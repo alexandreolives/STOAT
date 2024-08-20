@@ -1,12 +1,11 @@
 import io
 import argparse
 from cyvcf2 import VCF
+from typing import List
 import numpy as np
 import pandas as pd
 import os
-from typing import List
 import time
-import pandas as pd
 import re 
 
 class Chunk:
@@ -41,17 +40,30 @@ class Chunk:
 
 class Matrix :
     def __init__(self, Tupple_matrix : tuple) :
-        self.Matrix = Tupple_matrix[0]
+        self.matrix = Tupple_matrix[0]
         self.row_header = Tupple_matrix[1]
         self.column_header = Tupple_matrix[2]
+        self.list_samples = Tupple_matrix[3]
+    
+    def get_matrix(self) :
+        return self.matrix
+    
+    def get_row_header(self) :
+        return self.row_header
+    
+    def get_column_header(self) :
+        return self.column_header
 
+    def get_list_samples(self) :
+        return self.list_samples
+    
     def __str__(self) :
         return f"           {self.column_header} \n" \
-               f"{self.row_header[0]} {self.Matrix[0]}"
+               f"{self.row_header[0]} {self.matrix[0]}"
         
 class Snarl :
     def __init__(self, vcf_path: str, group_file : str, path_file : str) :
-        self.paths = self._parse_path_file(path_file)
+        self.snarl_paths = self._parse_path_file(path_file)
         self.group = self._parse_group_file(group_file)
         self.matrix = Matrix(self._parse_vcf(vcf_path))
 
@@ -144,7 +156,52 @@ class Snarl :
 
                 idx_geno += 2 # push the index
             
-        return Chunk.concatenate_matrix(Matrix_list), row_header, column_header
+        return Chunk.concatenate_matrix(Matrix_list), row_header, column_header, list_samples
+
+    def creat_tables(self) :
+        res_table = []
+        for snarl in self.snarl_paths :
+            df = self.creat_table(snarl)
+            res_table.append(df)
+
+        return res_table
+    
+    def creat_table(self, snarl):
+        column_headers = snarl[1]
+        row_headers = self.matrix.get_row_header()
+        column_headers_header = self.matrix.get_list_samples()
+
+        # Initialize g0 and g1 with zeros, corresponding to the length of column_headers
+        g0 = [0] * len(column_headers)
+        g1 = [0] * len(column_headers)
+
+        # Iterate over each path_snarl in column_headers
+        for idx_g, path_snarl in enumerate(column_headers):
+            idx_srr_save = list(range(len(column_headers_header)))  # Initialize with all indices
+            decomposed_snarl = self.decompose_string(path_snarl)
+
+            # Iterate over each snarl in the decomposed_snarl
+            for snarl in decomposed_snarl:
+                if snarl in row_headers:
+                    idx_row = row_headers.index(snarl)
+                    matrix_row = self.matrix.get_matrix()[idx_row]
+
+                    # Update idx_srr_save to only include indices where row is 1
+                    idx_srr_save = [idx for idx in idx_srr_save if matrix_row[idx] == 1]
+
+            # Count occurrences in g0 and g1 based on the updated idx_srr_save
+            print("column_headers_header: ", column_headers_header)
+            for idx in idx_srr_save:
+                srr = column_headers_header[idx]
+                if srr in self.group[0]:
+                    g0[idx_g] += 1
+                if srr in self.group[1]:  
+                    g1[idx_g] += 1
+
+        # Create and return the DataFrame
+        df = pd.DataFrame([g0, g1], index=['G0', 'G1'], columns=column_headers)
+        print(df)
+        return df
 
     def _parse_group_file(self, groupe_file) :
         group_0 = []
@@ -161,18 +218,16 @@ class Snarl :
         return group_0, group_1
 
     def _parse_path_file(self, path_file) :
-        snarl_list = []
-        aT_list = []
+        path_list = []
         
         with open(path_file, 'r') as file:
             for line in file:
                 if line.strip():  # Skip empty lines
                     snarl, aT = line.split()
-                    snarl_list.append(snarl)
-                    aT_list.append(aT.split(','))
+                    path_list.append([snarl, aT.split(',')])
         
-        print("snarl_list, aT_list : ", snarl_list, aT_list)
-        return snarl_list, aT_list
+        print("path_list : ",path_list)
+        return path_list
 
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
@@ -186,4 +241,6 @@ if __name__ == "__main__" :
     print(vcf_object.print_matrix())
     print(f"Time : {time.time() - start} s")
 
+    vcf_object.creat_tables()
+    print(f"Time : {time.time() - start} s")
 
