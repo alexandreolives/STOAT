@@ -44,7 +44,7 @@ class Matrix :
         self.Matrix = Tupple_matrix[0]
         self.row_header = Tupple_matrix[1]
         self.column_header = Tupple_matrix[2]
-        
+
     def __str__(self) :
         return f"           {self.column_header} \n" \
                f"{self.row_header[0]} {self.Matrix[0]}"
