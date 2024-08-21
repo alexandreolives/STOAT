@@ -1,3 +1,4 @@
+htslib
 pysam
 cyvcf2
 numpy
