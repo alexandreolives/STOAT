@@ -1,4 +1,3 @@
-import io
 import argparse
 from cyvcf2 import VCF
 from typing import List
@@ -6,7 +5,6 @@ import numpy as np
 import pandas as pd
 import os
 import time
-import re 
 
 class Chunk:
     def __init__(self, nb_matrix_row, nb_matrix_column):
@@ -17,6 +15,9 @@ class Chunk:
 
     def get_data(self) :
         return self.data
+    
+    def __str__(self) :
+        return f"{self.data}"
     
     @staticmethod
     def concatenate_matrix(matrix_list, axis=0):
@@ -79,7 +80,7 @@ class Snarl :
         start_idx = i
         while i < length_s and s[i] not in ['>', '<']:
             i += 1
-        return i, int(s[start_idx:i])
+        return i, s[start_idx:i]
 
     def decompose_string(self, s: str) -> List[str]:
         """Decompose a string with snarl information."""
@@ -140,7 +141,7 @@ class Snarl :
         Matrix_list = [Chunk(nb_matrix_row, nb_matrix_column)]
         idx_matrix = 0
 
-        # Parse line per line
+        # Parse variant line per line
         for variant in vcf_object :
             genotypes = variant.genotypes # genotypes : [[-1, -1, False], [-1, -1, False], [1, 1, False], [-1, -1, False]]
             snarl_list = variant.INFO.get('AT', '').split(',') # snarl_list :  ['>1272>1273>1274', '>1272>1274']
@@ -150,47 +151,81 @@ class Snarl :
             for gt in genotypes:
                 allele_1, allele_2 = gt[:2]  # Extract the two allele
 
-                if allele_1 != -1 : # Suppose that allele_2 are always -1
+                if allele_1 != -1 and allele_2 != -1 :  #TODO SPECIAL CASE 
                     Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_1, nb_matrix_row, nb_matrix_column, row_header, Matrix_list, idx_geno, idx_matrix)
                     Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_2, nb_matrix_row, nb_matrix_column, row_header, Matrix_list, idx_geno+1, idx_matrix)
 
                 idx_geno += 2 # push the index
-            
+
         return Chunk.concatenate_matrix(Matrix_list), row_header, column_header, list_samples
 
-    def creat_tables(self) :
+    def create_tables(self) :
         res_table = []
         for snarl in self.snarl_paths :
-            df = self.creat_table(snarl)
+            df = self.create_table(snarl)
             res_table.append(df)
 
         return res_table
     
-    def creat_table(self, snarl):
+    def create_table(self, snarl) -> pd.DataFrame :
         column_headers = snarl[1]
         row_headers = self.matrix.get_row_header()
         column_headers_header = self.matrix.get_list_samples()
+        length_column_headers = len(column_headers)
 
         # Initialize g0 and g1 with zeros, corresponding to the length of column_headers
-        g0 = [0] * len(column_headers)
-        g1 = [0] * len(column_headers)
+        g0 = [0] * length_column_headers
+        g1 = [0] * length_column_headers
 
         # Iterate over each path_snarl in column_headers
         for idx_g, path_snarl in enumerate(column_headers):
             idx_srr_save = list(range(len(column_headers_header)))  # Initialize with all indices
             decomposed_snarl = self.decompose_string(path_snarl)
-
+            star_path = 0
             # Iterate over each snarl in the decomposed_snarl
             for snarl in decomposed_snarl:
-                if snarl in row_headers:
-                    idx_row = row_headers.index(snarl)
-                    matrix_row = self.matrix.get_matrix()[idx_row]
+                
+                # Suppose that at leat one snarl pass thought
+                # Case * in snarl
+                if "*" in snarl:
+                    # Extract the relevant parts before and after the "*"
+                    prefix = snarl.split('*')[0] if snarl[0] != '*' else ""
+                    suffix = snarl.split('*')[-1] if snarl[-1] != '*' else ""
+                    
+                    # Check for any matching headers in row_headers
+                    matching_headers = [header for header in row_headers if header.startswith(prefix) and header.endswith(suffix)]
+                    star_path += 1
 
-                    # Update idx_srr_save to only include indices where row is 1
-                    idx_srr_save = [idx for idx in idx_srr_save if matrix_row[idx] == 1]
+                    if matching_headers:
+                        inter_srr_list = []
+                        for matched_header in matching_headers:
+                            idx_row = row_headers.index(matched_header)
+                            matrix_row = self.matrix.get_matrix()[idx_row]
+                            
+                            # Update idx_srr_save only where indices row is True
+                            inter_srr_list.append([idx for idx in idx_srr_save if any(matrix_row[2 * idx: 2 * idx + 2])])
+                        inter_srr_list[star_path-1] = [item for sublist in inter_srr_list for item in sublist]
+
+                        if star_path >= 2 :
+                            idx_srr_save = set(inter_srr_list[star_path-2]).intersection(set(inter_srr_list[star_path-1]))
+
+                    else:
+                        idx_srr_save = []
+                        break
+
+                else :
+                    if any(snarl in header for header in row_headers) :
+                        idx_row = row_headers.index(snarl)
+                        matrix_row = self.matrix.get_matrix()[idx_row]
+
+                        # Update idx_srr_save only where indices row is 1
+                        idx_srr_save = [idx for idx in idx_srr_save if any(matrix_row[2 * idx: 2 * idx + 2])]
+                                        
+                    else :
+                        idx_srr_save = []
+                        break
 
             # Count occurrences in g0 and g1 based on the updated idx_srr_save
-            print("column_headers_header: ", column_headers_header)
             for idx in idx_srr_save:
                 srr = column_headers_header[idx]
                 if srr in self.group[0]:
@@ -214,10 +249,9 @@ class Snarl :
                     group_0.append(g0)
                     group_1.append(g1)
         
-        print("group_0, group_1 : ", group_0, group_1)
         return group_0, group_1
 
-    def _parse_path_file(self, path_file) :
+    def _parse_path_file(self, path_file) -> list :
         path_list = []
         
         with open(path_file, 'r') as file:
@@ -226,7 +260,6 @@ class Snarl :
                     snarl, aT = line.split()
                     path_list.append([snarl, aT.split(',')])
         
-        print("path_list : ",path_list)
         return path_list
 
 if __name__ == "__main__" :
@@ -238,9 +271,9 @@ if __name__ == "__main__" :
 
     start = time.time()
     vcf_object = Snarl(args.vcf_path, args.group, args.snarl)
-    print(vcf_object.print_matrix())
+    #print(vcf_object.print_matrix())
     print(f"Time : {time.time() - start} s")
 
-    vcf_object.creat_tables()
+    vcf_object.create_tables()
     print(f"Time : {time.time() - start} s")
 
