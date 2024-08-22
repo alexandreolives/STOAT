@@ -7,8 +7,8 @@ import os
 import time
 
 class Chunk:
-    def __init__(self, nb_matrix_row, nb_matrix_column):
-        self.data = np.zeros((nb_matrix_row, nb_matrix_column), dtype=bool)
+    def __init__(self, MATRIX_ROW_NUMBER, nb_matrix_column):
+        self.data = np.zeros((MATRIX_ROW_NUMBER, nb_matrix_column), dtype=bool)
 
     def add_data(self, idx_snarl, idx_geno):
         self.data[idx_snarl, idx_geno] = 1
@@ -23,8 +23,7 @@ class Chunk:
     def concatenate_matrix(matrix_list, axis=0):
         
         matrix_list = [matrix.get_data() for matrix in matrix_list]
-
-        if not matrix_list:
+        if len(matrix_list) == 0 :
             raise ValueError("The array list is empty, nothing to concatenate.")
         
         if len(matrix_list) == 1 :
@@ -63,17 +62,12 @@ class Matrix :
                f"{self.row_header[0]} {self.matrix[0]}"
         
 class Snarl :
-    def __init__(self, vcf_path: str, group_file : str, path_file : str) :
-        self.snarl_paths = self._parse_path_file(path_file)
-        self.group = self._parse_group_file(group_file)
-        self.matrix = Matrix(self._parse_vcf(vcf_path))
-
-    def print_matrix(self) :
-        print(self.matrix)
-
-    def is_valid_vcf(self, file_path: str) -> bool:
-        """Check if the file is a valid VCF or VCF.GZ file."""
-        return os.path.isfile(file_path) and file_path.endswith(('.vcf', '.vcf.gz'))
+    def __init__(self, vcf_path: str) :
+        self.vcf_path = vcf_path
+        self.matrix = None
+    
+    def initialise_matrix(self) :
+        self.matrix = Matrix(self.create_matrix())
 
     def determine_str(self, s: str, length_s : int, i: int) -> tuple[int, int]:
         """Extract an integer from a string starting at index i."""
@@ -107,7 +101,7 @@ class Snarl :
         """Decompose a list of snarl strings."""
         return [self.decompose_string(s) for s in lst]
 
-    def push_matrix(self, decomposed_snarl, allele, nb_matrix_row, nb_matrix_column, row_header, Matrix_list, idx_geno, idx_matrix) :
+    def push_matrix(self, decomposed_snarl, allele, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, Matrix_list, idx_geno, idx_matrix) :
         """Add True to the matrix if snarl are found"""
         for decomposed_snarl_path in decomposed_snarl[allele] :
             if decomposed_snarl_path not in row_header :
@@ -116,29 +110,26 @@ class Snarl :
             idx_snarl = row_header.index(decomposed_snarl_path)
             
             # Check if current numpy matrix are full 
-            if (len(row_header)+1) % nb_matrix_row == 1 :
+            if (len(row_header)+1) % MATRIX_ROW_NUMBER == 1 :
                 # Add new chunck
-                Matrix_list.append(Chunk(nb_matrix_row, nb_matrix_column))
+                Matrix_list.append(Chunk(MATRIX_ROW_NUMBER, nb_matrix_column))
                 idx_matrix += 1
 
-            Matrix_list[idx_matrix].add_data(idx_snarl%nb_matrix_row, idx_geno) # matrix[idx_snarl, idx_geno] = 1
+            Matrix_list[idx_matrix].add_data(idx_snarl%MATRIX_ROW_NUMBER, idx_geno) # matrix[idx_snarl, idx_geno] = 1
         
         return Matrix_list, idx_matrix
 
-    def _parse_vcf(self, vcf_path) :
+    def create_matrix(self) :
         """Parse vcf file (main function)"""
-        if not self.is_valid_vcf(vcf_path) :
-            raise ValueError(f"VCF file : {vcf_path} are not on the correct format (.vcf or .vcf.gz)")
-        
-        vcf_object = VCF(vcf_path)
+        vcf_object = VCF(self.vcf_path)
         list_samples = vcf_object.samples
 
         # define column and row header for the numpy matrix 
         row_header = []
         column_header = [f"{sample}_{i}" for sample in list_samples for i in range(2)]
-        nb_matrix_row = 100000
         nb_matrix_column = len(list_samples) * 2
-        Matrix_list = [Chunk(nb_matrix_row, nb_matrix_column)]
+        MATRIX_ROW_NUMBER = 100000
+        Matrix_list = [Chunk(MATRIX_ROW_NUMBER, nb_matrix_column)]
         idx_matrix = 0
 
         # Parse variant line per line
@@ -152,22 +143,25 @@ class Snarl :
                 allele_1, allele_2 = gt[:2]  # Extract the two allele
 
                 if allele_1 != -1 and allele_2 != -1 :  #TODO SPECIAL CASE 
-                    Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_1, nb_matrix_row, nb_matrix_column, row_header, Matrix_list, idx_geno, idx_matrix)
-                    Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_2, nb_matrix_row, nb_matrix_column, row_header, Matrix_list, idx_geno+1, idx_matrix)
+                    Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_1, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, Matrix_list, idx_geno, idx_matrix)
+                    Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_2, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, Matrix_list, idx_geno+1, idx_matrix)
 
                 idx_geno += 2 # push the index
 
         return Chunk.concatenate_matrix(Matrix_list), row_header, column_header, list_samples
 
-    def create_tables(self) :
+    def binary_table(self, snarls, binary_groups) :
         res_table = []
-        for snarl in self.snarl_paths :
-            df = self.create_table(snarl)
+        for snarl in snarls :
+            df = self.create_table(binary_groups, snarl)
             res_table.append(df)
 
         return res_table
     
-    def create_table(self, snarl) -> pd.DataFrame :
+    def quantitative_table(self, path_snarls, path_pheno) :
+        ...
+
+    def create_table(self, groups, snarl) -> pd.DataFrame :
         column_headers = snarl[1]
         row_headers = self.matrix.get_row_header()
         column_headers_header = self.matrix.get_list_samples()
@@ -181,37 +175,13 @@ class Snarl :
         for idx_g, path_snarl in enumerate(column_headers):
             idx_srr_save = list(range(len(column_headers_header)))  # Initialize with all indices
             decomposed_snarl = self.decompose_string(path_snarl)
-            star_path = 0
             # Iterate over each snarl in the decomposed_snarl
             for snarl in decomposed_snarl:
                 
                 # Suppose that at leat one snarl pass thought
                 # Case * in snarl
                 if "*" in snarl:
-                    # Extract the relevant parts before and after the "*"
-                    prefix = snarl.split('*')[0] if snarl[0] != '*' else ""
-                    suffix = snarl.split('*')[-1] if snarl[-1] != '*' else ""
-                    
-                    # Check for any matching headers in row_headers
-                    matching_headers = [header for header in row_headers if header.startswith(prefix) and header.endswith(suffix)]
-                    star_path += 1
-
-                    if matching_headers:
-                        inter_srr_list = []
-                        for matched_header in matching_headers:
-                            idx_row = row_headers.index(matched_header)
-                            matrix_row = self.matrix.get_matrix()[idx_row]
-                            
-                            # Update idx_srr_save only where indices row is True
-                            inter_srr_list.append([idx for idx in idx_srr_save if any(matrix_row[2 * idx: 2 * idx + 2])])
-                        inter_srr_list[star_path-1] = [item for sublist in inter_srr_list for item in sublist]
-
-                        if star_path >= 2 :
-                            idx_srr_save = set(inter_srr_list[star_path-2]).intersection(set(inter_srr_list[star_path-1]))
-
-                    else:
-                        idx_srr_save = []
-                        break
+                    continue
 
                 else :
                     if any(snarl in header for header in row_headers) :
@@ -228,9 +198,9 @@ class Snarl :
             # Count occurrences in g0 and g1 based on the updated idx_srr_save
             for idx in idx_srr_save:
                 srr = column_headers_header[idx]
-                if srr in self.group[0]:
+                if srr in groups[0]:
                     g0[idx_g] += 1
-                if srr in self.group[1]:  
+                if srr in groups[1]:  
                     g1[idx_g] += 1
 
         # Create and return the DataFrame
@@ -238,42 +208,78 @@ class Snarl :
         print(df)
         return df
 
-    def _parse_group_file(self, groupe_file) :
-        group_0 = []
-        group_1 = []
-        
-        with open(groupe_file, 'r') as file:
-            for line in file:
-                if line.strip():
-                    g0, g1 = line.split()
-                    group_0.append(g0)
-                    group_1.append(g1)
-        
-        return group_0, group_1
+def parse_binary_group_file(groupe_file) :
+    group_0 = []
+    group_1 = []
+    
+    with open(groupe_file, 'r') as file:
+        for line in file:
+            if line.strip():
+                g0, g1 = line.split()
+                group_0.append(g0)
+                group_1.append(g1)
+    
+    return group_0, group_1
 
-    def _parse_path_file(self, path_file) -> list :
-        path_list = []
-        
-        with open(path_file, 'r') as file:
-            for line in file:
-                if line.strip():  # Skip empty lines
-                    snarl, aT = line.split()
-                    path_list.append([snarl, aT.split(',')])
-        
-        return path_list
+def parse_phenotype_file(phenotype_file) :
+    ...
+
+def parse_snarl_path_file(path_file) -> list :
+    path_list = []
+    
+    with open(path_file, 'r') as file:
+        for line in file:
+            if line.strip():  # Skip empty lines
+                snarl, aT = line.split()
+                path_list.append([snarl, aT.split(',')])
+    
+    return path_list
+
+def check_format_vcf_file(value):
+    """
+    Custom function to check if the provided file path is a valid VCF file.
+    """
+    if not os.path.isfile(value):
+        raise argparse.ArgumentTypeError(f"The file {value} does not exist.")
+
+    if not value.lower().endswith('.vcf') or value.lower().endswith('.vcf.gz'):
+        raise argparse.ArgumentTypeError(f"The file {value} is not a valid VCF file. It must have a .vcf extension or .vcf.gz.")
+    
+    return value
+
+def check_format_group_snarl(value):
+    """
+    Custom function to check if the provided file path is a valid group/snarl file.
+    """
+    if not os.path.isfile(value):
+        raise argparse.ArgumentTypeError(f"The file {value} does not exist.")
+    if not value.lower().endswith('.txt') or value.lower().endswith('.tsv'):
+        raise argparse.ArgumentTypeError(f"The file {value} is not a valid group/snarl file. It must have a .txt extension or .tsv.")
+    
+    return value
 
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
-    parser.add_argument("vcf_path", type=str, help="Path to the vcf file")
-    parser.add_argument("group", type=str, help="Path to the group file that containt SRR name for each group")
-    parser.add_argument("snarl", type=str, help="Path to the snarl file that containt snarl and aT")
+    parser.add_argument("vcf_path", type=check_format_vcf_file, help="Path to the vcf file")
+    parser.add_argument("snarl", type=check_format_group_snarl, help="Path to the snarl file that containt snarl and aT")
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-b", "--binary", type=check_format_group_snarl, help="Path to the binary group file")
+    group.add_argument("-q", "--quantitative", type=check_format_group_snarl, help="Path to the quantitative phenotype file")
     args = parser.parse_args()
 
     start = time.time()
-    vcf_object = Snarl(args.vcf_path, args.group, args.snarl)
-    #print(vcf_object.print_matrix())
-    print(f"Time : {time.time() - start} s")
+    vcf_object = Snarl(args.vcf_path)
+    vcf_object.initialise_matrix()
+    snarl = parse_snarl_path_file(args.snarl)
 
-    vcf_object.create_tables()
+    if args.binary:
+        binary_group = parse_binary_group_file(args.binary)
+        vcf_object.binary_table(snarl, binary_group)
+
+    if args.quantitative:
+        quantitative = parse_phenotype_file(args.quantitative)
+        vcf_object.quantitative_table(snarl, quantitative)
+
     print(f"Time : {time.time() - start} s")
 
