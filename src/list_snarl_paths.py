@@ -1,7 +1,6 @@
 import bdsg
 import argparse
 
-
 # class to help make paths from BDSG objects
 # and deal with orientation, flipping, etc
 class Path:

@@ -3,6 +3,9 @@ from cyvcf2 import VCF
 from typing import List
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import mean_squared_error, r2_score
 import os
 import time
 
@@ -43,7 +46,6 @@ class Matrix :
         self.matrix = Tupple_matrix[0]
         self.row_header = Tupple_matrix[1]
         self.column_header = Tupple_matrix[2]
-        self.list_samples = Tupple_matrix[3]
     
     def get_matrix(self) :
         return self.matrix
@@ -53,9 +55,6 @@ class Matrix :
     
     def get_column_header(self) :
         return self.column_header
-
-    def get_list_samples(self) :
-        return self.list_samples
     
     def __str__(self) :
         return f"           {self.column_header} \n" \
@@ -65,6 +64,7 @@ class Snarl :
     def __init__(self, vcf_path: str) :
         self.vcf_path = vcf_path
         self.matrix = None
+        self.list_samples = []
     
     def initialise_matrix(self) :
         self.matrix = Matrix(self.create_matrix())
@@ -122,12 +122,11 @@ class Snarl :
     def create_matrix(self) :
         """Parse vcf file (main function)"""
         vcf_object = VCF(self.vcf_path)
-        list_samples = vcf_object.samples
-
+        self.list_samples = vcf_object.samples
         # define column and row header for the numpy matrix 
         row_header = []
-        column_header = [f"{sample}_{i}" for sample in list_samples for i in range(2)]
-        nb_matrix_column = len(list_samples) * 2
+        column_header = [f"{sample}_{i}" for sample in self.list_samples for i in range(2)]
+        nb_matrix_column = len(self.list_samples) * 2
         MATRIX_ROW_NUMBER = 100000
         Matrix_list = [Chunk(MATRIX_ROW_NUMBER, nb_matrix_column)]
         idx_matrix = 0
@@ -148,9 +147,27 @@ class Snarl :
 
                 idx_geno += 2 # push the index
 
-        return Chunk.concatenate_matrix(Matrix_list), row_header, column_header, list_samples
+        return Chunk.concatenate_matrix(Matrix_list), row_header, column_header, self.list_samples
+
+    def check_pheno_group(self, group) :
+        """Check if all sample name in the matrix are matching with phenotype else return error"""
+        if type(group) == tuple :
+            list_group = group[0] + group[1]
+        elif type(group) == dict :
+            list_group = [i for i in group.keys()]
+        else :
+            raise ValueError(f"group type : {type(group)} not an dict or a tuple.")
+
+        print("list_group : ", list_group)
+        set_sample = set(self.list_samples)
+        set_group = set(list_group)
+        missing_elements = set_sample - set_group
+
+        if missing_elements:
+            raise ValueError(f"The following elements from set_sample are not present in set_group: {missing_elements}")
 
     def binary_table(self, snarls, binary_groups) :
+        self.check_pheno_group(binary_groups)
         res_table = []
         for snarl in snarls :
             df = self.create_binary_table(binary_groups, snarl)
@@ -159,17 +176,19 @@ class Snarl :
         return res_table
     
     def quantitative_table(self, snarls, pheno) :
+        self.check_pheno_group(pheno)
         res_table = []
         for snarl in snarls :
             df = self.create_quantitative_table(snarl)
-            res_table.append(df)
+            p_value = self.linear_regression(df, pheno)
+            res_table.append((df, p_value))
 
         return res_table
 
     def create_quantitative_table(self, snarl) -> pd.DataFrame :
         column_headers = snarl[1]
         row_headers = self.matrix.get_row_header()
-        column_headers_header = self.matrix.get_list_samples()
+        column_headers_header = self.list_samples
         genotypes = []
 
         # Iterate over each path_snarl in column_headers
@@ -260,6 +279,36 @@ class Snarl :
         print(df)
         return df
 
+    def linear_regression(self, df, pheno) :
+
+        df = df.astype(int)
+
+        print("pheno : ", pheno)
+        print('df : ', df)
+
+        df['Target'] = df.index.map(pheno)
+        print('df 2 : ', df)
+
+        # Separate features (X) and target (y)
+        X = df.drop('Target', axis=1)
+        y = df['Target']
+        print("X : ", X)
+        print("Y : ", y)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        model = LogisticRegression()
+
+        # Train the model
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+
+        # Evaluate the model's performance
+        mse = mean_squared_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        print(f"Mean Squared Error: {mse}")
+        print(f"R^2 Score: {r2}")
+        return r2
+
 def parse_group_file(groupe_file) :
     group_0 = []
     group_1 = []
@@ -273,15 +322,15 @@ def parse_group_file(groupe_file) :
     
     return group_0, group_1
 
-def parse_pheno_file(phenotype_file) :
-    parsed_data = []
+def parse_pheno_file(phenotype_file) -> dict :
+    parsed_data = {}
 
     with open(phenotype_file, 'r') as file:
         for line in file:
             # Strip any leading/trailing whitespace and split the line by whitespace
             parts = line.strip().split()
             # Add the resulting list to the parsed_data list
-            parsed_data.append(parts)
+            parsed_data[parts[0]] = float(parts[1])
 
     return parsed_data
 

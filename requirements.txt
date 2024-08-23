@@ -1,3 +1,4 @@
-cyvcf2
-numpy
-pandas
+cyvcf2==0.31.1
+numpy==2.0.1
+pandas==2.2.2
+bdsg==0.3

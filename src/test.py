@@ -48,19 +48,19 @@ class TestMatrix(unittest.TestCase):
 
 class TestSnarl(unittest.TestCase):
     def test_is_valid_vcf(self):
-        self.assertTrue(snarl_vcf_parser.check_format_vcf_file("test/test_variant.vcf"))
+        self.assertTrue(snarl_vcf_parser.check_format_vcf_file("../test/test_variant.vcf"))
         
         with self.assertRaises(argparse.ArgumentTypeError):
-            self.assertFalse(snarl_vcf_parser.check_format_vcf_file("test/test.txt"))
+            self.assertFalse(snarl_vcf_parser.check_format_vcf_file("../test/test.txt"))
 
     def test_decompose_snarl(self):
-        snarl = Snarl("test/test_variant.vcf")
+        snarl = Snarl("../test/test_variant.vcf")
         result = snarl.decompose_snarl([">1322<1323>1323<1323>1325", ">1272>1274"])
         expected = [['>1322<1323', '<1323>1323', '>1323<1323', '<1323>1325'], [">1272>1274"]]
         self.assertEqual(result, expected)
 
     def test_decompose_star_snarl(self):
-        snarl = Snarl("test/test_variant.vcf")
+        snarl = Snarl("../test/test_variant.vcf")
         result = snarl.decompose_snarl([">1272<1273>*>1276<1277", ">1272>1274"])
         expected = [[">1272<1273", "<1273>*", ">*>1276", ">1276<1277"], [">1272>1274"]]
         self.assertEqual(result, expected)
@@ -68,20 +68,17 @@ class TestSnarl(unittest.TestCase):
     @patch('snarl_vcf_parser.Snarl.create_matrix')
     def test_snarl_initialization(self, mockcreate_matrix):
         mockcreate_matrix.return_value = (np.zeros((2, 2)), [], [], [])
-        snarl = Snarl("test/test_variant.vcf")
+        snarl = Snarl("../test/test_variant.vcf")
         self.assertEqual(snarl.matrix, None)
 
-    # @patch('snarl_vcf_parser.Snarl.binary_table')
-    # def test_create_tables(self, mock_create_table):
-    #     snarl = Snarl("test/test_variant.vcf")
-    #     mock_create_table.return_value = pd.DataFrame({"G0": [1, 2], "G1": [3, 4]})
-    #     result = snarl.binary_table()
-    #     self.assertIsInstance(result[0], pd.DataFrame)
-
-class TestFonctionnal(unittest.TestCase):
-    def test_create_tables(self):
-        #snarl = Snarl("test/test_variant.vcf")
-        ...
+class TestFonctionnal(unittest.TestCase) :
+    def test_binary(self) :
+        vcf_object = Snarl("../test/test_variant.vcf")
+        vcf_object.initialise_matrix()
+        snarl = snarl_vcf_parser.parse_snarl_path_file("../test/test_path.txt")
+        binary_group = snarl_vcf_parser.parse_group_file("../test/test_group.txt")
+        binary_tables = vcf_object.binary_table(snarl, binary_group)
+        binary_tables_expected = pd.DataFrame()
 
 if __name__ == '__main__':
     unittest.main()
