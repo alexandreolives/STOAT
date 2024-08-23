@@ -153,15 +153,67 @@ class Snarl :
     def binary_table(self, snarls, binary_groups) :
         res_table = []
         for snarl in snarls :
-            df = self.create_table(binary_groups, snarl)
+            df = self.create_binary_table(binary_groups, snarl)
             res_table.append(df)
 
         return res_table
     
-    def quantitative_table(self, path_snarls, path_pheno) :
-        ...
+    def quantitative_table(self, snarls, pheno) :
+        res_table = []
+        for snarl in snarls :
+            df = self.create_quantitative_table(snarl)
+            res_table.append(df)
 
-    def create_table(self, groups, snarl) -> pd.DataFrame :
+        return res_table
+
+    def create_quantitative_table(self, snarl) -> pd.DataFrame :
+        column_headers = snarl[1]
+        row_headers = self.matrix.get_row_header()
+        column_headers_header = self.matrix.get_list_samples()
+        genotypes = []
+
+        # Iterate over each path_snarl in column_headers
+        for idx_g, path_snarl in enumerate(column_headers):
+            idx_srr_save = list(range(len(column_headers_header)))  # Initialize with all indices
+            decomposed_snarl = self.decompose_string(path_snarl)
+
+            # print("path_snarl : ", path_snarl)
+            # print("idx_g : ", idx_g)
+            # print("idx_srr_save : ", idx_srr_save)
+            # print("decomposed_snarl : ", decomposed_snarl)
+            genotype = []
+
+            # Iterate over each snarl in the decomposed_snarl
+            for snarl in decomposed_snarl:
+                
+                # print("snarl : ", snarl)
+                # Suppose that at leat one snarl pass thought
+                # Case * in snarl
+                if "*" in snarl:
+                    continue
+
+                else :
+                    if any(snarl in header for header in row_headers) :
+                        idx_row = row_headers.index(snarl)
+                        matrix_row = self.matrix.get_matrix()[idx_row]
+
+                        # Update idx_srr_save only where indices row is 1
+                        idx_srr_save = [idx for idx in idx_srr_save if any(matrix_row[2 * idx: 2 * idx + 2])]
+
+                    else :
+                        idx_srr_save = []
+                        break
+                    
+            genotype = [1 if idx_header in idx_srr_save else 0 for idx_header in range(len(column_headers_header))]
+            genotypes.append(genotype)
+
+        # Transposing the matrix
+        transposed_genotypes = [list(row) for row in zip(*genotypes)]
+        df = pd.DataFrame(transposed_genotypes, index=column_headers_header, columns=column_headers)
+        print(df)
+        return df
+ 
+    def create_binary_table(self, groups, snarl) -> pd.DataFrame :
         column_headers = snarl[1]
         row_headers = self.matrix.get_row_header()
         column_headers_header = self.matrix.get_list_samples()
@@ -208,7 +260,7 @@ class Snarl :
         print(df)
         return df
 
-def parse_binary_group_file(groupe_file) :
+def parse_group_file(groupe_file) :
     group_0 = []
     group_1 = []
     
@@ -221,8 +273,17 @@ def parse_binary_group_file(groupe_file) :
     
     return group_0, group_1
 
-def parse_phenotype_file(phenotype_file) :
-    ...
+def parse_pheno_file(phenotype_file) :
+    parsed_data = []
+
+    with open(phenotype_file, 'r') as file:
+        for line in file:
+            # Strip any leading/trailing whitespace and split the line by whitespace
+            parts = line.strip().split()
+            # Add the resulting list to the parsed_data list
+            parsed_data.append(parts)
+
+    return parsed_data
 
 def parse_snarl_path_file(path_file) -> list :
     path_list = []
@@ -274,11 +335,11 @@ if __name__ == "__main__" :
     snarl = parse_snarl_path_file(args.snarl)
 
     if args.binary:
-        binary_group = parse_binary_group_file(args.binary)
+        binary_group = parse_group_file(args.binary)
         vcf_object.binary_table(snarl, binary_group)
 
     if args.quantitative:
-        quantitative = parse_phenotype_file(args.quantitative)
+        quantitative = parse_pheno_file(args.quantitative)
         vcf_object.quantitative_table(snarl, quantitative)
 
     print(f"Time : {time.time() - start} s")
