@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 import os
 import time
@@ -158,7 +158,6 @@ class Snarl :
         else :
             raise ValueError(f"group type : {type(group)} not an dict or a tuple.")
 
-        print("list_group : ", list_group)
         set_sample = set(self.list_samples)
         set_group = set(list_group)
         missing_elements = set_sample - set_group
@@ -296,18 +295,15 @@ class Snarl :
         print("Y : ", y)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        model = LogisticRegression()
+        model = LinearRegression()
 
         # Train the model
         model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
 
         # Evaluate the model's performance
-        mse = mean_squared_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-        print(f"Mean Squared Error: {mse}")
-        print(f"R^2 Score: {r2}")
-        return r2
+        print(f"Coefficients: {model.coef_}")
+        print(f"Intercept: {model.intercept_}")
+        return 
 
 def parse_group_file(groupe_file) :
     group_0 = []
