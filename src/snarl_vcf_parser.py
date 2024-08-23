@@ -3,9 +3,7 @@ from cyvcf2 import VCF
 from typing import List
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
 import os
 import time
 
@@ -191,20 +189,15 @@ class Snarl :
         genotypes = []
 
         # Iterate over each path_snarl in column_headers
-        for idx_g, path_snarl in enumerate(column_headers):
+        for path_snarl in column_headers:
             idx_srr_save = list(range(len(column_headers_header)))  # Initialize with all indices
             decomposed_snarl = self.decompose_string(path_snarl)
 
-            # print("path_snarl : ", path_snarl)
-            # print("idx_g : ", idx_g)
-            # print("idx_srr_save : ", idx_srr_save)
-            # print("decomposed_snarl : ", decomposed_snarl)
             genotype = []
 
             # Iterate over each snarl in the decomposed_snarl
             for snarl in decomposed_snarl:
                 
-                # print("snarl : ", snarl)
                 # Suppose that at leat one snarl pass thought
                 # Case * in snarl
                 if "*" in snarl:
@@ -279,31 +272,19 @@ class Snarl :
         return df
 
     def linear_regression(self, df, pheno) :
-
+        """Define a regression model that explain the phenotype per snarl path"""
         df = df.astype(int)
-
-        print("pheno : ", pheno)
-        print('df : ', df)
-
         df['Target'] = df.index.map(pheno)
-        print('df 2 : ', df)
 
-        # Separate features (X) and target (y)
         X = df.drop('Target', axis=1)
         y = df['Target']
-        print("X : ", X)
-        print("Y : ", y)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         model = LinearRegression()
+        model.fit(X, y)
 
-        # Train the model
-        model.fit(X_train, y_train)
-
-        # Evaluate the model's performance
         print(f"Coefficients: {model.coef_}")
         print(f"Intercept: {model.intercept_}")
-        return 
+        return model
 
 def parse_group_file(groupe_file) :
     group_0 = []
@@ -366,12 +347,12 @@ def check_format_group_snarl(value):
 
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
-    parser.add_argument("vcf_path", type=check_format_vcf_file, help="Path to the vcf file")
-    parser.add_argument("snarl", type=check_format_group_snarl, help="Path to the snarl file that containt snarl and aT")
+    parser.add_argument("vcf_path", type=check_format_vcf_file, help="Path to the vcf file (.vcf or .vcf.gz)")
+    parser.add_argument("snarl", type=check_format_group_snarl, help="Path to the snarl file that containt snarl and aT (.txt or .tsv)")
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-b", "--binary", type=check_format_group_snarl, help="Path to the binary group file")
-    group.add_argument("-q", "--quantitative", type=check_format_group_snarl, help="Path to the quantitative phenotype file")
+    group.add_argument("-b", "--binary", type=check_format_group_snarl, help="Path to the binary group file (.txt or .tsv)")
+    group.add_argument("-q", "--quantitative", type=check_format_group_snarl, help="Path to the quantitative phenotype file (.txt or .tsv)")
     args = parser.parse_args()
 
     start = time.time()

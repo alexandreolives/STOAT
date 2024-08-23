@@ -62,18 +62,16 @@ class Path:
         # counts how many nodes are traversed in reverse
         return (sum(['<' == orient for orient in self.orients]))
 
-
-parser = argparse.ArgumentParser('List path through the netgraph of each snarl'
-                                 ' in a pangenome')
+parser = argparse.ArgumentParser('List path through the netgraph of each snarl in a pangenome')
 parser.add_argument('-p', help='the input pangenome .pg file', required=True)
-parser.add_argument('-d', help='the input distance index .dist file',
-                    required=True)
+parser.add_argument('-d', help='the input distance index .dist file',required=True)
 parser.add_argument('-o', help='the output TSV file', required=True)
 args = parser.parse_args()
 
 # load graph and snarl tree
 pg = bdsg.bdsg.PackedGraph()
 pg.deserialize(args.p)
+print(dir(bdsg.bdsg))
 stree = bdsg.bdsg.SnarlDistanceIndex()
 stree.deserialize(args.d)
 
@@ -83,7 +81,6 @@ root = stree.get_root()
 # list storing the snarl objects
 snarls = []
 
-
 def save_snarl_tree_node(net):
     if stree.is_snarl(net):
         snarls.append(net)
@@ -91,10 +88,8 @@ def save_snarl_tree_node(net):
         stree.for_each_child(net, save_snarl_tree_node)
     return (True)
 
-
 stree.for_each_child(root, save_snarl_tree_node)
 print('{} snarls found'.format(len(snarls)))
-
 
 # output file will be a TSV file with two columns
 outf = open(args.o, 'wt')
