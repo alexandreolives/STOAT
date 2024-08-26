@@ -4,6 +4,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
 from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact
 import os
@@ -179,8 +180,7 @@ class Snarl :
         res_table = []
         for snarl in snarls :
             df = self.create_quantitative_table(snarl)
-            p_value = self.linear_regression(df, pheno)
-            res_table.append((df, p_value))
+            res_table.append(df)
 
         return res_table
 
@@ -273,20 +273,24 @@ class Snarl :
         print(df)
         return df
 
-    def linear_regression(self, df, pheno) :
-        """Define a regression model that explain the phenotype per snarl path"""
-        df = df.astype(int)
-        df['Target'] = df.index.map(pheno)
+    def linear_regression(self, list_dataframe, pheno) :
 
-        x = df.drop('Target', axis=1)
-        y = df['Target']
+        list_pvalue = []
+        for df in list_dataframe :
+                
+            df = df.astype(int)
+            df['Target'] = df.index.map(pheno)
 
-        model = LinearRegression()
-        model.fit(x, y)
+            x = df.drop('Target', axis=1)
+            y = df['Target']
 
-        print(f"Coefficients: {model.coef_}")
-        print(f"Intercept: {model.intercept_}")
-        return model
+            # Fit the regression model
+            model = sm.OLS(y, x).fit()
+
+            # Extract p-values from the fitted model
+            p_values = model.pvalues
+            print("p_values : ", p_values)
+        return list_pvalue
 
     def chi2_test(self, list_dataframe) -> list : 
         """Calcul p_value from list of dataframe using chi-2 test"""
@@ -294,10 +298,14 @@ class Snarl :
         list_pvalue = []
         for df in list_dataframe :
             # Perform Chi-Square test
-            chi2, p_value, dof, expected = chi2_contingency(df)
+            if df.shape[1] >= 2 :
+                chi2, p_value, dof, expected = chi2_contingency(df)
+                print(f"Chi-Square Test p-value: {p_value}")
+            else :
+                p_value = "N/A"
+
             list_pvalue.append(p_value)
-            print(f"Chi-Square Test p-value: {p_value}")
-        
+            
         return list_pvalue
 
     def fisher_test(self, list_dataframe) : 
@@ -396,6 +404,9 @@ if __name__ == "__main__" :
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-b", "--binary", type=check_format_group_snarl, help="Path to the binary group file (.txt or .tsv)")
     group.add_argument("-q", "--quantitative", type=check_format_group_snarl, help="Path to the quantitative phenotype file (.txt or .tsv)")
+    
+    parser.add_argument("-c", "--chi", action='store_true', help="Apply chi-2 test")
+    parser.add_argument("-f", "--fisher", action='store_true', help="Apply fisher exact test")
     parser.add_argument("-o", "--output", type=str, required=False, help="Path to the output file")
 
     args = parser.parse_args()
@@ -406,18 +417,30 @@ if __name__ == "__main__" :
     snarl = parse_snarl_path_file(args.snarl)
 
     if args.binary:
+        if not (args.chi or args.fisher):
+            raise ValueError("If '-b/--binary' is used, either '--chi' or '--fisher' must be specified.")
+        
         binary_group = parse_group_file(args.binary)
         list_binary_df = vcf_object.binary_table(snarl, binary_group)
-        binary_p_value = vcf_object.fisher_test(list_binary_df)
+        if args.chi :
+            binary_p_value = vcf_object.chi2_test(list_binary_df)
+
+        if args.fisher:
+            binary_p_value_2 = vcf_object.fisher_test(list_binary_df)
+
         if args.output :
             vcf_object.output_writing(snarl, binary_p_value, args.output)
         else :
             vcf_object.output_writing(snarl, binary_p_value)
 
+    else:
+        if args.chi or args.fisher:
+            raise ValueError("The '--chi' and '--fisher' options can only be used with '-b/--binary'.")
+        
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
         list_quantitative_df = vcf_object.quantitative_table(snarl, quantitative)
-        quantitative_p_value = vcf_object.chi2_test(list_quantitative_df)
+        quantitative_p_value = vcf_object.linear_regression(list_quantitative_df, quantitative)
         if args.output :
             vcf_object.output_writing(snarl, quantitative_p_value, args.output)
         else :
