@@ -71,7 +71,6 @@ args = parser.parse_args()
 # load graph and snarl tree
 pg = bdsg.bdsg.PackedGraph()
 pg.deserialize(args.p)
-print(dir(bdsg.bdsg))
 stree = bdsg.bdsg.SnarlDistanceIndex()
 stree.deserialize(args.d)
 

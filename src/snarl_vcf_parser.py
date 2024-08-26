@@ -289,18 +289,26 @@ class Snarl :
             # Extract p-values from the fitted model
             p_values = model.pvalues
             print("p_values : ", p_values)
+            list_pvalue.append(p_values)
         return list_pvalue
 
-    def chi2_test(self, list_dataframe) -> list : 
-        """Calcul p_value from list of dataframe using chi-2 test"""
+    def chi2_test(self, list_dataframe) -> list:
+        """Calculate p_value from list of dataframe using chi-2 test"""
 
         list_pvalue = []
-        for df in list_dataframe :
-            # Perform Chi-Square test
-            if df.shape[1] >= 2 :
-                chi2, p_value, dof, expected = chi2_contingency(df)
-                print(f"Chi-Square Test p-value: {p_value}")
-            else :
+        for df in list_dataframe:
+            print("df.shape : ", df.shape)
+            
+            # Check if dataframe has at least 2 columns and more than 0 counts in every cell
+            if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
+                try:
+                    # Perform Chi-Square test
+                    chi2, p_value, dof, expected = chi2_contingency(df)
+                    print(f"Chi-Square Test p-value: {p_value}")
+                except ValueError as e:
+                    print(f"Error in Chi-Square test: {e}")
+                    p_value = "Error"
+            else:
                 p_value = "N/A"
 
             list_pvalue.append(p_value)
@@ -320,7 +328,22 @@ class Snarl :
         
         return list_pvalue
     
-    def output_writing(self, list_dataframe, list_pvalues, output_filename="output.tsv") :
+    def output_writing_quantitative(self, list_dataframe, list_pvalues, output_filename="quantitative_output.tsv") :
+        print("list_dataframe : ", list_dataframe)
+        df_combined = pd.DataFrame({
+                'Snarl': list_dataframe,
+                'P_value': list_pvalues
+            })
+        print("df_combined : ", df_combined)
+        for idx, (df, p_value) in enumerate(zip(list_dataframe, list_pvalues)):
+            print(f"Snarl: {idx+1}:\n{df}")
+            print(f"p-value: {p_value}")
+        
+        # Save to TSV
+        df_combined.to_csv(output_filename, sep='\t', index=False)
+        print(f"p-values and DataFrames saved to {output_filename}")
+
+    def output_writing_binary(self, list_dataframe, list_pvalues, output_filename="binary_output.tsv") :
         # Combine DataFrames and p-values into a single DataFrame for saving
         df_combined = pd.DataFrame({
             'Snarl': list_dataframe,
@@ -417,33 +440,34 @@ if __name__ == "__main__" :
 
     if args.binary:
         if not (args.chi or args.fisher):
-            raise ValueError("If '-b/--binary' is used, either '--chi' or '--fisher' must be specified.")
+            raise ValueError("If '-b/--binary' is used, either '-c/--chi' or '-f/--fisher' must be specified.")
         
         binary_group = parse_group_file(args.binary)
         list_binary_df = vcf_object.binary_table(snarl, binary_group)
+        # TODO : case where both are required
         if args.chi :
             binary_p_value = vcf_object.chi2_test(list_binary_df)
 
         if args.fisher:
-            binary_p_value_2 = vcf_object.fisher_test(list_binary_df)
+            binary_p_value = vcf_object.fisher_test(list_binary_df)
 
         if args.output :
-            vcf_object.output_writing(snarl, binary_p_value, args.output)
+            vcf_object.output_writing_binary(snarl, binary_p_value, args.output)
         else :
-            vcf_object.output_writing(snarl, binary_p_value)
+            vcf_object.output_writing_binary(snarl, binary_p_value)
 
     else:
         if args.chi or args.fisher:
-            raise ValueError("The '--chi' and '--fisher' options can only be used with '-b/--binary'.")
+            raise ValueError("The '-c/--chi' and '-f/--fisher' options can only be used with '-b/--binary'.")
         
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
         list_quantitative_df = vcf_object.quantitative_table(snarl, quantitative)
         quantitative_p_value = vcf_object.linear_regression(list_quantitative_df, quantitative)
         if args.output :
-            vcf_object.output_writing(snarl, quantitative_p_value, args.output)
+            vcf_object.output_writing_quantitative(snarl, quantitative_p_value, args.output)
         else :
-            vcf_object.output_writing(snarl, quantitative_p_value)
+            vcf_object.output_writing_quantitative(snarl, quantitative_p_value)
 
     print(f"Time : {time.time() - start} s")
 
