@@ -4,6 +4,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+from scipy.stats import chi2_contingency
+from scipy.stats import fisher_exact
 import os
 import time
 
@@ -163,7 +165,7 @@ class Snarl :
         if missing_elements:
             raise ValueError(f"The following elements from set_sample are not present in set_group: {missing_elements}")
 
-    def binary_table(self, snarls, binary_groups) :
+    def binary_table(self, snarls, binary_groups) -> list : # list of dataframe
         self.check_pheno_group(binary_groups)
         res_table = []
         for snarl in snarls :
@@ -172,7 +174,7 @@ class Snarl :
 
         return res_table
     
-    def quantitative_table(self, snarls, pheno) :
+    def quantitative_table(self, snarls, pheno) -> list : # list of dataframe
         self.check_pheno_group(pheno)
         res_table = []
         for snarl in snarls :
@@ -227,7 +229,7 @@ class Snarl :
     def create_binary_table(self, groups, snarl) -> pd.DataFrame :
         column_headers = snarl[1]
         row_headers = self.matrix.get_row_header()
-        column_headers_header = self.matrix.get_list_samples()
+        column_headers_header = self.list_samples
         length_column_headers = len(column_headers)
 
         # Initialize g0 and g1 with zeros, corresponding to the length of column_headers
@@ -276,15 +278,56 @@ class Snarl :
         df = df.astype(int)
         df['Target'] = df.index.map(pheno)
 
-        X = df.drop('Target', axis=1)
+        x = df.drop('Target', axis=1)
         y = df['Target']
 
         model = LinearRegression()
-        model.fit(X, y)
+        model.fit(x, y)
 
         print(f"Coefficients: {model.coef_}")
         print(f"Intercept: {model.intercept_}")
         return model
+
+    def chi2_test(self, list_dataframe) -> list : 
+        """Calcul p_value from list of dataframe using chi-2 test"""
+
+        list_pvalue = []
+        for df in list_dataframe :
+            # Perform Chi-Square test
+            chi2, p_value, dof, expected = chi2_contingency(df)
+            list_pvalue.append(p_value)
+            print(f"Chi-Square Test p-value: {p_value}")
+        
+        return list_pvalue
+
+    def fisher_test(self, list_dataframe) : 
+        """Calcul p_value from list of dataframe using fisher exact test"""
+
+        list_pvalue = []
+        for df in list_dataframe :
+            print(df)
+            # Perform Fisher test
+            odds_ratio, p_value = fisher_exact(df)
+            list_pvalue.append(p_value)
+            print(f"Fisher's Exact Test p-value: {p_value}")
+        
+        return list_pvalue
+    
+    def output_writing(self, list_dataframe, list_pvalues, output_filename="output.tsv") :
+        # Combine DataFrames and p-values into a single DataFrame for saving
+        df_combined = pd.DataFrame({
+            'Snarl': list_dataframe,
+            'P_value': list_pvalues
+        })
+        
+        # Print each DataFrame and corresponding p-value
+        for idx, (df, p_value) in enumerate(zip(list_dataframe, list_pvalues)):
+            print(f"Snarl: {idx+1}:\n{df}")
+            print(f"p-value: {p_value}")
+        
+        # Save to TSV
+        df_combined.to_csv(output_filename, sep='\t', index=False)
+        print(f"p-values and DataFrames saved to {output_filename}")
 
 def parse_group_file(groupe_file) :
     group_0 = []
@@ -353,6 +396,8 @@ if __name__ == "__main__" :
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-b", "--binary", type=check_format_group_snarl, help="Path to the binary group file (.txt or .tsv)")
     group.add_argument("-q", "--quantitative", type=check_format_group_snarl, help="Path to the quantitative phenotype file (.txt or .tsv)")
+    parser.add_argument("-o", "--output", type=str, required=False, help="Path to the output file")
+
     args = parser.parse_args()
 
     start = time.time()
@@ -362,11 +407,21 @@ if __name__ == "__main__" :
 
     if args.binary:
         binary_group = parse_group_file(args.binary)
-        vcf_object.binary_table(snarl, binary_group)
+        list_binary_df = vcf_object.binary_table(snarl, binary_group)
+        binary_p_value = vcf_object.fisher_test(list_binary_df)
+        if args.output :
+            vcf_object.output_writing(snarl, binary_p_value, args.output)
+        else :
+            vcf_object.output_writing(snarl, binary_p_value)
 
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
-        vcf_object.quantitative_table(snarl, quantitative)
+        list_quantitative_df = vcf_object.quantitative_table(snarl, quantitative)
+        quantitative_p_value = vcf_object.chi2_test(list_quantitative_df)
+        if args.output :
+            vcf_object.output_writing(snarl, quantitative_p_value, args.output)
+        else :
+            vcf_object.output_writing(snarl, quantitative_p_value)
 
     print(f"Time : {time.time() - start} s")
 
