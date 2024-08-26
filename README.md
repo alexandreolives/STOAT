@@ -21,7 +21,7 @@ pip install -r requirements.txt
 Run the script from the command line, providing the paths to your VCF file, group file, and snarl file:
 
 ```bash
-python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -b <path_to_group_file.txt>
+python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -b <path_to_group_file.txt> --chi -o output.txt
 ```
 
 ### Input format file
@@ -31,14 +31,14 @@ python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -
 
 ### Run test
 ```bash
-python3 snarl_vcf_parser.py test/test_variant.vcf test/test_path.txt -b test/test_group.txt
+python3 src/snarl_vcf_parser.py test/test_variant.vcf test/test_path.txt -b test/test_group.txt --fisher -o test_output.txt
 ```
 
 ## Output
 The output of the script includes:
 
 Binary phenotype case : 
-- Printed DataFrames: Summarize the distribution of snarl patterns across the specified groups.
+- coming soon ...
 
 Quantitative phenotype case : 
 - coming soon ...
