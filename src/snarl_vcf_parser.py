@@ -96,35 +96,43 @@ class Snarl :
             prev_sym = start_sym
         
         return result
-    
-    def decompose_snarl(self, lst: List[str]) -> List[List[str]] :
+        
+    def decompose_snarl(self, lst: List[str]) -> List[List[str]]:
         """Decompose a list of snarl strings."""
         return [self.decompose_string(s) for s in lst]
 
-    def push_matrix(self, decomposed_snarl, allele, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, Matrix_list, idx_geno, idx_matrix) :
+    def push_matrix(self, decomposed_snarl, allele, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, row_header_dict, Matrix_list, idx_geno, idx_matrix):
         """Add True to the matrix if snarl are found"""
-        for decomposed_snarl_path in decomposed_snarl[allele] :
-            if decomposed_snarl_path not in row_header :
+
+        current_row_len = len(row_header)
+
+        for decomposed_snarl_path in decomposed_snarl[allele]:
+            # Check if the path is already in the row header dictionary
+            if decomposed_snarl_path not in row_header_dict:
+                row_header_dict[decomposed_snarl_path] = current_row_len
                 row_header.append(decomposed_snarl_path)
-            
-            idx_snarl = row_header.index(decomposed_snarl_path)
-            
-            # Check if current numpy matrix are full 
-            if (len(row_header)+1) % MATRIX_ROW_NUMBER == 1 :
-                # Add new chunck
+                current_row_len += 1 
+
+            idx_snarl = row_header_dict[decomposed_snarl_path]
+
+            # Determine if a new matrix chunk is needed
+            if current_row_len % MATRIX_ROW_NUMBER == 1:
+                # Add new chunk
                 Matrix_list.append(Chunk(MATRIX_ROW_NUMBER, nb_matrix_column))
                 idx_matrix += 1
 
-            Matrix_list[idx_matrix].add_data(idx_snarl%MATRIX_ROW_NUMBER, idx_geno) # matrix[idx_snarl, idx_geno] = 1
-        
+            # Use the current matrix to add data
+            Matrix_list[idx_matrix].add_data(idx_snarl % MATRIX_ROW_NUMBER, idx_geno) # matrix[idx_snarl, idx_geno] = 1
+
         return Matrix_list, idx_matrix
 
-    def create_matrix(self) :
-        """Parse vcf file (main function)"""
+    def create_matrix(self):
+        """Parse VCF file (main function)"""
         vcf_object = VCF(self.vcf_path)
         self.list_samples = vcf_object.samples
         # define column and row header for the numpy matrix 
         row_header = []
+        row_header_dict = {}  # Use dictionary for faster lookup
         column_header = [f"{sample}_{i}" for sample in self.list_samples for i in range(2)]
         nb_matrix_column = len(self.list_samples) * 2
         MATRIX_ROW_NUMBER = 100000
@@ -132,23 +140,25 @@ class Snarl :
         idx_matrix = 0
 
         # Parse variant line per line
-        for variant in vcf_object :
-            genotypes = variant.genotypes # genotypes : [[-1, -1, False], [-1, -1, False], [1, 1, False], [-1, -1, False]]
-            snarl_list = variant.INFO.get('AT', '').split(',') # snarl_list :  ['>1272>1273>1274', '>1272>1274']
-            decomposed_snarl = self.decompose_snarl(snarl_list) # decomposed_snarl :  [['>1272>1273', '>1273>1274'], ['>1272>1274']]
-
+        for idx, variant in enumerate(vcf_object):
+            genotypes = variant.genotypes  # genotypes: [[-1, -1, False], [-1, -1, False], [1, 1, False], [-1, -1, False]]
+            snarl_list = variant.INFO.get('AT', '').split(',')  # snarl_list: ['>1272>1273>1274', '>1272>1274']
+            decomposed_snarl = self.decompose_snarl(snarl_list)  # decomposed_snarl: [['>1272>1273', '>1273>1274'], ['>1272>1274']]
             idx_geno = 0
+
             for gt in genotypes:
-                allele_1, allele_2 = gt[:2]  # Extract the two allele
+                allele_1, allele_2 = gt[:2]  # Extract the two alleles
 
-                if allele_1 != -1 and allele_2 != -1 :  #TODO SPECIAL CASE 
-                    Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_1, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, Matrix_list, idx_geno, idx_matrix)
-                    Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_2, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, Matrix_list, idx_geno+1, idx_matrix)
+                if allele_1 != -1 and allele_2 != -1:  # TODO SPECIAL CASE 
+                    Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_1, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, row_header_dict, Matrix_list, idx_geno, idx_matrix)
+                    Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_2, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, row_header_dict, Matrix_list, idx_geno + 1, idx_matrix)
 
-                idx_geno += 2 # push the index
+                idx_geno += 2  # push the index
 
+        print("Matrix concatenation in coming")
+        print(f"Decomposed snarl found : {len(row_header)}")
         return Chunk.concatenate_matrix(Matrix_list), row_header, column_header, self.list_samples
-
+    
     def check_pheno_group(self, group) :
         """Check if all sample name in the matrix are matching with phenotype else return error"""
         if type(group) == tuple :
@@ -222,7 +232,7 @@ class Snarl :
         # Transposing the matrix
         transposed_genotypes = [list(row) for row in zip(*genotypes)]
         df = pd.DataFrame(transposed_genotypes, index=column_headers_header, columns=column_headers)
-        print(df)
+        #print(df)
         return df
  
     def create_binary_table(self, groups, snarl) -> pd.DataFrame :
@@ -269,7 +279,7 @@ class Snarl :
 
         # Create and return the DataFrame
         df = pd.DataFrame([g0, g1], index=['G0', 'G1'], columns=column_headers)
-        print(df)
+        #print(df)
         return df
 
     def linear_regression(self, list_dataframe, pheno) :
@@ -288,7 +298,7 @@ class Snarl :
 
             # Extract p-values from the fitted model
             p_values = model.pvalues
-            print("p_values : ", p_values)
+            #print("p_values : ", p_values)
             list_pvalue.append(p_values)
         return list_pvalue
 
@@ -297,16 +307,16 @@ class Snarl :
 
         list_pvalue = []
         for df in list_dataframe:
-            print("df.shape : ", df.shape)
+            #print("df.shape : ", df.shape)
             
             # Check if dataframe has at least 2 columns and more than 0 counts in every cell
             if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
                 try:
                     # Perform Chi-Square test
                     chi2, p_value, dof, expected = chi2_contingency(df)
-                    print(f"Chi-Square Test p-value: {p_value}")
+                    #print(f"Chi-Square Test p-value: {p_value}")
                 except ValueError as e:
-                    print(f"Error in Chi-Square test: {e}")
+                    #print(f"Error in Chi-Square test: {e}")
                     p_value = "Error"
             else:
                 p_value = "N/A"
@@ -320,12 +330,12 @@ class Snarl :
 
         list_pvalue = []
         for df in list_dataframe :
-            print(df)
+            #print(df)
             # Shape > 2 : error ?
             # Perform Fisher test
             odds_ratio, p_value = fisher_exact(df)
             list_pvalue.append(p_value)
-            print(f"Fisher's Exact Test p-value: {p_value}")
+            #print(f"Fisher's Exact Test p-value: {p_value}")
         
         return list_pvalue
     
@@ -460,6 +470,7 @@ if __name__ == "__main__" :
     start = time.time()
     vcf_object = Snarl(args.vcf_path)
     vcf_object.initialise_matrix()
+    print(f"Time : {time.time() - start}")
     snarl = parse_snarl_path_file(args.snarl)
 
     if args.binary:
