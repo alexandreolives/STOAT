@@ -321,6 +321,7 @@ class Snarl :
         list_pvalue = []
         for df in list_dataframe :
             print(df)
+            # Shape > 2 : error ?
             # Perform Fisher test
             odds_ratio, p_value = fisher_exact(df)
             list_pvalue.append(p_value)
@@ -328,36 +329,34 @@ class Snarl :
         
         return list_pvalue
     
+    def binary_stat_test(self, list_dataframe) :
+
+        chi2_p_value = self.chi2_test(list_dataframe)
+        fisher_p_value = self.fisher_test(list_dataframe)
+
+        return chi2_p_value, fisher_p_value
+
+    def output_writing_binary(self, list_dataframe, list_pvalues, output_filename="binary_output.tsv") :
+        # Combine DataFrames and p-values into a single DataFrame for saving
+        list_ficher = list_pvalues[0]
+        list_chi = list_pvalues[1]
+        df_combined = pd.DataFrame({
+            'Snarl': list_dataframe,
+            'P_value (Fisher)': list_ficher,
+            'P_value (Chi2)': list_chi
+        })
+        
+        # Save to TSV
+        df_combined.to_csv(output_filename, sep='\t', index=False)
+
     def output_writing_quantitative(self, list_dataframe, list_pvalues, output_filename="quantitative_output.tsv") :
-        print("list_dataframe : ", list_dataframe)
         df_combined = pd.DataFrame({
                 'Snarl': list_dataframe,
                 'P_value': list_pvalues
             })
-        print("df_combined : ", df_combined)
-        for idx, (df, p_value) in enumerate(zip(list_dataframe, list_pvalues)):
-            print(f"Snarl: {idx+1}:\n{df}")
-            print(f"p-value: {p_value}")
-        
-        # Save to TSV
-        df_combined.to_csv(output_filename, sep='\t', index=False)
-        print(f"p-values and DataFrames saved to {output_filename}")
 
-    def output_writing_binary(self, list_dataframe, list_pvalues, output_filename="binary_output.tsv") :
-        # Combine DataFrames and p-values into a single DataFrame for saving
-        df_combined = pd.DataFrame({
-            'Snarl': list_dataframe,
-            'P_value': list_pvalues
-        })
-        
-        # Print each DataFrame and corresponding p-value
-        for idx, (df, p_value) in enumerate(zip(list_dataframe, list_pvalues)):
-            print(f"Snarl: {idx+1}:\n{df}")
-            print(f"p-value: {p_value}")
-        
         # Save to TSV
         df_combined.to_csv(output_filename, sep='\t', index=False)
-        print(f"p-values and DataFrames saved to {output_filename}")
 
 def parse_group_file(groupe_file) :
     group_0 = []
@@ -384,6 +383,25 @@ def parse_pheno_file(phenotype_file) -> dict :
 
     return parsed_data
 
+def parse_pheno_file(file_path):
+
+    parsed_data = {}
+    with open(file_path, 'r') as file:
+        # Skip the header line
+        next(file)
+        
+        # Process each subsequent line
+        for line in file:
+            parts = line.strip().split()
+            if len(parts) != 3:
+                raise ValueError(f"The line '{line.strip()}' does not have exactly 3 columns.")
+            
+            sample_name = parts[1]  # IID
+            phenotype = parts[2]    # PHENO
+            parsed_data[sample_name] = float(phenotype)
+    
+    return parsed_data
+
 def parse_snarl_path_file(path_file) -> list :
     path_list = []
     
@@ -395,28 +413,37 @@ def parse_snarl_path_file(path_file) -> list :
     
     return path_list
 
-def check_format_vcf_file(value):
+def check_format_vcf_file(file_path):
     """
-    Custom function to check if the provided file path is a valid VCF file.
+    Function to check if the provided file path is a valid VCF file.
     """
-    if not os.path.isfile(value):
-        raise argparse.ArgumentTypeError(f"The file {value} does not exist.")
+    if not os.path.isfile(file_path):
+        raise argparse.ArgumentTypeError(f"The file {file_path} does not exist.")
 
-    if not value.lower().endswith('.vcf') or value.lower().endswith('.vcf.gz'):
-        raise argparse.ArgumentTypeError(f"The file {value} is not a valid VCF file. It must have a .vcf extension or .vcf.gz.")
-    
-    return value
+    if not file_path.lower().endswith('.vcf') and not file_path.lower().endswith('.vcf.gz'):
+        raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid VCF file. It must have a .vcf extension or .vcf.gz.")
+    return file_path
 
-def check_format_group_snarl(value):
+def check_format_group_snarl(file_path):
     """
-    Custom function to check if the provided file path is a valid group/snarl file.
+    Function to check if the provided file path is a valid group file.
     """
-    if not os.path.isfile(value):
-        raise argparse.ArgumentTypeError(f"The file {value} does not exist.")
-    if not value.lower().endswith('.txt') or value.lower().endswith('.tsv'):
-        raise argparse.ArgumentTypeError(f"The file {value} is not a valid group/snarl file. It must have a .txt extension or .tsv.")
+    if not os.path.isfile(file_path):
+        raise argparse.ArgumentTypeError(f"The file {file_path} does not exist.")
     
-    return value
+    if not file_path.lower().endswith('.txt') and not file_path.lower().endswith('.tsv'):
+        raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid group/snarl file. It must have a .txt extension or .tsv.")
+    return file_path
+    
+def check_format_pheno(file_path):
+
+    with open(file_path, 'r') as file:
+        first_line = file.readline().strip()
+    
+    header = first_line.split()
+    if header != ['FID', 'IID', 'PHENO']:
+        raise ValueError("The file does not contain the correct header.")
+    return file_path
 
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
@@ -425,40 +452,26 @@ if __name__ == "__main__" :
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-b", "--binary", type=check_format_group_snarl, help="Path to the binary group file (.txt or .tsv)")
-    group.add_argument("-q", "--quantitative", type=check_format_group_snarl, help="Path to the quantitative phenotype file (.txt or .tsv)")
-    
-    parser.add_argument("-c", "--chi", action='store_true', help="Apply chi-2 test")
-    parser.add_argument("-f", "--fisher", action='store_true', help="Apply fisher exact test")
+    group.add_argument("-q", "--quantitative", type=check_format_pheno, help="Path to the quantitative phenotype file (.txt or .tsv)")
     parser.add_argument("-o", "--output", type=str, required=False, help="Path to the output file")
 
     args = parser.parse_args()
-
+    
     start = time.time()
     vcf_object = Snarl(args.vcf_path)
     vcf_object.initialise_matrix()
     snarl = parse_snarl_path_file(args.snarl)
 
     if args.binary:
-        if not (args.chi or args.fisher):
-            raise ValueError("If '-b/--binary' is used, either '-c/--chi' or '-f/--fisher' must be specified.")
         
         binary_group = parse_group_file(args.binary)
         list_binary_df = vcf_object.binary_table(snarl, binary_group)
-        # TODO : case where both are required
-        if args.chi :
-            binary_p_value = vcf_object.chi2_test(list_binary_df)
-
-        if args.fisher:
-            binary_p_value = vcf_object.fisher_test(list_binary_df)
+        binary_p_value = vcf_object.binary_stat_test(list_binary_df)
 
         if args.output :
             vcf_object.output_writing_binary(snarl, binary_p_value, args.output)
         else :
             vcf_object.output_writing_binary(snarl, binary_p_value)
-
-    else:
-        if args.chi or args.fisher:
-            raise ValueError("The '-c/--chi' and '-f/--fisher' options can only be used with '-b/--binary'.")
         
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
