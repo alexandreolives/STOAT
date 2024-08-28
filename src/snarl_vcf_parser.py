@@ -4,6 +4,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from collections import defaultdict
 from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact
 import os
@@ -155,7 +156,6 @@ class Snarl :
 
                 idx_geno += 2  # push the index
 
-        print("Matrix concatenation in coming")
         print(f"Decomposed snarl found : {len(row_header)}")
         return Chunk.concatenate_matrix(Matrix_list), row_header, column_header, self.list_samples
     
@@ -178,65 +178,70 @@ class Snarl :
     def binary_table(self, snarls, binary_groups) -> list : # list of dataframe
         self.check_pheno_group(binary_groups)
         res_table = []
-        for snarl in snarls :
+        reference_list = []
+        for reference, snarl in snarls.items() :
             df = self.create_binary_table(binary_groups, snarl)
             res_table.append(df)
+            reference_list.append(reference)
 
-        return res_table
+        return reference_list, res_table
     
     def quantitative_table(self, snarls, pheno) -> list : # list of dataframe
         self.check_pheno_group(pheno)
         res_table = []
-        for snarl in snarls :
+        for _, snarl in snarls.items() :
             df = self.create_quantitative_table(snarl)
             res_table.append(df)
 
         return res_table
+    
+    def create_quantitative_table(self, column_headers) -> pd.DataFrame:
 
-    def create_quantitative_table(self, snarl) -> pd.DataFrame :
-        column_headers = snarl[1]
+        #print("column_headers : ", column_headers)
         row_headers = self.matrix.get_row_header()
+        row_headers_dict = {header: idx for idx, header in enumerate(row_headers)}  # Dictionary for faster lookup
         column_headers_header = self.list_samples
+        matrix = self.matrix.get_matrix()  # Retrieve matrix once
         genotypes = []
 
         # Iterate over each path_snarl in column_headers
         for path_snarl in column_headers:
-            idx_srr_save = list(range(len(column_headers_header)))  # Initialize with all indices
+            idx_srr_save = set(range(len(column_headers_header)))  # Use a set for efficient filtering
             decomposed_snarl = self.decompose_string(path_snarl)
 
-            genotype = []
-
-            # Iterate over each snarl in the decomposed_snarl
             for snarl in decomposed_snarl:
-                
-                # Suppose that at leat one snarl pass thought
-                # Case * in snarl
                 if "*" in snarl:
                     continue
 
-                else :
-                    if any(snarl in header for header in row_headers) :
-                        idx_row = row_headers.index(snarl)
-                        matrix_row = self.matrix.get_matrix()[idx_row]
+                if snarl in row_headers_dict:
+                    idx_row = row_headers_dict[snarl]
+                    matrix_row = matrix[idx_row]
 
-                        # Update idx_srr_save only where indices row is 1
-                        idx_srr_save = [idx for idx in idx_srr_save if any(matrix_row[2 * idx: 2 * idx + 2])]
+                    # Efficiently update idx_srr_save with indices where matrix_row is 1
+                    idx_srr_save.intersection_update(idx for idx in idx_srr_save if any(matrix_row[2 * idx: 2 * idx + 2]))
 
-                    else :
-                        idx_srr_save = []
+                    # Early exit if no valid indices are left
+                    if not idx_srr_save:
                         break
-                    
-            genotype = [1 if idx_header in idx_srr_save else 0 for idx_header in range(len(column_headers_header))]
+                else:
+                    idx_srr_save.clear()  # Clear the set, indicating no match found
+                    break
+
+            genotype = [1 if idx in idx_srr_save else 0 for idx in range(len(column_headers_header))]
             genotypes.append(genotype)
 
         # Transposing the matrix
-        transposed_genotypes = [list(row) for row in zip(*genotypes)]
-        df = pd.DataFrame(transposed_genotypes, index=column_headers_header, columns=column_headers)
-        #print(df)
+        transposed_genotypes = list(map(list, zip(*genotypes)))
+        print("transposed_genotypes : ", transposed_genotypes)
+        print("row_headers : ", row_headers)
+        print("column_headers : ", column_headers)
+
+        df = pd.DataFrame(transposed_genotypes, index=row_headers, columns=column_headers)
+        
         return df
- 
-    def create_binary_table(self, groups, snarl) -> pd.DataFrame :
-        column_headers = snarl[1]
+
+    def create_binary_table(self, groups, column_headers) -> pd.DataFrame :
+        
         row_headers = self.matrix.get_row_header()
         column_headers_header = self.list_samples
         length_column_headers = len(column_headers)
@@ -307,7 +312,7 @@ class Snarl :
 
         list_pvalue = []
         for df in list_dataframe:
-            #print("df.shape : ", df.shape)
+            #print("df : ", df)
             
             # Check if dataframe has at least 2 columns and more than 0 counts in every cell
             if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
@@ -316,7 +321,7 @@ class Snarl :
                     chi2, p_value, dof, expected = chi2_contingency(df)
                     #print(f"Chi-Square Test p-value: {p_value}")
                 except ValueError as e:
-                    #print(f"Error in Chi-Square test: {e}")
+                    print(f"Error in Chi-Square test: {e}")
                     p_value = "Error"
             else:
                 p_value = "N/A"
@@ -331,9 +336,11 @@ class Snarl :
         list_pvalue = []
         for df in list_dataframe :
             #print(df)
-            # Shape > 2 : error ?
-            # Perform Fisher test
-            odds_ratio, p_value = fisher_exact(df)
+            try:
+                odds_ratio, p_value = fisher_exact(df)
+            except ValueError as e: 
+                p_value = 'N/A'
+
             list_pvalue.append(p_value)
             #print(f"Fisher's Exact Test p-value: {p_value}")
         
@@ -341,17 +348,17 @@ class Snarl :
     
     def binary_stat_test(self, list_dataframe) :
 
-        chi2_p_value = self.chi2_test(list_dataframe)
         fisher_p_value = self.fisher_test(list_dataframe)
+        chi2_p_value = self.chi2_test(list_dataframe)
 
-        return chi2_p_value, fisher_p_value
+        return fisher_p_value, chi2_p_value
 
-    def output_writing_binary(self, list_dataframe, list_pvalues, output_filename="binary_output.tsv") :
+    def output_writing_binary(self, reference_list, list_pvalues, output_filename="binary_output.tsv") :
         # Combine DataFrames and p-values into a single DataFrame for saving
         list_ficher = list_pvalues[0]
         list_chi = list_pvalues[1]
         df_combined = pd.DataFrame({
-            'Snarl': list_dataframe,
+            'Snarl': reference_list,
             'P_value (Fisher)': list_ficher,
             'P_value (Chi2)': list_chi
         })
@@ -359,39 +366,31 @@ class Snarl :
         # Save to TSV
         df_combined.to_csv(output_filename, sep='\t', index=False)
 
-    def output_writing_quantitative(self, list_dataframe, list_pvalues, output_filename="quantitative_output.tsv") :
+    def output_writing_quantitative(self, reference_list, list_pvalues, output_filename="quantitative_output.tsv") :
         df_combined = pd.DataFrame({
-                'Snarl': list_dataframe,
+                'Snarl': reference_list,
                 'P_value': list_pvalues
             })
 
         # Save to TSV
         df_combined.to_csv(output_filename, sep='\t', index=False)
 
-def parse_group_file(groupe_file) :
+def parse_group_file(groupe_file):
     group_0 = []
     group_1 = []
-    
+
     with open(groupe_file, 'r') as file:
         for line in file:
-            if line.strip():
-                g0, g1 = line.split()
-                group_0.append(g0)
-                group_1.append(g1)
-    
+            if line.strip():  # Check if the line is not empty
+                parts = line.split()
+                group_0.append(parts[0])
+
+                if len(parts) > 1:
+                    group_1.append(parts[1])
+                else:
+                    group_1.append('')  # Append an empty string if the second group is missing
+
     return group_0, group_1
-
-def parse_pheno_file(phenotype_file) -> dict :
-    parsed_data = {}
-
-    with open(phenotype_file, 'r') as file:
-        for line in file:
-            # Strip any leading/trailing whitespace and split the line by whitespace
-            parts = line.strip().split()
-            # Add the resulting list to the parsed_data list
-            parsed_data[parts[0]] = float(parts[1])
-
-    return parsed_data
 
 def parse_pheno_file(file_path):
 
@@ -412,15 +411,17 @@ def parse_pheno_file(file_path):
     
     return parsed_data
 
-def parse_snarl_path_file(path_file) -> list :
-    path_list = []
-    
+def parse_snarl_path_file(path_file: str) -> dict:
+    path_list = defaultdict(list)
+
     with open(path_file, 'r') as file:
+        next(file)
+
         for line in file:
             if line.strip():  # Skip empty lines
-                snarl, aT = line.split()
-                path_list.append([snarl, aT.split(',')])
-    
+                snarl, aT = line.split()  
+                path_list[snarl].append(aT)
+
     return path_list
 
 def check_format_vcf_file(file_path):
@@ -476,13 +477,13 @@ if __name__ == "__main__" :
     if args.binary:
         
         binary_group = parse_group_file(args.binary)
-        list_binary_df = vcf_object.binary_table(snarl, binary_group)
+        reference_list, list_binary_df = vcf_object.binary_table(snarl, binary_group)
         binary_p_value = vcf_object.binary_stat_test(list_binary_df)
 
         if args.output :
-            vcf_object.output_writing_binary(snarl, binary_p_value, args.output)
+            vcf_object.output_writing_binary(reference_list, binary_p_value, args.output)
         else :
-            vcf_object.output_writing_binary(snarl, binary_p_value)
+            vcf_object.output_writing_binary(reference_list, binary_p_value)
         
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
