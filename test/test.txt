@@ -1,5 +1,0 @@
-##fileformat=VCFv4.2
-##FILTER=<ID=PASS,Description="All filters passed">
-##contig=<ID=dm6#0#chrX,length=23542271>
-##contig=<ID=dm6#0#chrM,length=19524>
-##contig=<ID=dm6#0#chr2R,length=25286936>
