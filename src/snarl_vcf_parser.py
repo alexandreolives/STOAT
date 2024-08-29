@@ -68,6 +68,7 @@ class Snarl :
         self.list_samples = []
     
     def initialise_matrix(self) :
+        #self.matrix = Matrix(self.create_matrix())
         self.matrix = Matrix(self.create_matrix())
 
     def determine_str(self, s: str, length_s : int, i: int) -> tuple[int, int]:
@@ -157,8 +158,9 @@ class Snarl :
                 idx_geno += 2  # push the index
 
         print(f"Decomposed snarl found : {len(row_header)}")
-        return Chunk.concatenate_matrix(Matrix_list), row_header, column_header, self.list_samples
-    
+        #return Chunk.concatenate_matrix(Matrix_list), row_header, column_header, self.list_samples
+        return Matrix_list, row_header, column_header
+
     def check_pheno_group(self, group) :
         """Check if all sample name in the matrix are matching with phenotype else return error"""
         if type(group) == tuple :
