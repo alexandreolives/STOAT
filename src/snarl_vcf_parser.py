@@ -345,7 +345,7 @@ class Snarl :
             #print(f"Fisher's Exact Test p-value: {p_value}")
         
         return list_pvalue
-    
+     
     def binary_stat_test(self, list_dataframe) :
 
         fisher_p_value = self.fisher_test(list_dataframe)
