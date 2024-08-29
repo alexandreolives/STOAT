@@ -189,11 +189,13 @@ class Snarl :
     def quantitative_table(self, snarls, pheno) -> list : # list of dataframe
         self.check_pheno_group(pheno)
         res_table = []
-        for _, snarl in snarls.items() :
+        res_reference = []
+        for ref, snarl in snarls.items() :
             df = self.create_quantitative_table(snarl)
             res_table.append(df)
+            res_reference.append(ref)
 
-        return res_table
+        return res_reference, res_table
     
     def create_quantitative_table(self, column_headers) -> pd.DataFrame:
 
@@ -233,10 +235,9 @@ class Snarl :
         # Transposing the matrix
         transposed_genotypes = list(map(list, zip(*genotypes)))
         print("transposed_genotypes : ", transposed_genotypes)
-        print("row_headers : ", row_headers)
-        print("column_headers : ", column_headers)
+        print("column_headers_header : ", column_headers_header)
 
-        df = pd.DataFrame(transposed_genotypes, index=row_headers, columns=column_headers)
+        df = pd.DataFrame(transposed_genotypes, index=column_headers_header, columns=column_headers)
         
         return df
 
@@ -367,6 +368,7 @@ class Snarl :
         df_combined.to_csv(output_filename, sep='\t', index=False)
 
     def output_writing_quantitative(self, reference_list, list_pvalues, output_filename="quantitative_output.tsv") :
+        print("reference_list : ", reference_list)
         df_combined = pd.DataFrame({
                 'Snarl': reference_list,
                 'P_value': list_pvalues
@@ -487,12 +489,12 @@ if __name__ == "__main__" :
         
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
-        list_quantitative_df = vcf_object.quantitative_table(snarl, quantitative)
+        reference_list, list_quantitative_df = vcf_object.quantitative_table(snarl, quantitative)
         quantitative_p_value = vcf_object.linear_regression(list_quantitative_df, quantitative)
         if args.output :
-            vcf_object.output_writing_quantitative(snarl, quantitative_p_value, args.output)
+            vcf_object.output_writing_quantitative(reference_list, quantitative_p_value, args.output)
         else :
-            vcf_object.output_writing_quantitative(snarl, quantitative_p_value)
+            vcf_object.output_writing_quantitative(reference_list, quantitative_p_value)
 
     print(f"Time : {time.time() - start} s")
 
