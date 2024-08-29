@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from collections import defaultdict
+from collections import OrderedDict
 from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact
 import os
@@ -12,65 +13,64 @@ import time
 
 class Chunk:
     def __init__(self, MATRIX_ROW_NUMBER, nb_matrix_column):
-        self.data = np.zeros((MATRIX_ROW_NUMBER, nb_matrix_column), dtype=bool)
+        self.chunk = np.zeros((MATRIX_ROW_NUMBER, nb_matrix_column), dtype=bool)
 
     def add_data(self, idx_snarl, idx_geno):
-        self.data[idx_snarl, idx_geno] = 1
+        self.chunk[idx_snarl, idx_geno] = 1
 
-    def get_data(self) :
-        return self.data
+    def get_chunk(self) :
+        return self.chunk
     
     def __str__(self) :
-        return f"{self.data}"
-    
-    @staticmethod
-    def concatenate_matrix(matrix_list, axis=0):
-        
-        matrix_list = [matrix.get_data() for matrix in matrix_list]
-        if len(matrix_list) == 0 :
-            raise ValueError("The array list is empty, nothing to concatenate.")
-        
-        if len(matrix_list) == 1 :
-            return matrix_list[0]
-        
-        # Check if all matrix have the same shape except for the concatenation axis
-        reference_shape = list(matrix_list[0].shape)
-        reference_shape[axis] = None  # Ignore the axis we're concatenating along
-        for matrix in matrix_list:
-            if list(matrix.shape)[:axis] + list(matrix.shape)[axis+1:] != reference_shape[:axis] + reference_shape[axis+1:]:
-                raise ValueError("All arrays must have the same shape except along the concatenation axis.")
-
-        return np.concatenate(matrix_list, axis=0)
+        return f"{self.chunk}"
 
 class Matrix :
-    def __init__(self, Tupple_matrix : tuple) :
-        self.matrix = Tupple_matrix[0]
-        self.row_header = Tupple_matrix[1]
-        self.column_header = Tupple_matrix[2]
+    def __init__(self, matrix=None, row_header=None, column_header=None):
+        self.matrix = matrix
+        self.row_header = row_header
+        self.column_header = column_header
     
-    def get_matrix(self) :
+    def get_matrix(self):
         return self.matrix
-    
-    def get_row_header(self) :
+
+    def get_row_header(self):
         return self.row_header
-    
-    def get_column_header(self) :
+
+    def set_row_header(self, row_header):
+        self.row_header = row_header  
+
+    def get_column_header(self):
         return self.column_header
-    
+
+    def set_column_header(self, column_header):
+        self.column_header = column_header
+
     def __str__(self) :
         return f"           {self.column_header} \n" \
                f"{self.row_header[0]} {self.matrix[0]}"
         
-class Snarl :
-    def __init__(self, vcf_path: str) :
+class Snarl:
+    def __init__(self, vcf_path: str):
+        self.defauld_chunck_matrix_row_number = 10000
+        self.list_samples = VCF(vcf_path).samples
+        self.matrix = Matrix()
         self.vcf_path = vcf_path
-        self.matrix = None
-        self.list_samples = []
-    
-    def initialise_matrix(self) :
-        #self.matrix = Matrix(self.create_matrix())
-        self.matrix = Matrix(self.create_matrix())
 
+    def get_matrix(self) :
+        return self.matrix
+
+    def increase_matrix(self, chunk, axis=0):
+        """Increase the matrix size by concatenating a new chunk."""
+        matrix_data = self.matrix.get_matrix()
+
+        # Check if matrix_data is None or has data
+        if matrix_data is not None and matrix_data.size > 0:
+            # Concatenate along the specified axis
+            self.matrix = Matrix(np.concatenate((matrix_data, chunk.get_chunk()), axis=axis))
+        else:
+            # Initialize with the new chunk if the matrix is empty
+            self.matrix = Matrix(chunk.get_chunk())
+        
     def determine_str(self, s: str, length_s : int, i: int) -> tuple[int, int]:
         """Extract an integer from a string starting at index i."""
         start_idx = i
@@ -103,46 +103,45 @@ class Snarl :
         """Decompose a list of snarl strings."""
         return [self.decompose_string(s) for s in lst]
 
-    def push_matrix(self, decomposed_snarl, allele, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, row_header_dict, Matrix_list, idx_geno, idx_matrix):
-        """Add True to the matrix if snarl are found"""
-
-        current_row_len = len(row_header)
-
+    def get_or_add_index(self, ordered_dict, key, length_ordered_dict):
+        """ 
+        Retrieve the index of the key if it exists in the OrderedDict.
+        If the key does not exist, add it and return the new index.
+        """
+        if key in ordered_dict:
+            return ordered_dict[key]
+        else:
+            new_index = length_ordered_dict
+            ordered_dict[key] = new_index
+            return new_index
+    
+    def push_chunk(self, chunk, decomposed_snarl, allele, nb_matrix_column, row_header_dict, idx_geno):
+        """Add True to the matrix if snarl is found"""
+        length_ordered_dict = len(row_header_dict)
         for decomposed_snarl_path in decomposed_snarl[allele]:
-            # Check if the path is already in the row header dictionary
-            if decomposed_snarl_path not in row_header_dict:
-                row_header_dict[decomposed_snarl_path] = current_row_len
-                row_header.append(decomposed_snarl_path)
-                current_row_len += 1 
-
-            idx_snarl = row_header_dict[decomposed_snarl_path]
+            # Retrieve or add the index in a single step
+            idx_snarl = self.get_or_add_index(row_header_dict, decomposed_snarl_path, length_ordered_dict)
 
             # Determine if a new matrix chunk is needed
-            if current_row_len % MATRIX_ROW_NUMBER == 1:
-                # Add new chunk
-                Matrix_list.append(Chunk(MATRIX_ROW_NUMBER, nb_matrix_column))
-                idx_matrix += 1
+            if length_ordered_dict % self.defauld_chunck_matrix_row_number == 1:
+                self.increase_matrix(chunk)
+                # Initialize a new chunk
+                chunk = Chunk(self.defauld_chunck_matrix_row_number, nb_matrix_column)
 
-            # Use the current matrix to add data
-            Matrix_list[idx_matrix].add_data(idx_snarl % MATRIX_ROW_NUMBER, idx_geno) # matrix[idx_snarl, idx_geno] = 1
+            # Add data to the matrix
+            chunk.add_data(idx_snarl % self.defauld_chunck_matrix_row_number, idx_geno)
 
-        return Matrix_list, idx_matrix
-
-    def create_matrix(self):
+        return chunk 
+    
+    def fill_matrix(self):
         """Parse VCF file (main function)"""
-        vcf_object = VCF(self.vcf_path)
-        self.list_samples = vcf_object.samples
-        # define column and row header for the numpy matrix 
-        row_header = []
-        row_header_dict = {}  # Use dictionary for faster lookup
+        row_header_dict = OrderedDict()
         column_header = [f"{sample}_{i}" for sample in self.list_samples for i in range(2)]
         nb_matrix_column = len(self.list_samples) * 2
-        MATRIX_ROW_NUMBER = 100000
-        Matrix_list = [Chunk(MATRIX_ROW_NUMBER, nb_matrix_column)]
-        idx_matrix = 0
+        chunk = Chunk(self.defauld_chunck_matrix_row_number, nb_matrix_column)
 
         # Parse variant line per line
-        for idx, variant in enumerate(vcf_object):
+        for variant in VCF(self.vcf_path) :
             genotypes = variant.genotypes  # genotypes: [[-1, -1, False], [-1, -1, False], [1, 1, False], [-1, -1, False]]
             snarl_list = variant.INFO.get('AT', '').split(',')  # snarl_list: ['>1272>1273>1274', '>1272>1274']
             decomposed_snarl = self.decompose_snarl(snarl_list)  # decomposed_snarl: [['>1272>1273', '>1273>1274'], ['>1272>1274']]
@@ -152,14 +151,15 @@ class Snarl :
                 allele_1, allele_2 = gt[:2]  # Extract the two alleles
 
                 if allele_1 != -1 and allele_2 != -1:  # TODO SPECIAL CASE 
-                    Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_1, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, row_header_dict, Matrix_list, idx_geno, idx_matrix)
-                    Matrix_list, idx_matrix = self.push_matrix(decomposed_snarl, allele_2, MATRIX_ROW_NUMBER, nb_matrix_column, row_header, row_header_dict, Matrix_list, idx_geno + 1, idx_matrix)
+                    self.push_chunk(chunk, decomposed_snarl, allele_1, nb_matrix_column, row_header_dict, idx_geno)
+                    self.push_chunk(chunk, decomposed_snarl, allele_2, nb_matrix_column, row_header_dict, idx_geno + 1)
 
                 idx_geno += 2  # push the index
 
-        print(f"Decomposed snarl found : {len(row_header)}")
-        #return Chunk.concatenate_matrix(Matrix_list), row_header, column_header, self.list_samples
-        return Matrix_list, row_header, column_header
+        print(f"Decomposed snarl found: {len(row_header_dict)}")
+        self.increase_matrix(chunk)
+        self.matrix.set_row_header(np.array(list(row_header_dict.keys()), dtype=str))
+        self.matrix.set_column_header(column_header)
 
     def check_pheno_group(self, group) :
         """Check if all sample name in the matrix are matching with phenotype else return error"""
@@ -187,61 +187,6 @@ class Snarl :
             reference_list.append(reference)
 
         return reference_list, res_table
-    
-    def quantitative_table(self, snarls, pheno) -> list : # list of dataframe
-        self.check_pheno_group(pheno)
-        res_table = []
-        res_reference = []
-        for ref, snarl in snarls.items() :
-            df = self.create_quantitative_table(snarl)
-            res_table.append(df)
-            res_reference.append(ref)
-
-        return res_reference, res_table
-    
-    def create_quantitative_table(self, column_headers) -> pd.DataFrame:
-
-        #print("column_headers : ", column_headers)
-        row_headers = self.matrix.get_row_header()
-        row_headers_dict = {header: idx for idx, header in enumerate(row_headers)}  # Dictionary for faster lookup
-        column_headers_header = self.list_samples
-        matrix = self.matrix.get_matrix()  # Retrieve matrix once
-        genotypes = []
-
-        # Iterate over each path_snarl in column_headers
-        for path_snarl in column_headers:
-            idx_srr_save = set(range(len(column_headers_header)))  # Use a set for efficient filtering
-            decomposed_snarl = self.decompose_string(path_snarl)
-
-            for snarl in decomposed_snarl:
-                if "*" in snarl:
-                    continue
-
-                if snarl in row_headers_dict:
-                    idx_row = row_headers_dict[snarl]
-                    matrix_row = matrix[idx_row]
-
-                    # Efficiently update idx_srr_save with indices where matrix_row is 1
-                    idx_srr_save.intersection_update(idx for idx in idx_srr_save if any(matrix_row[2 * idx: 2 * idx + 2]))
-
-                    # Early exit if no valid indices are left
-                    if not idx_srr_save:
-                        break
-                else:
-                    idx_srr_save.clear()  # Clear the set, indicating no match found
-                    break
-
-            genotype = [1 if idx in idx_srr_save else 0 for idx in range(len(column_headers_header))]
-            genotypes.append(genotype)
-
-        # Transposing the matrix
-        transposed_genotypes = list(map(list, zip(*genotypes)))
-        print("transposed_genotypes : ", transposed_genotypes)
-        print("column_headers_header : ", column_headers_header)
-
-        df = pd.DataFrame(transposed_genotypes, index=column_headers_header, columns=column_headers)
-        
-        return df
 
     def create_binary_table(self, groups, column_headers) -> pd.DataFrame :
         
@@ -287,7 +232,56 @@ class Snarl :
 
         # Create and return the DataFrame
         df = pd.DataFrame([g0, g1], index=['G0', 'G1'], columns=column_headers)
-        #print(df)
+        return df
+
+    def quantitative_table(self, snarls, pheno) -> list : # list of dataframe
+        self.check_pheno_group(pheno)
+        res_table = []
+        res_reference = []
+        for ref, snarl in snarls.items() :
+            df = self.create_quantitative_table(snarl)
+            res_table.append(df)
+            res_reference.append(ref)
+
+        return res_reference, res_table
+    
+    def create_quantitative_table(self, column_headers) -> pd.DataFrame:
+        row_headers = self.matrix.get_row_header()
+        row_headers_dict = {header: idx for idx, header in enumerate(row_headers)}  # Dictionary for faster lookup
+        column_headers_header = self.list_samples
+        matrix = self.matrix.get_matrix()
+        genotypes = []
+
+        # Iterate over each path_snarl in column_headers
+        for path_snarl in column_headers:
+            idx_srr_save = set(range(len(column_headers_header)))  # Use a set for efficient filtering
+            decomposed_snarl = self.decompose_string(path_snarl)
+
+            for snarl in decomposed_snarl:
+                if "*" in snarl:
+                    continue
+
+                if snarl in row_headers_dict:
+                    idx_row = row_headers_dict[snarl]
+                    matrix_row = matrix[idx_row]
+
+                    # Efficiently update idx_srr_save with indices where matrix_row is 1
+                    idx_srr_save.intersection_update(idx for idx in idx_srr_save if any(matrix_row[2 * idx: 2 * idx + 2]))
+
+                    # Early exit if no valid indices are left
+                    if not idx_srr_save:
+                        break
+                else:
+                    idx_srr_save.clear()  # Clear the set, indicating no match found
+                    break
+
+            genotype = [1 if idx in idx_srr_save else 0 for idx in range(len(column_headers_header))]
+            genotypes.append(genotype)
+
+        # Transposing the matrix
+        transposed_genotypes = list(map(list, zip(*genotypes)))
+        df = pd.DataFrame(transposed_genotypes, index=column_headers_header, columns=column_headers)
+        
         return df
 
     def linear_regression(self, list_dataframe, pheno) :
@@ -315,14 +309,12 @@ class Snarl :
 
         list_pvalue = []
         for df in list_dataframe:
-            #print("df : ", df)
             
             # Check if dataframe has at least 2 columns and more than 0 counts in every cell
             if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
                 try:
                     # Perform Chi-Square test
                     chi2, p_value, dof, expected = chi2_contingency(df)
-                    #print(f"Chi-Square Test p-value: {p_value}")
                 except ValueError as e:
                     print(f"Error in Chi-Square test: {e}")
                     p_value = "Error"
@@ -338,14 +330,12 @@ class Snarl :
 
         list_pvalue = []
         for df in list_dataframe :
-            #print(df)
             try:
                 odds_ratio, p_value = fisher_exact(df)
             except ValueError as e: 
                 p_value = 'N/A'
 
             list_pvalue.append(p_value)
-            #print(f"Fisher's Exact Test p-value: {p_value}")
         
         return list_pvalue
      
@@ -356,7 +346,7 @@ class Snarl :
 
         return fisher_p_value, chi2_p_value
 
-    def output_writing_binary(self, reference_list, list_pvalues, output_filename="binary_output.tsv") :
+    def output_writing_binary(self, reference_list, list_pvalues, output_filename="output/binary_output.tsv") :
         # Combine DataFrames and p-values into a single DataFrame for saving
         list_ficher = list_pvalues[0]
         list_chi = list_pvalues[1]
@@ -369,8 +359,7 @@ class Snarl :
         # Save to TSV
         df_combined.to_csv(output_filename, sep='\t', index=False)
 
-    def output_writing_quantitative(self, reference_list, list_pvalues, output_filename="quantitative_output.tsv") :
-        print("reference_list : ", reference_list)
+    def output_writing_quantitative(self, reference_list, list_pvalues, output_filename="output/quantitative_output.tsv") :
         df_combined = pd.DataFrame({
                 'Snarl': reference_list,
                 'P_value': list_pvalues
@@ -474,7 +463,7 @@ if __name__ == "__main__" :
     
     start = time.time()
     vcf_object = Snarl(args.vcf_path)
-    vcf_object.initialise_matrix()
+    vcf_object.fill_matrix()
     print(f"Time : {time.time() - start}")
     snarl = parse_snarl_path_file(args.snarl)
 
