@@ -69,12 +69,12 @@ class TestSnarlProcessing(unittest.TestCase):
         self.assertEqual(matrix.get_column_header(), column_header)
 
     def test_snarl_class(self):
-        snarl = snarl_vcf_parser.Snarl(self.vcf_file)
+        snarl = snarl_vcf_parser.SnarlProcessor(self.vcf_file)
         snarl.fill_matrix()
         self.assertIsInstance(snarl.matrix, snarl_vcf_parser.Matrix)
 
     def test_decompose_string_mixed_input(self):
-        snarl = snarl_vcf_parser.Snarl(self.vcf_file)
+        snarl = snarl_vcf_parser.SnarlProcessor(self.vcf_file)
         input_str = ">412>4<349>8"
         expected_output = [">412>4", ">4<349", "<349>8"]
         self.assertEqual(snarl.decompose_string(input_str), expected_output)

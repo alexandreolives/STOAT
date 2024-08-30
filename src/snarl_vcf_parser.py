@@ -25,10 +25,9 @@ class Chunk:
         return f"{self.chunk}"
 
 class Matrix :
-    def __init__(self, matrix=None, row_header=None, column_header=None):
+    def __init__(self, matrix=None, row_header=None):
         self.matrix = matrix
         self.row_header = row_header
-        self.column_header = column_header
     
     def get_matrix(self):
         return self.matrix
@@ -39,12 +38,6 @@ class Matrix :
     def set_row_header(self, row_header):
         self.row_header = row_header  
 
-    def get_column_header(self):
-        return self.column_header
-
-    def set_column_header(self, column_header):
-        self.column_header = column_header
-
     def __str__(self) :
         return f"     {self.column_header} \n" \
                f"{self.row_header[0]} {self.matrix[0]} \n" \
@@ -53,27 +46,28 @@ class Matrix :
                f"{self.row_header[3]} {self.matrix[3]} \n" \
                f"{self.row_header[4]} {self.matrix[4]} \n"
 
-class Snarl:
+class SnarlProcessor:
     def __init__(self, vcf_path: str):
         self.defauld_chunck_matrix_row_number = 100000
         self.list_samples = VCF(vcf_path).samples
         self.matrix = Matrix()
+        self.chunk = Chunk(self.defauld_chunck_matrix_row_number, len(self.list_samples) * 2)
         self.vcf_path = vcf_path
 
     def get_matrix(self) :
         return self.matrix
 
-    def increase_matrix(self, chunk, axis=0):
+    def increase_matrix(self, axis=0):
         """Increase the matrix size by concatenating a new chunk."""
         matrix_data = self.matrix.get_matrix()
 
         # Check if matrix_data is None or has data
         if matrix_data is not None and matrix_data.size > 0:
             # Concatenate along the specified axis
-            self.matrix = Matrix(np.concatenate((matrix_data, chunk.get_chunk()), axis=axis))
+            self.matrix = Matrix(np.concatenate((matrix_data, self.chunk.get_chunk()), axis=axis))
         else:
             # Initialize with the new chunk if the matrix is empty
-            self.matrix = Matrix(chunk.get_chunk())
+            self.matrix = Matrix(self.chunk.get_chunk())
         
     def determine_str(self, s: str, length_s : int, i: int) -> tuple[int, int]:
         """Extract an integer from a string starting at index i."""
@@ -119,7 +113,7 @@ class Snarl:
             ordered_dict[key] = new_index
             return new_index
     
-    def push_chunk(self, chunk, idx_snarl, decomposed_snarl, allele, nb_matrix_column, row_header_dict, index_column):
+    def push_chunk(self, idx_snarl, decomposed_snarl, allele, nb_matrix_column, row_header_dict, index_column):
         """Add True to the matrix if snarl is found"""
 
         if allele == idx_snarl:
@@ -129,23 +123,19 @@ class Snarl:
 
             # Check if a new matrix chunk is needed (only if length > 1)
             if length_ordered_dict > 1 and length_ordered_dict % self.defauld_chunck_matrix_row_number == 1:
-                self.increase_matrix(chunk)
-                chunk = Chunk(self.defauld_chunck_matrix_row_number, nb_matrix_column)
+                self.increase_matrix()
+                self.chunk = Chunk(self.defauld_chunck_matrix_row_number, nb_matrix_column)
 
             # Compute index row
             row_index = idx_snarl % self.defauld_chunck_matrix_row_number
             
             # Add data to the matrix
-            chunk.add_data(row_index, index_column)
-
-        return chunk
+            self.chunk.add_data(row_index, index_column)
     
     def fill_matrix(self): # TODO : special case where snarl decomposed are between 2 chunk ... 
         """Parse VCF file (main function)"""
         row_header_dict = OrderedDict()
-        column_header = [f"{sample}_{i}" for sample in self.list_samples for i in range(2)]
         nb_matrix_column = len(self.list_samples) * 2
-        chunk = Chunk(self.defauld_chunck_matrix_row_number, nb_matrix_column)
 
         # Parse variant line by line
         for variant in VCF(self.vcf_path):
@@ -163,12 +153,11 @@ class Snarl:
                         # Push chunks only if both alleles are valid
                         if allele_1 != -1 and allele_2 != -1:
                             col_idx = index_column * 2
-                            self.push_chunk(chunk, idx_snarl, decomposed_snarl, allele_1, nb_matrix_column, row_header_dict, col_idx)
-                            self.push_chunk(chunk, idx_snarl, decomposed_snarl, allele_2, nb_matrix_column, row_header_dict, col_idx + 1)
+                            self.push_chunk(idx_snarl, decomposed_snarl, allele_1, nb_matrix_column, row_header_dict, col_idx)
+                            self.push_chunk(idx_snarl, decomposed_snarl, allele_2, nb_matrix_column, row_header_dict, col_idx + 1)
 
-        self.increase_matrix(chunk)
-        self.matrix.set_row_header(list(row_header_dict.keys()))
-        self.matrix.set_column_header(column_header)
+        self.increase_matrix()
+        self.matrix.set_row_header(row_header_dict.keys())
 
     def check_pheno_group(self, group) :
         """Check if all sample name in the matrix are matching with phenotype else return error"""
@@ -197,9 +186,33 @@ class Snarl:
 
         return reference_list, res_table
 
+    def identify_correct_path(self, decomposed_snarl : list, row_headers_dict : list, idx_srr_save : list) -> list:
+        matrix = self.matrix.get_matrix()
+
+        for snarl in decomposed_snarl:
+            if "*" in snarl:
+                continue
+
+            if snarl in row_headers_dict:
+                idx_row = row_headers_dict[snarl]
+
+                # Efficiently update idx_srr_save with indices where matrix_row is 1
+                extracted_rows = matrix[idx_row]
+                column_sums = np.sum(extracted_rows, axis=0)
+                idx_srr_save = [i for i, sum_val in enumerate(column_sums) if sum_val == len(idx_row)]
+
+                # Early exit if no valid indices are left
+                if not idx_srr_save:
+                    break
+            else:
+                idx_srr_save.clear()  # Clear the set, indicating no match found
+                break
+
+        return idx_srr_save
+
     def create_binary_table(self, groups, list_path_snarl) -> pd.DataFrame :
         """Generates a binary table DataFrame indicating the presence of snarl paths in given groups based on matrix data"""
-        list_decomposed_snarl = self.matrix.get_row_header()
+        row_headers_dict = self.matrix.get_row_header()
         list_samples = self.list_samples
         length_column_headers = len(list_path_snarl)
 
@@ -209,35 +222,17 @@ class Snarl:
 
         # Iterate over each path_snarl in column_headers
         for idx_g, path_snarl in enumerate(list_path_snarl):
-            idx_srr_save = list(range(len(list_samples)))  # Initialize with all indices
+            idx_srr_save = list(range(len(list_samples)))
             decomposed_snarl = self.decompose_string(path_snarl)
-
-            for snarl in decomposed_snarl:
-                # Suppose that at least one snarl pass thought
-                # Case * in snarl
-                if "*" in snarl:
-                    continue
-
-                else :
-                    if any(snarl in header for header in list_decomposed_snarl) :
-                        idx_row = list_decomposed_snarl.index(snarl) #TODO : Optimize
-                        matrix_row = self.matrix.get_matrix()[idx_row]
-
-                        # Update idx_srr_save only where indices row is 1
-                        idx_srr_save = [idx for idx in idx_srr_save if any(matrix_row[2 * idx: 2 * idx + 2])]
-   
-                    else :
-                        idx_srr_save = []
-                        break
+            idx_srr_save = self.identify_correct_path(decomposed_snarl, row_headers_dict, idx_srr_save)
             
             # Count occurrences in g0 and g1 based on the updated idx_srr_save
-            for snarl in list_path_snarl:
-                for idx in idx_srr_save :
-                    srr = list_samples[idx]
-                    if srr in groups[0]:
-                        g0[idx_g] += 1
-                    if srr in groups[1]:  
-                        g1[idx_g] += 1
+            for idx in idx_srr_save :
+                srr = list_samples[idx]
+                if srr in groups[0]:
+                    g0[idx_g] += 1
+                if srr in groups[1]:  
+                    g1[idx_g] += 1
 
         # Create and return the DataFrame
         df = pd.DataFrame([g0, g1], index=['G0', 'G1'], columns=list_path_snarl)
@@ -251,35 +246,16 @@ class Snarl:
 
         return res_table
     
-    def create_quantitative_table(self, column_headers) -> pd.DataFrame:
-        row_headers = self.matrix.get_row_header()
-        row_headers_dict = {header: idx for idx, header in enumerate(row_headers)}  # Dictionary for faster lookup
+    def create_quantitative_table(self, column_headers : list) -> pd.DataFrame:
+        row_headers_dict = self.matrix.get_row_header()
         column_headers_header = self.list_samples
-        matrix = self.matrix.get_matrix()
         genotypes = []
 
         # Iterate over each path_snarl in column_headers
         for path_snarl in column_headers:
-            idx_srr_save = set(range(len(column_headers_header)))  # Use a set for efficient filtering
+            idx_srr_save = list(range(len(column_headers_header)))
             decomposed_snarl = self.decompose_string(path_snarl)
-
-            for snarl in decomposed_snarl:
-                if "*" in snarl:
-                    continue
-
-                if snarl in row_headers_dict:
-                    idx_row = row_headers_dict[snarl]
-                    matrix_row = matrix[idx_row]
-
-                    # Efficiently update idx_srr_save with indices where matrix_row is 1
-                    idx_srr_save.intersection_update(idx for idx in idx_srr_save if any(matrix_row[2 * idx: 2 * idx + 2]))
-
-                    # Early exit if no valid indices are left
-                    if not idx_srr_save:
-                        break
-                else:
-                    idx_srr_save.clear()  # Clear the set, indicating no match found
-                    break
+            idx_srr_save = self.identify_correct_path(decomposed_snarl, row_headers_dict, idx_srr_save)
 
             genotype = [1 if idx in idx_srr_save else 0 for idx in range(len(column_headers_header))]
             genotypes.append(genotype)
@@ -289,7 +265,7 @@ class Snarl:
         df = pd.DataFrame(transposed_genotypes, index=column_headers_header, columns=column_headers)
         return df
 
-    def linear_regression(self, list_dataframe, pheno) :
+    def linear_regression(self, list_dataframe : list, pheno : dict) -> list :
 
         list_pvalue = []
         for df in list_dataframe :
@@ -328,7 +304,7 @@ class Snarl:
             
         return list_pvalue
 
-    def fisher_test(self, list_dataframe) : 
+    def fisher_test(self, list_dataframe : list) -> list : 
         """Calcul p_value from list of dataframe using fisher exact test"""
 
         list_pvalue = []
@@ -343,7 +319,7 @@ class Snarl:
         
         return list_pvalue
      
-    def binary_stat_test(self, list_dataframe) :
+    def binary_stat_test(self, list_dataframe : list) :
 
         fisher_p_value = self.fisher_test(list_dataframe)
         chi2_p_value = self.chi2_test(list_dataframe)
@@ -358,6 +334,10 @@ class Snarl:
             'Snarl': reference_list,
             'P_value (Fisher)': list_ficher,
             'P_value (Chi2)': list_chi
+            #add number path
+            #sum de toute la table
+            #sum g0 et sum g1 et min (G0 ^ G1)
+            #sum // column
         })
         
         df_combined.to_csv(output_filename, sep='\t', index=False)
@@ -367,40 +347,37 @@ class Snarl:
         df_combined = pd.DataFrame(list_pvalues, columns=['Snarl', 'P_value'])
         df_combined.to_csv(output_filename, sep='\t', index=False)
 
-def parse_group_file(groupe_file):
-    group_0 = []
-    group_1 = []
-
-    with open(groupe_file, 'r') as file:
-        for line in file:
-            if line.strip():  # Check if the line is not empty
-                parts = line.split()
-                group_0.append(parts[0])
-
-                if len(parts) > 1:
-                    group_1.append(parts[1])
-                else:
-                    group_1.append('')  # Append an empty string if the second group is missing
-
+def parse_group_file(group_file : str):
+    # Read the file into a DataFrame
+    df = pd.read_csv(group_file, sep='\t')
+    
+    # Check if the required columns are present
+    required_columns = {'sample', 'group'}
+    if not required_columns.issubset(df.columns):
+        raise ValueError(f"Missing required columns. The file must contain the following columns: {required_columns}")
+    
+    # Extract samples belonging to group 0 and group 1
+    group_0 = df[df['group'] == 0]['sample'].tolist()
+    group_1 = df[df['group'] == 1]['sample'].tolist()
+    
     return group_0, group_1
 
-def parse_pheno_file(file_path):
+def parse_pheno_file(file_path : str) -> dict:
+    # Read the file into a DataFrame
+    df = pd.read_csv(file_path, delim_whitespace=True, header=None)
 
-    parsed_data = {}
-    with open(file_path, 'r') as file:
-        # Skip the header line
-        next(file)
-        
-        # Process each subsequent line
-        for line in file:
-            parts = line.strip().split()
-            if len(parts) != 3:
-                raise ValueError(f"The line '{line.strip()}' does not have exactly 3 columns.")
-            
-            sample_name = parts[1]  # IID
-            phenotype = parts[2]    # PHENO
-            parsed_data[sample_name] = float(phenotype)
+    # Check if the required headers are present
+    required_headers = ['FID', 'IID', 'PHENO']
+    if not all(header in df.columns for header in required_headers):
+        raise ValueError(f"The file must contain the following headers: {required_headers}")
     
+    # Ensure that only the required headers are present
+    if list(df.columns) != required_headers:
+        raise ValueError(f"The file contains unexpected columns. Expected columns: {required_headers}")
+    
+    # Extract the IID (second column) and PHENO (third column) and convert PHENO to float
+    parsed_data = df.set_index(1)[2].astype(float).to_dict()
+
     return parsed_data
 
 def parse_snarl_path_file(path_file: str) -> dict:
@@ -422,7 +399,7 @@ def parse_snarl_path_file(path_file: str) -> dict:
     
     return snarl_paths
 
-def check_format_vcf_file(file_path):
+def check_format_vcf_file(file_path : str) -> str:
     """
     Function to check if the provided file path is a valid VCF file.
     """
@@ -433,7 +410,7 @@ def check_format_vcf_file(file_path):
         raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid VCF file. It must have a .vcf extension or .vcf.gz.")
     return file_path
 
-def check_format_group_snarl(file_path):
+def check_format_group_snarl(file_path : str) -> str :
     """
     Function to check if the provided file path is a valid group file.
     """
@@ -444,7 +421,7 @@ def check_format_group_snarl(file_path):
         raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid group/snarl file. It must have a .txt extension or .tsv.")
     return file_path
     
-def check_format_pheno(file_path):
+def check_format_pheno(file_path : str) -> str :
 
     with open(file_path, 'r') as file:
         first_line = file.readline().strip()
@@ -466,7 +443,7 @@ if __name__ == "__main__" :
     args = parser.parse_args()
     
     start = time.time()
-    vcf_object = Snarl(args.vcf_path)
+    vcf_object = SnarlProcessor(args.vcf_path)
     vcf_object.fill_matrix()
     print(f"Time Matrix : {time.time() - start} s")
     start = time.time()
