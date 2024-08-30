@@ -4,22 +4,13 @@ import pandas as pd
 from unittest.mock import patch
 import snarl_vcf_parser
 from collections import defaultdict
-import os
 
 class TestSnarlProcessing(unittest.TestCase):
 
     def setUp(self):
-        # Sample data for testing
-        self.vcf_data = """
-        #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	Sample1	Sample2
-        chr1	12345	rs1	A	T	.	.	AT=1>2;GT:1|0	0/1	0/0
-        chr1	12346	rs2	G	C	.	.	AT=2>3;GT:0|1	1/1	0/1
-        """
-        self.vcf_file = 'test.vcf'
-        with open(self.vcf_file, 'w') as f:
-            f.write(self.vcf_data)
+        self.vcf_file = "test/small_vcf.vcf"
 
-        self.group_file_data = "Group0\tGroup1\nA\tB\nC\tD\n"
+        self.group_file_data = "A\tB\nC\tD\n"
         self.group_file = 'test_group.txt'
         with open(self.group_file, 'w') as f:
             f.write(self.group_file_data)
@@ -82,11 +73,11 @@ class TestSnarlProcessing(unittest.TestCase):
         snarl.fill_matrix()
         self.assertIsInstance(snarl.matrix, snarl_vcf_parser.Matrix)
 
-    def tearDown(self):
-        os.remove(self.vcf_file)
-        os.remove(self.group_file)
-        os.remove(self.pheno_file)
-        os.remove(self.snarl_path_file)
+    def test_decompose_string_mixed_input(self):
+        snarl = snarl_vcf_parser.Snarl(self.vcf_file)
+        input_str = ">412>4<349>8"
+        expected_output = [">412>4", ">4<349", "<349>8"]
+        self.assertEqual(snarl.decompose_string(input_str), expected_output)
 
 if __name__ == '__main__':
     unittest.main()
