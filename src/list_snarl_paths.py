@@ -21,7 +21,7 @@ class Path:
         # trivial chain
         if stree.is_trivial_chain(node_h):
             node_s = node_s.replace(' pretending to be a chain', '')
-            node_s = node_s.replace(' in a simple snarl ', '')
+            node_s = node_s.replace(' in a simple snarl', '')
 
         # parse node info
         node_s = node_s.replace('node ', '')
@@ -149,6 +149,7 @@ if __name__ == "__main__" :
                 stree.follow_net_edges(path[-1], pg, False, lambda n: add_to_path(n))
 
             # prepare path list to output and write each path directly to the file
+            pretty_paths = []
             for path in finished_paths:
                 ppath = Path()
                 for net in path:
@@ -171,10 +172,10 @@ if __name__ == "__main__" :
                 # check if path is mostly traversing nodes in reverse orientation
                 if ppath.nreversed() > ppath.size() / 2:
                     ppath.flip()
-
+                pretty_paths.append(ppath.print())
                 # write each path directly to the file
-                outf.write('{}\t{}\n'.format(snarl_id, ppath.print()))
-                npaths += 1
+            outf.write('{}\t{}\n'.format(snarl_id, ','.join(pretty_paths)))
+            npaths += len(pretty_paths)
 
     print(f'Total paths written: {npaths}')
 

@@ -320,7 +320,6 @@ class Snarl:
                     # Perform Chi-Square test
                     chi2, p_value, dof, expected = chi2_contingency(df)
                 except ValueError as e:
-                    #print(f"Error in Chi-Square test: {e}")
                     p_value = "Error"
             else:
                 p_value = "N/A"
@@ -336,6 +335,7 @@ class Snarl:
         for df in list_dataframe :
             try:
                 odds_ratio, p_value = fisher_exact(df)
+
             except ValueError as e: 
                 p_value = 'N/A'
 
@@ -404,17 +404,23 @@ def parse_pheno_file(file_path):
     return parsed_data
 
 def parse_snarl_path_file(path_file: str) -> dict:
-    path_list = defaultdict(list)
-
-    with open(path_file, 'r') as file:
-        next(file)
-
-        for line in file:
-            if line.strip():  # Skip empty lines
-                snarl, aT = line.split()  
-                path_list[snarl].append(aT)
-
-    return path_list
+    # Initialize a defaultdict with lists as default values
+    snarl_paths = defaultdict(list)
+    
+    # Read the file using pandas
+    df = pd.read_csv(path_file, sep='\t', dtype=str)
+    
+    # Iterate through the DataFrame rows
+    for _, row in df.iterrows():
+        snarl = row['snarl']
+        paths = row['paths']
+        
+        # Split paths by comma and add them to the defaultdict
+        if pd.notna(paths):
+            path_list = paths.split(',')
+            snarl_paths[snarl].extend(path_list)
+    
+    return snarl_paths
 
 def check_format_vcf_file(file_path):
     """
@@ -462,10 +468,10 @@ if __name__ == "__main__" :
     start = time.time()
     vcf_object = Snarl(args.vcf_path)
     vcf_object.fill_matrix()
-    print(f"Time : {time.time() - start}")
+    print(f"Time Matrix : {time.time() - start} s")
+    start = time.time()
 
     snarl = parse_snarl_path_file(args.snarl)
-    print("snarl : ", snarl)
 
     if args.binary:
         binary_group = parse_group_file(args.binary)
@@ -487,5 +493,5 @@ if __name__ == "__main__" :
         else :
             vcf_object.output_writing_quantitative(quantitative_p_value)
 
-    print(f"Time : {time.time() - start} s")
+    print(f"Time P-value: {time.time() - start} s")
 
