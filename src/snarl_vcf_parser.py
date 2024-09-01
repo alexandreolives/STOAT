@@ -10,24 +10,11 @@ from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact
 import os
 import time
-
-class Chunk:
-    def __init__(self, MATRIX_ROW_NUMBER, nb_matrix_column):
-        self.chunk = np.zeros((MATRIX_ROW_NUMBER, nb_matrix_column), dtype=bool)
-
-    def add_data(self, idx_snarl, idx_geno):
-        self.chunk[idx_snarl, idx_geno] = 1
-
-    def get_chunk(self) :
-        return self.chunk
     
-    def __str__(self) :
-        return f"{self.chunk}"
-
 class Matrix :
-    def __init__(self, matrix=None, row_header=None):
-        self.matrix = matrix
-        self.row_header = row_header
+    def __init__(self, default_row_number=100000, column_number=2):
+        self.matrix = np.zeros((default_row_number, column_number),dtype=bool)
+        self.row_header = OrderedDict()
     
     def get_matrix(self):
         return self.matrix
@@ -38,9 +25,11 @@ class Matrix :
     def set_row_header(self, row_header):
         self.row_header = row_header  
 
+    def add_data(self, idx_snarl, idx_geno):
+        self.matrix[idx_snarl, idx_geno] = 1
+
     def __str__(self) :
-        return f"     {self.column_header} \n" \
-               f"{self.row_header[0]} {self.matrix[0]} \n" \
+        return f"{self.row_header[0]} {self.matrix[0]} \n" \
                f"{self.row_header[1]} {self.matrix[1]} \n" \
                f"{self.row_header[2]} {self.matrix[2]} \n" \
                f"{self.row_header[3]} {self.matrix[3]} \n" \
@@ -48,27 +37,25 @@ class Matrix :
 
 class SnarlProcessor:
     def __init__(self, vcf_path: str):
-        self.defauld_chunck_matrix_row_number = 100000
         self.list_samples = VCF(vcf_path).samples
-        self.matrix = Matrix()
-        self.chunk = Chunk(self.defauld_chunck_matrix_row_number, len(self.list_samples) * 2)
+        self.matrix = Matrix(100000, len(self.list_samples)*2)
         self.vcf_path = vcf_path
 
-    def get_matrix(self) :
-        return self.matrix
+    def expand_matrix(self):
+        """
+        Expands a given numpy matrix by doubling the number of rows.
+        """
 
-    def increase_matrix(self, axis=0):
-        """Increase the matrix size by concatenating a new chunk."""
-        matrix_data = self.matrix.get_matrix()
+        data_matrix = self.matrix.get_matrix()
+        current_rows, current_cols = data_matrix.shape
+        new_rows = current_rows * 2
 
-        # Check if matrix_data is None or has data
-        if matrix_data is not None and matrix_data.size > 0:
-            # Concatenate along the specified axis
-            self.matrix = Matrix(np.concatenate((matrix_data, self.chunk.get_chunk()), axis=axis))
-        else:
-            # Initialize with the new chunk if the matrix is empty
-            self.matrix = Matrix(self.chunk.get_chunk())
-        
+        # Create a new matrix of zeros with the expanded size
+        expanded_matrix = np.zeros((new_rows, current_cols), dtype=data_matrix.dtype)
+        expanded_matrix[:current_rows, :] = data_matrix
+
+        return expanded_matrix
+            
     def determine_str(self, s: str, length_s : int, i: int) -> tuple[int, int]:
         """Extract an integer from a string starting at index i."""
         start_idx = i
@@ -113,8 +100,10 @@ class SnarlProcessor:
             ordered_dict[key] = new_index
             return new_index
     
-    def push_chunk(self, idx_snarl, decomposed_snarl, allele, nb_matrix_column, row_header_dict, index_column):
+    def push_matrix(self, idx_snarl, decomposed_snarl, allele, row_header_dict, index_column):
         """Add True to the matrix if snarl is found"""
+
+        current_rows, _ = self.matrix.get_matrix().shape
 
         if allele == idx_snarl:
             # Retrieve or add the index in one step and calculate the length once
@@ -122,20 +111,32 @@ class SnarlProcessor:
             idx_snarl = self.get_or_add_index(row_header_dict, decomposed_snarl, length_ordered_dict)
 
             # Check if a new matrix chunk is needed (only if length > 1)
-            if length_ordered_dict > 1 and length_ordered_dict % self.defauld_chunck_matrix_row_number == 1:
-                self.increase_matrix()
-                self.chunk = Chunk(self.defauld_chunck_matrix_row_number, nb_matrix_column)
+            if length_ordered_dict > 1 and length_ordered_dict > current_rows :
+                self.expand_matrix()
 
             # Compute index row
-            row_index = idx_snarl % self.defauld_chunck_matrix_row_number
+            row_index = idx_snarl
             
             # Add data to the matrix
-            self.chunk.add_data(row_index, index_column)
-    
+            self.matrix.add_data(row_index, index_column)
+
+    def truncate_matrix(self, max_rows):
+        """
+        Truncates the matrix to a specified maximum number of rows.
+        """
+
+        data_matrix = self.matrix.get_matrix()
+        current_rows, _ = data_matrix.shape
+        if max_rows == current_rows:
+            return data_matrix
+
+        truncated_matrix = data_matrix[:max_rows, :]
+
+        return truncated_matrix
+
     def fill_matrix(self): # TODO : special case where snarl decomposed are between 2 chunk ... 
         """Parse VCF file (main function)"""
         row_header_dict = OrderedDict()
-        nb_matrix_column = len(self.list_samples) * 2
 
         # Parse variant line by line
         for variant in VCF(self.vcf_path):
@@ -150,14 +151,13 @@ class SnarlProcessor:
                     for index_column, gt in enumerate(genotypes):
                         allele_1, allele_2 = gt[:2]  # Extract alleles
                         
-                        # Push chunks only if both alleles are valid
+                        # Push matrix only if both alleles are valid
                         if allele_1 != -1 and allele_2 != -1:
                             col_idx = index_column * 2
-                            self.push_chunk(idx_snarl, decomposed_snarl, allele_1, nb_matrix_column, row_header_dict, col_idx)
-                            self.push_chunk(idx_snarl, decomposed_snarl, allele_2, nb_matrix_column, row_header_dict, col_idx + 1)
+                            self.push_matrix(idx_snarl, decomposed_snarl, allele_1, row_header_dict, col_idx)
+                            self.push_matrix(idx_snarl, decomposed_snarl, allele_2, row_header_dict, col_idx + 1)
 
-        self.increase_matrix()
-        self.matrix.set_row_header(row_header_dict.keys())
+        self.matrix.set_row_header(row_header_dict)
 
     def check_pheno_group(self, group) :
         """Check if all sample name in the matrix are matching with phenotype else return error"""
@@ -186,28 +186,25 @@ class SnarlProcessor:
 
         return reference_list, res_table
 
-    def identify_correct_path(self, decomposed_snarl : list, row_headers_dict : list, idx_srr_save : list) -> list:
+    def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
         matrix = self.matrix.get_matrix()
-
-        for snarl in decomposed_snarl:
-            if "*" in snarl:
-                continue
-
-            if snarl in row_headers_dict:
+        rows_to_check = []
+        
+        for snarl in decomposed_snarl :
+            if "*" not in snarl and snarl in row_headers_dict :
                 idx_row = row_headers_dict[snarl]
-
-                # Efficiently update idx_srr_save with indices where matrix_row is 1
-                extracted_rows = matrix[idx_row]
-                column_sums = np.sum(extracted_rows, axis=0)
-                idx_srr_save = [i for i, sum_val in enumerate(column_sums) if sum_val == len(idx_row)]
-
-                # Early exit if no valid indices are left
-                if not idx_srr_save:
-                    break
+                rows_to_check.append(idx_row)
             else:
-                idx_srr_save.clear()  # Clear the set, indicating no match found
-                break
+                return [] 
+            
+        if not rows_to_check :
+            return []
 
+        rows_to_check = np.array(rows_to_check)
+        extracted_rows = matrix[rows_to_check, :]
+        columns_all_ones = np.all(extracted_rows == 1, axis=0)
+        idx_srr_save = np.where(columns_all_ones)[0].tolist()
+        
         return idx_srr_save
 
     def create_binary_table(self, groups, list_path_snarl) -> pd.DataFrame :
@@ -228,7 +225,8 @@ class SnarlProcessor:
             
             # Count occurrences in g0 and g1 based on the updated idx_srr_save
             for idx in idx_srr_save :
-                srr = list_samples[idx]
+                srr = list_samples[idx//2]
+
                 if srr in groups[0]:
                     g0[idx_g] += 1
                 if srr in groups[1]:  
