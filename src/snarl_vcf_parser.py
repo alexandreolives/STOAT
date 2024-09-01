@@ -187,6 +187,9 @@ class SnarlProcessor:
         return reference_list, res_table
 
     def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
+        """
+        Return a list of column index where all specifique element of this column of matrix are 1
+        """
         matrix = self.matrix.get_matrix()
         rows_to_check = []
         
@@ -350,9 +353,9 @@ def parse_group_file(group_file : str):
     df = pd.read_csv(group_file, sep='\t')
     
     # Check if the required columns are present
-    required_columns = {'sample', 'group'}
-    if not required_columns.issubset(df.columns):
-        raise ValueError(f"Missing required columns. The file must contain the following columns: {required_columns}")
+    required_headers = {'sample', 'group'}
+    if not required_headers.issubset(df.columns):
+        raise ValueError(f"Missing required columns. The file must contain the following columns: {required_headers}")
     
     # Extract samples belonging to group 0 and group 1
     group_0 = df[df['group'] == 0]['sample'].tolist()
@@ -362,21 +365,17 @@ def parse_group_file(group_file : str):
 
 def parse_pheno_file(file_path : str) -> dict:
     # Read the file into a DataFrame
-    df = pd.read_csv(file_path, delim_whitespace=True, header=None)
+    df = pd.read_csv(file_path, sep='\t')
 
     # Check if the required headers are present
-    required_headers = ['FID', 'IID', 'PHENO']
-    if not all(header in df.columns for header in required_headers):
+    required_headers = {'FID', 'IID', 'PHENO'}
+    if not required_headers.issubset(df.columns):
         raise ValueError(f"The file must contain the following headers: {required_headers}")
-    
-    # Ensure that only the required headers are present
-    if list(df.columns) != required_headers:
-        raise ValueError(f"The file contains unexpected columns. Expected columns: {required_headers}")
-    
-    # Extract the IID (second column) and PHENO (third column) and convert PHENO to float
-    parsed_data = df.set_index(1)[2].astype(float).to_dict()
 
-    return parsed_data
+    # Extract the IID (second column) and PHENO (third column) and convert PHENO to float
+    parsed_pheno = dict(zip(df['IID'], df['PHENO']))
+
+    return parsed_pheno
 
 def parse_snarl_path_file(path_file: str) -> dict:
     # Initialize a defaultdict with lists as default values
