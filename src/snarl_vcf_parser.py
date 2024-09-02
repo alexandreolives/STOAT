@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from collections import defaultdict
-from collections import OrderedDict
 from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact
 import os
@@ -14,7 +13,7 @@ import time
 class Matrix :
     def __init__(self, default_row_number=100000, column_number=2):
         self.matrix = np.zeros((default_row_number, column_number),dtype=bool)
-        self.row_header = OrderedDict()
+        self.row_header = None
     
     def get_matrix(self):
         return self.matrix
@@ -48,7 +47,9 @@ class SnarlProcessor:
 
         data_matrix = self.matrix.get_matrix()
         current_rows, current_cols = data_matrix.shape
-        new_rows = current_rows * 2
+        #TODO : test performance
+        #new_rows = current_rows * 2 # multiply by 2
+        new_rows = current_rows + 100000 # add 100000 row  
 
         # Create a new matrix of zeros with the expanded size
         expanded_matrix = np.zeros((new_rows, current_cols), dtype=data_matrix.dtype)
@@ -134,9 +135,9 @@ class SnarlProcessor:
 
         return truncated_matrix
 
-    def fill_matrix(self): # TODO : special case where snarl decomposed are between 2 chunk ... 
+    def fill_matrix(self):
         """Parse VCF file (main function)"""
-        row_header_dict = OrderedDict()
+        row_header_dict = dict()
 
         # Parse variant line by line
         for variant in VCF(self.vcf_path):
