@@ -282,6 +282,8 @@ class SnarlProcessor:
 
             # Extract p-values from the fitted model and format as a list of tuples
             for index, pval in model.pvalues.items() :
+                if str(pval) == 'nan' :
+                    pval = "N/A"
                 list_pvalue.append((index, pval))
         return list_pvalue
 
