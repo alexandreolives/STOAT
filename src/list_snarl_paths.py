@@ -110,43 +110,43 @@ if __name__ == "__main__" :
             send = stree.get_node_from_sentinel(send)
             snarl_id = '{}_{}'.format(stree.node_id(sstart),
                                     stree.node_id(send))
+            
             # we'll traverse the netgraph starting at the left boundary
             # init unfinished paths to the first boundary node
             paths = [[stree.get_bound(snarl, False, True)]]
             finished_paths = []
-            # while there are still unfinished paths, pop one path, follow net edges
-            # to get the next step from the last node in the path, and then either
-            # remember the completed path or remember to continue traversing
+            
             while len(paths) > 0:
                 path = paths.pop()
 
-                # helper function to add the next child to the path we're building and
-                # either add it to the list of completed paths or the list of paths
-                # to continue building
-                def add_to_path(next_child):
+                # TODO : case where paths loop over and over 
+                def add_to_path(next_child) :
                     if stree.is_sentinel(next_child):
                         # If this is the bound of the snarl then we're done
                         # Because we only traverse in the netgraph, it can only be the
                         # bound of the parent snarl
-                        # Explicitly make a deep copy of the path because
-                        # idk how to do it in python (<- Xian)
                         finished_paths.append([])
                         for net in path:
                             finished_paths[-1].append(net)
                         finished_paths[-1].append(next_child)
-                    else:
-                        # If we reached sibling child of the snarl,
-                        # then continue the traversal
-                        # Do another copy into the other list of paths
+                    else :
                         paths.append([])
                         for net in path:
                             paths[-1].append(net)
                         paths[-1].append(next_child)
                     return True
 
-                # run add_to_path for everything one step out
                 # from the last thing in the path
-                stree.follow_net_edges(path[-1], pg, False, lambda n: add_to_path(n))
+                stree.follow_net_edges(path[-1], pg, False, add_to_path)
+
+                if idx == 3010 :
+                    
+                    print("len(paths) : ", len(paths))
+                    print("path : ", path)
+                    print("paths : ", paths)
+
+                    if len(paths) > 10 :
+                        break 
 
             # prepare path list to output and write each path directly to the file
             pretty_paths = []
@@ -173,7 +173,8 @@ if __name__ == "__main__" :
                 if ppath.nreversed() > ppath.size() / 2:
                     ppath.flip()
                 pretty_paths.append(ppath.print())
-                # write each path directly to the file
+                
+            # write each path directly to the file
             outf.write('{}\t{}\n'.format(snarl_id, ','.join(pretty_paths)))
             npaths += len(pretty_paths)
 
