@@ -17,6 +17,9 @@ class Matrix :
     
     def get_matrix(self):
         return self.matrix
+    
+    def set_matrix(self, expended_matrix) :
+        self.matrix = expended_matrix
 
     def get_row_header(self):
         return self.row_header
@@ -54,8 +57,7 @@ class SnarlProcessor:
         # Create a new matrix of zeros with the expanded size
         expanded_matrix = np.zeros((new_rows, current_cols), dtype=data_matrix.dtype)
         expanded_matrix[:current_rows, :] = data_matrix
-
-        return expanded_matrix
+        self.matrix.set_matrix(expanded_matrix)
             
     def determine_str(self, s: str, length_s : int, i: int) -> tuple[int, int]:
         """Extract an integer from a string starting at index i."""
@@ -104,7 +106,7 @@ class SnarlProcessor:
     def push_matrix(self, idx_snarl, decomposed_snarl, allele, row_header_dict, index_column):
         """Add True to the matrix if snarl is found"""
 
-        current_rows, _ = self.matrix.get_matrix().shape
+        current_rows_number, _ = self.matrix.get_matrix().shape
 
         if allele == idx_snarl:
             # Retrieve or add the index in one step and calculate the length once
@@ -112,7 +114,7 @@ class SnarlProcessor:
             idx_snarl = self.get_or_add_index(row_header_dict, decomposed_snarl, length_ordered_dict)
 
             # Check if a new matrix chunk is needed (only if length > 1)
-            if length_ordered_dict > 1 and length_ordered_dict > current_rows :
+            if length_ordered_dict > 1 and length_ordered_dict > current_rows_number -1 :
                 self.expand_matrix()
 
             # Compute index row
@@ -176,17 +178,41 @@ class SnarlProcessor:
         if missing_elements:
             raise ValueError(f"The following elements from set_sample are not present in set_group: {missing_elements}")
 
-    def binary_table(self, snarls, binary_groups) -> list : # list of dataframe
+    def binary_table(self, snarls, binary_groups, output="output/binary_output.tsv") : 
+
         self.check_pheno_group(binary_groups)
-        res_table = []
-        reference_list = []
-        for reference, list_snarl in snarls.items() :
-            df = self.create_binary_table(binary_groups, list_snarl)
-            res_table.append(df)
-            reference_list.append(reference)
 
-        return reference_list, res_table
+        # Check if headers are already present; if not, write them
+        with open(output, 'wb') as outf:
+            headers = 'Snarl\tP_value (Fisher)\tP_value (Chi2)\n'
+            outf.write(headers.encode('utf-8'))
 
+            for snarl, list_snarl in snarls.items() :
+                df = self.create_binary_table(binary_groups, list_snarl)
+                pvalues_f, pvalues_c = self.binary_stat_test(df)
+                data = '{}\t{}\t{}\n'.format(snarl, pvalues_f, pvalues_c)
+                outf.write(data.encode('utf-8'))
+                #TODO add more metadata
+                #add number path
+                #sum de toute la table
+                #sum g0 et sum g1 et min (G0 ^ G1)
+                #sum // column
+
+    def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
+
+        self.check_pheno_group(quantitative)
+
+        # Check if headers are already present; if not, write them
+        with open(output, 'wb') as outf:
+            headers = 'Snarl\tP_value\n'
+            outf.write(headers.encode('utf-8'))
+            
+            for _, snarl in snarls.items() :
+                df = self.create_quantitative_table(snarl)
+                snarl, pvalue = self.linear_regression(df, quantitative)
+                data = '{}\t{}\n'.format(snarl, pvalue)
+                outf.write(data.encode('utf-8'))
+            
     def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
         """
         Return a list of column index where all specifique element of this column of matrix are 1
@@ -240,14 +266,6 @@ class SnarlProcessor:
         df = pd.DataFrame([g0, g1], index=['G0', 'G1'], columns=list_path_snarl)
         return df
 
-    def quantitative_table(self, snarls, pheno) -> list : # list of dataframe
-        self.check_pheno_group(pheno)
-        res_table = []
-        for _, snarl in snarls.items() :
-            res_table.append(self.create_quantitative_table(snarl))
-
-        return res_table
-    
     def create_quantitative_table(self, column_headers : list) -> pd.DataFrame:
         row_headers_dict = self.matrix.get_row_header()
         column_headers_header = self.list_samples
@@ -267,89 +285,55 @@ class SnarlProcessor:
         df = pd.DataFrame(transposed_genotypes, index=column_headers_header, columns=column_headers)
         return df
 
-    def linear_regression(self, list_dataframe : list, pheno : dict) -> list :
+    def linear_regression(self, df, pheno : dict) -> float :
+        
+        df = df.astype(int)
+        df['Target'] = df.index.map(pheno)
 
-        list_pvalue = []
-        for df in list_dataframe :
-                
-            df = df.astype(int)
-            df['Target'] = df.index.map(pheno)
+        x = df.drop('Target', axis=1)
+        y = df['Target']
 
-            x = df.drop('Target', axis=1)
-            y = df['Target']
+        # Fit the regression model
+        model = sm.OLS(y, x).fit()
 
-            # Fit the regression model
-            model = sm.OLS(y, x).fit()
+        # Extract p-values from the fitted model and format as a list of tuples
+        index, pval = next(iter(model.pvalues.items()))
+        if str(pval) == 'nan':
+            pval = "N/A"
+        return index, pval
 
-            # Extract p-values from the fitted model and format as a list of tuples
-            for index, pval in model.pvalues.items() :
-                if str(pval) == 'nan' :
-                    pval = "N/A"
-                list_pvalue.append((index, pval))
-        return list_pvalue
-
-    def chi2_test(self, dataframe) -> list:
+    def chi2_test(self, dataframe) -> float:
         """Calculate p_value from list of dataframe using chi-2 test"""
 
-        list_pvalue = []
-        for df in dataframe:
-            
-            # Check if dataframe has at least 2 columns and more than 0 counts in every cell
-            if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
-                try:
-                    # Perform Chi-Square test
-                    chi2, p_value, dof, expected = chi2_contingency(df)
-                except ValueError as e:
-                    p_value = "Error"
-            else:
-                p_value = "N/A"
-
-            list_pvalue.append(p_value)
-            
-        return list_pvalue
-
-    def fisher_test(self, list_dataframe : list) -> list : 
-        """Calcul p_value from list of dataframe using fisher exact test"""
-
-        list_pvalue = []
-        for df in list_dataframe :
+        # Check if dataframe has at least 2 columns and more than 0 counts in every cell
+        if dataframe.shape[1] >= 2 and np.all(dataframe.sum(axis=0)) and np.all(dataframe.sum(axis=1)):
             try:
-                odds_ratio, p_value = fisher_exact(df)
+                # Perform Chi-Square test
+                chi2, p_value, dof, expected = chi2_contingency(dataframe)
+            except ValueError as e:
+                p_value = "Error"
+        else:
+            p_value = "N/A"
 
-            except ValueError as e: 
-                p_value = 'N/A'
+        return p_value
 
-            list_pvalue.append(p_value)
+    def fisher_test(self, dataframe) -> float : 
+        """Calcul p_value using fisher exact test"""
+
+        try:
+            odds_ratio, p_value = fisher_exact(dataframe)
+
+        except ValueError as e: 
+            p_value = 'N/A'
         
-        return list_pvalue
+        return p_value
      
-    def binary_stat_test(self, list_dataframe : list) :
+    def binary_stat_test(self, dataframe) :
 
-        fisher_p_value = self.fisher_test(list_dataframe)
-        chi2_p_value = self.chi2_test(list_dataframe)
+        fisher_p_value = self.fisher_test(dataframe)
+        chi2_p_value = self.chi2_test(dataframe)
 
         return fisher_p_value, chi2_p_value
-
-    def output_writing_binary(self, reference_list, list_pvalues, output_filename="output/binary_output.tsv") :
-        # Combine DataFrames and p-values into a single DataFrame for saving
-        list_ficher = list_pvalues[0]
-        list_chi = list_pvalues[1]
-        df_combined = pd.DataFrame({
-            'Snarl': reference_list,
-            'P_value (Fisher)': list_ficher,
-            'P_value (Chi2)': list_chi
-            #add number path
-            #sum de toute la table
-            #sum g0 et sum g1 et min (G0 ^ G1)
-            #sum // column
-        })
-        
-        df_combined.to_csv(output_filename, sep='\t', index=False)
-
-    def output_writing_quantitative(self, list_pvalues, output_filename="output/quantitative_output.tsv") :
-
-        df_combined = pd.DataFrame(list_pvalues, columns=['Snarl', 'P_value'])
-        df_combined.to_csv(output_filename, sep='\t', index=False)
 
 def parse_group_file(group_file : str):
     # Read the file into a DataFrame
@@ -365,15 +349,10 @@ def parse_group_file(group_file : str):
     group_1 = df[df['group'] == 1]['sample'].tolist()
     
     return group_0, group_1
-
+ 
 def parse_pheno_file(file_path : str) -> dict:
     # Read the file into a DataFrame
     df = pd.read_csv(file_path, sep='\t')
-
-    # Check if the required headers are present
-    required_headers = {'FID', 'IID', 'PHENO'}
-    if not required_headers.issubset(df.columns):
-        raise ValueError(f"The file must contain the following headers: {required_headers}")
 
     # Extract the IID (second column) and PHENO (third column) and convert PHENO to float
     parsed_pheno = dict(zip(df['IID'], df['PHENO']))
@@ -426,9 +405,11 @@ def check_format_pheno(file_path : str) -> str :
     with open(file_path, 'r') as file:
         first_line = file.readline().strip()
     
-    header = first_line.split()
-    if header != ['FID', 'IID', 'PHENO']:
-        raise ValueError("The file does not contain the correct header.")
+    header = first_line.split('\t')
+    expected_header = ['FID', 'IID', 'PHENO']
+    if header != expected_header:
+        raise ValueError(f"The file must contain the following headers: {expected_header} and be split by tabulation")
+    
     return file_path
 
 if __name__ == "__main__" :
@@ -447,28 +428,21 @@ if __name__ == "__main__" :
     vcf_object.fill_matrix()
     print(f"Time Matrix : {time.time() - start} s")
     start = time.time()
-
     snarl = parse_snarl_path_file(args.snarl)
 
     if args.binary:
         binary_group = parse_group_file(args.binary)
-        reference_list, list_binary_df = vcf_object.binary_table(snarl, binary_group)
-        binary_p_value = vcf_object.binary_stat_test(list_binary_df)
-
         if args.output :
-            vcf_object.output_writing_binary(reference_list, binary_p_value, args.output)
+            vcf_object.binary_table(snarl, binary_group, args.output)
         else :
-            vcf_object.output_writing_binary(reference_list, binary_p_value)
-        
+            vcf_object.binary_table(snarl, binary_group)
+
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
-        list_quantitative_df = vcf_object.quantitative_table(snarl, quantitative)
-        quantitative_p_value = vcf_object.linear_regression(list_quantitative_df, quantitative)
-
         if args.output :
-            vcf_object.output_writing_quantitative(quantitative_p_value, args.output)
+            vcf_object.quantitative_table(snarl, quantitative, args.output)
         else :
-            vcf_object.output_writing_quantitative(quantitative_p_value)
+            vcf_object.quantitative_table(snarl, quantitative)
 
     print(f"Time P-value: {time.time() - start} s")
 
