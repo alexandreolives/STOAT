@@ -182,27 +182,22 @@ class SnarlProcessor:
 
         self.check_pheno_group(binary_groups)
 
-        # Check if headers are already present; if not, write them
         with open(output, 'wb') as outf:
-            headers = 'Snarl\tP_value (Fisher)\tP_value (Chi2)\n'
+            headers = 'Snarl\tP_value (Fisher)\tP_value (Chi2)\tTable_sum\tInter_group\tAverage\n'
             outf.write(headers.encode('utf-8'))
 
             for snarl, list_snarl in snarls.items() :
                 df = self.create_binary_table(binary_groups, list_snarl)
-                pvalues_f, pvalues_c = self.binary_stat_test(df)
-                data = '{}\t{}\t{}\n'.format(snarl, pvalues_f, pvalues_c)
-                outf.write(data.encode('utf-8'))
                 #TODO add more metadata
-                #add number path
-                #sum de toute la table
-                #sum g0 et sum g1 et min (G0 ^ G1)
-                #sum // column
+                #add number path # hard
+                fisher_p_value, chi2_p_value, total_sum, inter_group, sum_column = self.binary_stat_test(df)
+                data = '{}\t{}\t{}\t{}\t{}\t{}\n'.format(snarl, fisher_p_value, chi2_p_value, total_sum, inter_group, sum_column)
+                outf.write(data.encode('utf-8'))
 
     def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
 
         self.check_pheno_group(quantitative)
 
-        # Check if headers are already present; if not, write them
         with open(output, 'wb') as outf:
             headers = 'Snarl\tP_value\n'
             outf.write(headers.encode('utf-8'))
@@ -294,22 +289,23 @@ class SnarlProcessor:
         y = df['Target']
 
         # Fit the regression model
-        model = sm.OLS(y, x).fit()
+        result = sm.OLS(y, x).fit()
 
         # Extract p-values from the fitted model and format as a list of tuples
-        index, pval = next(iter(model.pvalues.items()))
+        index, pval = next(iter(result.pvalues.items()))
+        print("result.summary() : ", result.summary())
         if str(pval) == 'nan':
             pval = "N/A"
         return index, pval
 
-    def chi2_test(self, dataframe) -> float:
+    def chi2_test(self, df) -> float:
         """Calculate p_value from list of dataframe using chi-2 test"""
 
         # Check if dataframe has at least 2 columns and more than 0 counts in every cell
-        if dataframe.shape[1] >= 2 and np.all(dataframe.sum(axis=0)) and np.all(dataframe.sum(axis=1)):
+        if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
             try:
                 # Perform Chi-Square test
-                chi2, p_value, dof, expected = chi2_contingency(dataframe)
+                chi2, p_value, dof, expected = chi2_contingency(df)
             except ValueError as e:
                 p_value = "Error"
         else:
@@ -317,23 +313,26 @@ class SnarlProcessor:
 
         return p_value
 
-    def fisher_test(self, dataframe) -> float : 
+    def fisher_test(self, df) -> float : 
         """Calcul p_value using fisher exact test"""
 
         try:
-            odds_ratio, p_value = fisher_exact(dataframe)
+            odds_ratio, p_value = fisher_exact(df)
 
         except ValueError as e: 
             p_value = 'N/A'
         
         return p_value
      
-    def binary_stat_test(self, dataframe) :
+    def binary_stat_test(self, df) :
 
-        fisher_p_value = self.fisher_test(dataframe)
-        chi2_p_value = self.chi2_test(dataframe)
-
-        return fisher_p_value, chi2_p_value
+        fisher_p_value = self.fisher_test(df)
+        chi2_p_value = self.chi2_test(df)
+        total_sum = int(df.values.sum())
+        inter_group = int(df.min().sum())
+        numb_colum = df.shape[1]
+        sum_column = float(total_sum / numb_colum)
+        return fisher_p_value, chi2_p_value, total_sum, inter_group, sum_column
 
 def parse_group_file(group_file : str):
     # Read the file into a DataFrame

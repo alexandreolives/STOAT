@@ -69,22 +69,30 @@ class TestSnarlProcessing(unittest.TestCase):
     def test_fonctionnal_binary(self):
         vcf_object = snarl_vcf_parser.SnarlProcessor(self.vcf_file)
         vcf_object.fill_matrix()
-        snarl = snarl_vcf_parser.parse_snarl_path_file(self.snarl_file)
+        snarls = snarl_vcf_parser.parse_snarl_path_file(self.snarl_file)
         binary_group = snarl_vcf_parser.parse_group_file(self.group_file)
-        _, list_binary_df = vcf_object.binary_table(snarl, binary_group)
-        binary_p_value = vcf_object.binary_stat_test(list_binary_df)
-        expected_output = (['N/A', 1.0, 1.0, 'N/A', 1.0, 1.0], ['N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
-        self.assertEqual(binary_p_value, expected_output)
+        # _, list_binary_df = vcf_object.binary_table(snarl, binary_group)
+        list_binary_p_value = []
+        for _, list_snarl in snarls.items() :
+            df = vcf_object.create_binary_table(binary_group, list_snarl)
+            fisher_p_value, chi2_p_value, total_sum, inter_group, sum_column = vcf_object.binary_stat_test(df)
+            list_binary_p_value.append((fisher_p_value, chi2_p_value, total_sum, inter_group, sum_column))
+
+        expected_output = [('N/A', 'N/A', 0, 0, 0.0), (1.0, 'N/A', 1, 0, 0.5), (1.0, 'N/A', 0, 0, 0.0), ('N/A', 'N/A', 2, 1, 2.0), (1.0, 'N/A', 6, 2, 3.0), (1.0, 'N/A', 2, 1, 1.0)]
+        self.assertEqual(list_binary_p_value, expected_output)
 
     def test_fonctionnal_pheno(self):
         vcf_object = snarl_vcf_parser.SnarlProcessor(self.vcf_file)
         vcf_object.fill_matrix()
-        snarl = snarl_vcf_parser.parse_snarl_path_file(self.snarl_file)
+        snarls = snarl_vcf_parser.parse_snarl_path_file(self.snarl_file)
         quantitative = snarl_vcf_parser.parse_pheno_file(self.pheno_file)
-        list_quantitative_df = vcf_object.quantitative_table(snarl, quantitative)
-        quantitative_p_value = vcf_object.linear_regression(list_quantitative_df, quantitative)
-        expected_output = [('>1>2>7', 'N/A'), ('>1>2>3>5>6', 0.2987424472523087), ('>1>2>4>6', 'N/A'), ('>1>2<2>1', 'N/A'), ('>1<3>5>6', 'N/A'), ('>2>3>5', 0.1173490631777916), ('>0>1>2', 0.001628646125175966), ('>0>1>*>6>7', 'N/A'), ('>1>2>3', 0.1173490631777916), ('>1>2>*>5>6', 'N/A')]
-        self.assertEqual(quantitative_p_value, expected_output)
+        list_quantitative_p_value= []
+        for _, snarl in snarls.items() :
+            df = vcf_object.create_quantitative_table(snarl)
+            snarl, pvalue = vcf_object.linear_regression(df, quantitative)
+            list_quantitative_p_value.append((snarl, pvalue))
+        expected_output = [('>1>2>7', 'N/A'), ('>1>2>3>5>6', 0.2987424472523087), ('>1>2<2>1', 'N/A'), ('>2>3>5', 0.1173490631777916), ('>0>1>2', 0.001628646125175966), ('>1>2>3', 0.1173490631777916)]
+        self.assertEqual(list_quantitative_p_value, expected_output)
 
 if __name__ == '__main__':
     unittest.main()
