@@ -103,8 +103,8 @@ if __name__ == "__main__" :
         # for each snarl, lists paths through the netgraph and write to output TSV
         for idx, snarl in enumerate(snarls):
 
-            # if idx > 0 and idx % 1000 == 0 :
-            #     print("idx : ", idx)
+            if idx > 0 and idx % 1000 == 0 :
+                print("idx : ", idx)
 
             # create a snarl ID as LEFT_RIGTH bondary nodes
             sstart = stree.get_bound(snarl, False, True)
@@ -118,16 +118,9 @@ if __name__ == "__main__" :
             # init unfinished paths to the first boundary node
             paths = [[stree.get_bound(snarl, False, True)]]
             finished_paths = []
-            idx_old = 0
 
             while len(paths) > 0:
                 path = paths.pop()
-
-                idx_old += 1
-
-                if idx_old > 100 :
-                    break
-
                 # TODO : case where paths loop over and over 
                 def add_to_path(next_child) :
    
@@ -140,6 +133,12 @@ if __name__ == "__main__" :
                             finished_paths[-1].append(net)
                         finished_paths[-1].append(next_child)
                     else :
+                        if idx == 3010 :
+                            print("path : ", path)
+                        for i in path : 
+                            if stree.net_handle_as_string(i) == stree.net_handle_as_string(next_child) :
+                                print("OUT")
+                                return False
                         paths.append([])
                         for net in path:
                             paths[-1].append(net)
@@ -148,22 +147,6 @@ if __name__ == "__main__" :
 
                 # from the last thing in the path
                 stree.follow_net_edges(path[-1], pg, False, add_to_path)
-
-                # if idx == 3010 and len(paths) > 10 :
-                #     #print("path : ", path)
-                #     #print("paths : ", paths)
-                #     for list_net in paths :
-                #         for net in list_net :
-                #             if stree.is_node(net):
-                #                 print('node : ', net)
-
-                #             if stree.is_chain(net):
-                #                print('chain : ', net)
-
-                #             if stree.is_sentinel(net):
-                #                 print('sentinel : ', net)
-                    
-                #     break 
 
             # prepare path list to output and write each path directly to the file
             pretty_paths = []

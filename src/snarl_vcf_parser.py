@@ -188,10 +188,8 @@ class SnarlProcessor:
 
             for snarl, list_snarl in snarls.items() :
                 df = self.create_binary_table(binary_groups, list_snarl)
-                #TODO add more metadata
-                #add number path # hard
-                fisher_p_value, chi2_p_value, total_sum, inter_group, sum_column = self.binary_stat_test(df)
-                data = '{}\t{}\t{}\t{}\t{}\t{}\n'.format(snarl, fisher_p_value, chi2_p_value, total_sum, inter_group, sum_column)
+                fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average = self.binary_stat_test(df)
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(snarl, fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average)
                 outf.write(data.encode('utf-8'))
 
     def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
@@ -205,6 +203,8 @@ class SnarlProcessor:
             for _, snarl in snarls.items() :
                 df = self.create_quantitative_table(snarl)
                 snarl, pvalue = self.linear_regression(df, quantitative)
+                # nb column
+                # min sum column
                 data = '{}\t{}\n'.format(snarl, pvalue)
                 outf.write(data.encode('utf-8'))
             
@@ -331,8 +331,8 @@ class SnarlProcessor:
         total_sum = int(df.values.sum())
         inter_group = int(df.min().sum())
         numb_colum = df.shape[1]
-        sum_column = float(total_sum / numb_colum)
-        return fisher_p_value, chi2_p_value, total_sum, inter_group, sum_column
+        average = float(total_sum / numb_colum)
+        return fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average
 
 def parse_group_file(group_file : str):
     # Read the file into a DataFrame
