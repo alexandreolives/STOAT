@@ -106,6 +106,12 @@ if __name__ == "__main__" :
     snarls_length = len(snarls)
     print('{} snarls found'.format(snarls_length))
 
+    def check_sublists_for_duplicates(lst):
+        for sublist in lst:
+            if len(sublist) != len(set(sublist)):
+                return True
+        return False
+
     # output file will be a TSV file with two columns
     with open(args.o, 'wt') as outf:
         outf.write('snarl\tpaths\n')
@@ -114,6 +120,11 @@ if __name__ == "__main__" :
 
         # for each snarl, lists paths through the netgraph and write to output TSV
         for idx, snarl in enumerate(snarls):
+
+            # if idx > 0 and idx % 1000 == 0 :
+            #     print("idx : ", idx)
+            if idx < 11952 :
+                continue
 
             # create a snarl ID as LEFT_RIGTH bondary nodes
             sstart = stree.get_bound(snarl, False, True)
@@ -127,8 +138,17 @@ if __name__ == "__main__" :
             # init unfinished paths to the first boundary node
             paths = [[stree.get_bound(snarl, False, True)]]
             finished_paths = []
-            idx_loop = 0
-            while len(paths) > 0:
+            idx_t = 0 
+            while len(paths) > 0 :
+                idx_t += 1
+                if idx == 11952 :
+                    result = check_sublists_for_duplicates(finished_paths)
+                    # If the lengths don't match, there are duplicates
+                    if result or idx_t == 1000 :
+                        print("finished_paths : ",finished_paths)
+                        print("idx_t : ", idx_t)
+                        exit()
+
                 path = paths.pop()
                 def add_to_path(next_child) :
    
@@ -138,9 +158,8 @@ if __name__ == "__main__" :
                         # bound of the parent snarl
                         finished_paths.append([])
                         for net in path:
-                            finished_paths[-1].append(net)
-                        finished_paths[-1].append(next_child)
-
+                            finished_paths[-1].append(stree.net_handle_as_string(net)) # change to net
+                        finished_paths[-1].append(stree.net_handle_as_string(next_child)) # change to next_child
                     else :
                         for i in path : 
                             # Case where we find a loop 
@@ -155,39 +174,34 @@ if __name__ == "__main__" :
 
                 # from the last thing in the path
                 stree.follow_net_edges(path[-1], pg, False, add_to_path)
-              
-                if idx_loop >= 10000 :
-                    break
 
-                idx_loop += 1 
+            # # prepare path list to output and write each path directly to the file
+            # pretty_paths = []
+            # for path in finished_paths:
+            #     ppath = Path()
+            #     for net in path:
+            #         if stree.is_sentinel(net):
+            #             net = stree.get_node_from_sentinel(net)
+            #         # Bug enter here with True False
+            #         if stree.is_node(net) or stree.is_trivial_chain(net):
+            #             # if it's a node, add it to the path
+            #             ppath.addNodeHandle(net, stree)
+            #         elif stree.is_chain(net):
+            #             # if it's a chain, we need to write someting like ">Nl>*>Nr"
+            #             nodl = stree.get_bound(net, False, True)
+            #             nodl_s = stree.net_handle_as_string(nodl)
+            #             nodr = stree.get_bound(net, True, False)
+            #             nodr_s = stree.net_handle_as_string(nodr)
+            #             ppath.addNodeHandle(nodl, stree)
+            #             ppath.addNode('*', '>')
+            #             ppath.addNodeHandle(nodr, stree)
 
-            # prepare path list to output and write each path directly to the file
-            pretty_paths = []
-            for path in finished_paths:
-                ppath = Path()
-                for net in path:
-                    if stree.is_sentinel(net):
-                        net = stree.get_node_from_sentinel(net)
-                    # Bug enter here with True False
-                    if stree.is_node(net) or stree.is_trivial_chain(net):
-                        # if it's a node, add it to the path
-                        ppath.addNodeHandle(net, stree)
-                    elif stree.is_chain(net):
-                        # if it's a chain, we need to write someting like ">Nl>*>Nr"
-                        nodl = stree.get_bound(net, False, True)
-                        nodl_s = stree.net_handle_as_string(nodl)
-                        nodr = stree.get_bound(net, True, False)
-                        nodr_s = stree.net_handle_as_string(nodr)
-                        ppath.addNodeHandle(nodl, stree)
-                        ppath.addNode('*', '>')
-                        ppath.addNodeHandle(nodr, stree)
-
-                # check if path is mostly traversing nodes in reverse orientation
-                if ppath.nreversed() > ppath.size() / 2:
-                    ppath.flip()
-                pretty_paths.append(ppath.print())
+            #     # check if path is mostly traversing nodes in reverse orientation
+            #     if ppath.nreversed() > ppath.size() / 2:
+            #         ppath.flip()
+            #     pretty_paths.append(ppath.print())
                 
-            # write each path directly to the file
-            outf.write('{}\t{}\n'.format(snarl_id, ','.join(pretty_paths)))
-            npaths += len(pretty_paths)
+            # # write each path directly to the file
+            # outf.write('{}\t{}\n'.format(snarl_id, ','.join(pretty_paths)))
+            # npaths += len(pretty_paths)
             
