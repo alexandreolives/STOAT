@@ -1,5 +1,7 @@
 import bdsg
 import argparse
+import matplotlib.pyplot as plt
+from collections import Counter
 
 # class to help make paths from BDSG objects
 # and deal with orientation, flipping, etc
@@ -84,12 +86,22 @@ if __name__ == "__main__" :
     snarls = []
 
     def save_snarl_tree_node(net):
+        children = []
+        def save_children(net):
+            children.append(net)
+            return (True)
+    
         if stree.is_snarl(net):
             snarls.append(net)
+            stree.for_each_child(net, save_children)
+            list_nb_children.append(len(children))
+            if len(children) == 2931 :
+                print('id_start_end : ', stree.net_handle_as_string(net))
         if not stree.is_node(net) and not stree.is_sentinel(net):
             stree.for_each_child(net, save_snarl_tree_node)
         return (True)
-
+  
+    list_nb_children = []
     stree.for_each_child(root, save_snarl_tree_node)
     snarls_length = len(snarls)
     print('{} snarls found'.format(snarls_length))
@@ -103,9 +115,6 @@ if __name__ == "__main__" :
         # for each snarl, lists paths through the netgraph and write to output TSV
         for idx, snarl in enumerate(snarls):
 
-            if idx > 0 and idx % 1000 == 0 :
-                print("idx : ", idx)
-
             # create a snarl ID as LEFT_RIGTH bondary nodes
             sstart = stree.get_bound(snarl, False, True)
             sstart = stree.get_node_from_sentinel(sstart)
@@ -118,10 +127,9 @@ if __name__ == "__main__" :
             # init unfinished paths to the first boundary node
             paths = [[stree.get_bound(snarl, False, True)]]
             finished_paths = []
-
+            idx_loop = 0
             while len(paths) > 0:
                 path = paths.pop()
-                # TODO : case where paths loop over and over 
                 def add_to_path(next_child) :
    
                     if stree.is_sentinel(next_child):
@@ -132,13 +140,13 @@ if __name__ == "__main__" :
                         for net in path:
                             finished_paths[-1].append(net)
                         finished_paths[-1].append(next_child)
+
                     else :
-                        if idx == 3010 :
-                            print("path : ", path)
                         for i in path : 
+                            # Case where we find a loop 
                             if stree.net_handle_as_string(i) == stree.net_handle_as_string(next_child) :
-                                print("OUT")
                                 return False
+                            
                         paths.append([])
                         for net in path:
                             paths[-1].append(net)
@@ -147,6 +155,11 @@ if __name__ == "__main__" :
 
                 # from the last thing in the path
                 stree.follow_net_edges(path[-1], pg, False, add_to_path)
+              
+                if idx_loop >= 10000 :
+                    break
+
+                idx_loop += 1 
 
             # prepare path list to output and write each path directly to the file
             pretty_paths = []
@@ -177,6 +190,4 @@ if __name__ == "__main__" :
             # write each path directly to the file
             outf.write('{}\t{}\n'.format(snarl_id, ','.join(pretty_paths)))
             npaths += len(pretty_paths)
-
-    print(f'Total paths written: {npaths}')
-
+            
