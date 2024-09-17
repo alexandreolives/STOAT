@@ -1,7 +1,7 @@
 # snarl_project
 
 ## Project Overview
-Snarl_project is tool designed to parse and analyze VCF (Variant Call Format) files, particularly focusing on snarl structures. The tool processes VCF files and extracts snarl information, in order to generated snarl's statistique on binary or quantitative phenotype.
+Snarl_project is tool designed to parse and analyze VCF (Variant Call Format) files, particularly focusing on snarl structures. The tool processes VCF files and extracts snarl information, in order to generated snarl's statistique on binary or quantitative phenotype. 
 
 ## Installation
 
