@@ -1,5 +1,4 @@
 import unittest
-import numpy as np
 import snarl_vcf_parser
 from unittest.mock import mock_open, patch
 from collections import defaultdict

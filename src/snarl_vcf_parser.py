@@ -3,6 +3,9 @@ from cyvcf2 import VCF
 from typing import List
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
+import scipy.stats as stats
 import statsmodels.api as sm
 from collections import defaultdict
 from scipy.stats import chi2_contingency
@@ -11,18 +14,22 @@ import os
 import time
     
 class Matrix :
-    def __init__(self, default_row_number=100000, column_number=2):
+    def __init__(self, default_row_number=1000000, column_number=2):
+        self.default_row_number = default_row_number 
         self.matrix = np.zeros((default_row_number, column_number),dtype=bool)
         self.row_header = None
     
     def get_matrix(self):
         return self.matrix
-    
+
     def set_matrix(self, expended_matrix) :
         self.matrix = expended_matrix
 
     def get_row_header(self):
         return self.row_header
+
+    def get_default_row_number(self):
+        return self.default_row_number
 
     def set_row_header(self, row_header):
         self.row_header = row_header  
@@ -40,7 +47,7 @@ class Matrix :
 class SnarlProcessor:
     def __init__(self, vcf_path: str):
         self.list_samples = VCF(vcf_path).samples
-        self.matrix = Matrix(100000, len(self.list_samples)*2)
+        self.matrix = Matrix(1000000, len(self.list_samples)*2)
         self.vcf_path = vcf_path
 
     def expand_matrix(self):
@@ -50,9 +57,7 @@ class SnarlProcessor:
 
         data_matrix = self.matrix.get_matrix()
         current_rows, current_cols = data_matrix.shape
-        #TODO : test performance
-        #new_rows = current_rows * 2 # multiply by 2
-        new_rows = current_rows + 100000 # add 100000 row  
+        new_rows = current_rows + self.matrix.get_default_row_number() # add + default_row_number row  
 
         # Create a new matrix of zeros with the expanded size
         expanded_matrix = np.zeros((new_rows, current_cols), dtype=data_matrix.dtype)
@@ -151,8 +156,8 @@ class SnarlProcessor:
             for idx_snarl, list_decomposed_snarl in enumerate(list_list_decomposed_snarl):
                 for decomposed_snarl in list_decomposed_snarl:
                     # Loop over genotypes with index_column tracking
-                    for index_column, gt in enumerate(genotypes):
-                        allele_1, allele_2 = gt[:2]  # Extract alleles
+                    for index_column, genotype in enumerate(genotypes):
+                        allele_1, allele_2 = genotype[:2]  # Extract alleles
                         
                         # Push matrix only if both alleles are valid
                         if allele_1 != -1 and allele_2 != -1:
@@ -180,7 +185,7 @@ class SnarlProcessor:
 
     def binary_table(self, snarls, binary_groups, output="output/binary_output.tsv") : 
 
-        self.check_pheno_group(binary_groups)
+        #self.check_pheno_group(binary_groups)
 
         with open(output, 'wb') as outf:
             headers = 'Snarl\tP_value (Fisher)\tP_value (Chi2)\tTable_sum\tInter_group\tAverage\n'
@@ -194,19 +199,24 @@ class SnarlProcessor:
 
     def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
 
-        self.check_pheno_group(quantitative)
+        #self.check_pheno_group(quantitative)
 
         with open(output, 'wb') as outf:
             headers = 'Snarl\tP_value\n'
             outf.write(headers.encode('utf-8'))
-            
+            idx = 0
+
             for _, snarl in snarls.items() :
                 df = self.create_quantitative_table(snarl)
-                snarl, pvalue = self.linear_regression(df, quantitative)
+                list_snarl, list_pvalue = self.linear_regression(df, quantitative)
                 # nb column
                 # min sum column
-                data = '{}\t{}\n'.format(snarl, pvalue)
-                outf.write(data.encode('utf-8'))
+                for snarl, pvalue in zip(list_snarl, list_pvalue) : 
+                    data = '{}\t{}\n'.format(snarl, pvalue)
+                    outf.write(data.encode('utf-8'))
+                    idx += 1
+                    if idx > 10000 :
+                        break
             
     def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
         """
@@ -280,22 +290,29 @@ class SnarlProcessor:
         df = pd.DataFrame(transposed_genotypes, index=column_headers_header, columns=column_headers)
         return df
 
+    def sm_ols(self, x, y) :
+
+        # Fit the regression model
+        scaler = StandardScaler()
+        x_scaled = scaler.fit_transform(x)
+        result = sm.OLS(y, x_scaled).fit()
+
+        list_p_value = []
+        for _, p_value in result.pvalues.items():
+            formatted_p_value = "N/A" if pd.isna(p_value) else p_value
+            list_p_value.append(formatted_p_value)
+
+        return list_p_value
+    
     def linear_regression(self, df, pheno : dict) -> float :
         
         df = df.astype(int)
         df['Target'] = df.index.map(pheno)
-
         x = df.drop('Target', axis=1)
         y = df['Target']
 
-        # Fit the regression model
-        result = sm.OLS(y, x).fit()
-
-        # Extract p-values from the fitted model and format as a list of tuples
-        index, pval = next(iter(result.pvalues.items()))
-        print("result.summary() : ", result.summary())
-        if str(pval) == 'nan':
-            pval = "N/A"
+        pval = self.sm_ols(x, y)
+        index = df.columns.tolist()
         return index, pval
 
     def chi2_test(self, df) -> float:
@@ -325,7 +342,7 @@ class SnarlProcessor:
         return p_value
      
     def binary_stat_test(self, df) :
-
+ 
         fisher_p_value = self.fisher_test(df)
         chi2_p_value = self.chi2_test(df)
         total_sum = int(df.values.sum())
@@ -359,22 +376,19 @@ def parse_pheno_file(file_path : str) -> dict:
     return parsed_pheno
 
 def parse_snarl_path_file(path_file: str) -> dict:
-    # Initialize a defaultdict with lists as default values
+    
+    # Initialize an empty dictionary for the snarl paths
     snarl_paths = defaultdict(list)
-    
-    # Read the file using pandas
+
+    # Read the file into a pandas DataFrame
     df = pd.read_csv(path_file, sep='\t', dtype=str)
-    
-    # Iterate through the DataFrame rows
-    for _, row in df.iterrows():
-        snarl = row['snarl']
-        paths = row['paths']
-        
-        # Split paths by comma and add them to the defaultdict
-        if pd.notna(paths):
-            path_list = paths.split(',')
-            snarl_paths[snarl].extend(path_list)
-    
+    df = df[df['paths'].notna()]
+    df['paths'] = df['paths'].str.split(',')
+
+    # Create the dictionary with snarl as key and paths as values
+    for snarl, paths in zip(df['snarl'], df['paths']):
+        snarl_paths[snarl].extend(paths)
+
     return snarl_paths
 
 def check_format_vcf_file(file_path : str) -> str:
@@ -428,6 +442,7 @@ if __name__ == "__main__" :
     print(f"Time Matrix : {time.time() - start} s")
     start = time.time()
     snarl = parse_snarl_path_file(args.snarl)
+    print(f"Time snarl path parseing : {time.time() - start} s")
 
     if args.binary:
         binary_group = parse_group_file(args.binary)
@@ -435,6 +450,9 @@ if __name__ == "__main__" :
             vcf_object.binary_table(snarl, binary_group, args.output)
         else :
             vcf_object.binary_table(snarl, binary_group)
+
+# python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
+# python3 src/snarl_vcf_parser.py ../../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../../snarl_data/group.txt
 
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
@@ -445,3 +463,5 @@ if __name__ == "__main__" :
 
     print(f"Time P-value: {time.time() - start} s")
 
+# python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -q test/pheno.txt
+# python3 src/snarl_vcf_parser.py ../../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -q ../../snarl_data/updated_phenotypes.txt
