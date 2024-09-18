@@ -3,9 +3,7 @@ from cyvcf2 import VCF
 from typing import List
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
-import scipy.stats as stats
 import statsmodels.api as sm
 from collections import defaultdict
 from scipy.stats import chi2_contingency
@@ -188,7 +186,7 @@ class SnarlProcessor:
         #self.check_pheno_group(binary_groups)
 
         with open(output, 'wb') as outf:
-            headers = 'Snarl\tP_value (Fisher)\tP_value (Chi2)\tTable_sum\tInter_group\tAverage\n'
+            headers = 'Snarl\tP_value_Fisher\tP_value_Chi2\tTable_sum\tInter_group\tAverage\n'
             outf.write(headers.encode('utf-8'))
 
             for snarl, list_snarl in snarls.items() :
