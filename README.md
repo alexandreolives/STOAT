@@ -22,6 +22,7 @@ Run the script from the command line, providing the paths to your VCF file, grou
 
 ```bash
 python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -b <path_to_group_file.txt> -o output.tx
+python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -b <path_to_group_file.txt> -o output.tx
 ```
 
 ### Input format file

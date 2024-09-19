@@ -54,7 +54,7 @@ def plot_manhattan_binary(file_path, output_file_manh):
     plt.axhline(y=significance_threshold_1, color='red', linestyle='dashed', label='p=0.00001')
     plt.axhline(y=significance_threshold_2, color='green', linestyle='dashed', label='p=0.00000001')
 
-    plt.title('Manhattan Plot', fontsize=16)
+    plt.title('Manhattan Plot of P-values', fontsize=16)
     plt.xlabel('Index', fontsize=14)
     plt.ylabel('-log10(P-value)', fontsize=14)
     plt.legend(loc='upper right')
@@ -74,7 +74,7 @@ def plot_manhattan_quantitative(file_path, output_file_manh):
     significance_threshold = -np.log10(0.00001)
 
     plt.axhline(y=significance_threshold, color='red', linestyle='--', label='p=0.00001')
-    plt.title('Manhattan Plot', fontsize=16)
+    plt.title('Manhattan Plot of P-values', fontsize=16)
     plt.xlabel('Index', fontsize=14)
     plt.ylabel('-log10(P-value)', fontsize=14)
     plt.legend(loc='upper right')
