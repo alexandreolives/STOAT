@@ -21,7 +21,7 @@ pip install -r requirements.txt
 Run the script from the command line, providing the paths to your VCF file, group file, and snarl file:
 
 ```bash
-python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -b <path_to_group_file.txt> --chi -o output.txt
+python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -b <path_to_group_file.txt> -o output.tx
 ```
 
 ### Input format file
@@ -31,14 +31,22 @@ python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -
 
 ### Run test
 ```bash
-python3 src/snarl_vcf_parser.py test/test_variant.vcf test/test_path.txt -b test/test_group.txt --fisher -o test_output.txt
+python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
 ```
 
-## Output
-The output of the script includes:
+### Output
+- Case of binary phenotype (-b option) :
+```bash
+Snarl	        P_value_Fisher	    P_value_Chi2	    Table_sum	Inter_group	Average
+5262721_5262719	0.46359729745943223	0.518292726549784	286	2	    137	        143.0
+5262719_5262717	0.8062220214636773	0.8747410243373839	286	2	    141	        143.0
+5262717_5262714	0.2120778233741457	0.2363840346684607	286	2	    134	        143.0
+```
 
-Binary phenotype case : 
-- coming soon ...
-
-Quantitative phenotype case : 
-- coming soon ...
+- Case of quantitative phenotype (-q option) :
+```bash
+Snarl	            P_value
+>5262719>5262721	0.9099354411737626
+>5262719>5262720	0.9099354411737626
+>5262717>5262719	0.9008729687523177
+```

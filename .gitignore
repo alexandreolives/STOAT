@@ -1,5 +1,2 @@
 src/__pycache__
-output/children.tsv
-output/p_value_distribution.png
-output/test_list_snarl.tsv
-output/*
+output/*.tsv
