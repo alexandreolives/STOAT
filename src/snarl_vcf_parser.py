@@ -106,39 +106,21 @@ class SnarlProcessor:
             ordered_dict[key] = new_index
             return new_index
     
-    def push_matrix(self, idx_snarl, decomposed_snarl, allele, row_header_dict, index_column):
+    def push_matrix(self, idx_snarl, decomposed_snarl, row_header_dict, index_column):
         """Add True to the matrix if snarl is found"""
 
         current_rows_number, _ = self.matrix.get_matrix().shape
 
-        if allele == idx_snarl:
-            # Retrieve or add the index in one step and calculate the length once
-            length_ordered_dict = len(row_header_dict)
-            idx_snarl = self.get_or_add_index(row_header_dict, decomposed_snarl, length_ordered_dict)
+        # Retrieve or add the index in one step and calculate the length once
+        length_ordered_dict = len(row_header_dict)
+        idx_snarl = self.get_or_add_index(row_header_dict, decomposed_snarl, length_ordered_dict)
 
-            # Check if a new matrix chunk is needed (only if length > 1)
-            if length_ordered_dict > 1 and length_ordered_dict > current_rows_number -1 :
-                self.expand_matrix()
+        # Check if a new matrix chunk is needed (only if length > 1)
+        if length_ordered_dict > 1 and length_ordered_dict > current_rows_number -1 :
+            self.expand_matrix()
 
-            # Compute index row
-            row_index = idx_snarl
-            
-            # Add data to the matrix
-            self.matrix.add_data(row_index, index_column)
-
-    def truncate_matrix(self, max_rows):
-        """
-        Truncates the matrix to a specified maximum number of rows.
-        """
-
-        data_matrix = self.matrix.get_matrix()
-        current_rows, _ = data_matrix.shape
-        if max_rows == current_rows:
-            return data_matrix
-
-        truncated_matrix = data_matrix[:max_rows, :]
-
-        return truncated_matrix
+        # Add data to the matrix
+        self.matrix.add_data(idx_snarl, index_column)
 
     def fill_matrix(self):
         """Parse VCF file (main function)"""
@@ -156,12 +138,13 @@ class SnarlProcessor:
                     # Loop over genotypes with index_column tracking
                     for index_column, genotype in enumerate(genotypes):
                         allele_1, allele_2 = genotype[:2]  # Extract alleles
-                        
-                        # Push matrix only if both alleles are valid
-                        if allele_1 != -1 and allele_2 != -1:
-                            col_idx = index_column * 2
-                            self.push_matrix(idx_snarl, decomposed_snarl, allele_1, row_header_dict, col_idx)
-                            self.push_matrix(idx_snarl, decomposed_snarl, allele_2, row_header_dict, col_idx + 1)
+                        col_idx = index_column * 2
+
+                        if allele_1 == idx_snarl :
+                            self.push_matrix(idx_snarl, decomposed_snarl, row_header_dict, col_idx)
+
+                        if allele_2 == idx_snarl :
+                            self.push_matrix(idx_snarl, decomposed_snarl, row_header_dict, col_idx + 1)
 
         self.matrix.set_row_header(row_header_dict)
 
@@ -202,20 +185,14 @@ class SnarlProcessor:
         with open(output, 'wb') as outf:
             headers = 'Snarl\tP_value\n'
             outf.write(headers.encode('utf-8'))
-            idx = 0
 
             for _, snarl in snarls.items() :
                 df = self.create_quantitative_table(snarl)
                 list_snarl, list_pvalue = self.linear_regression(df, quantitative)
-                # nb column
-                # min sum column
                 for snarl, pvalue in zip(list_snarl, list_pvalue) : 
                     data = '{}\t{}\n'.format(snarl, pvalue)
                     outf.write(data.encode('utf-8'))
-                    idx += 1
-                    if idx > 10000 :
-                        break
-            
+
     def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
         """
         Return a list of column index where all specifique element of this column of matrix are 1
@@ -271,21 +248,21 @@ class SnarlProcessor:
 
     def create_quantitative_table(self, column_headers : list) -> pd.DataFrame:
         row_headers_dict = self.matrix.get_row_header()
-        column_headers_header = self.list_samples
+        range_list_sample = range(len(self.list_samples))
         genotypes = []
 
         # Iterate over each path_snarl in column_headers
         for path_snarl in column_headers:
-            idx_srr_save = list(range(len(column_headers_header)))
+            idx_srr_save = list(range_list_sample)
             decomposed_snarl = self.decompose_string(path_snarl)
             idx_srr_save = self.identify_correct_path(decomposed_snarl, row_headers_dict, idx_srr_save)
 
-            genotype = [1 if idx in idx_srr_save else 0 for idx in range(len(column_headers_header))]
+            genotype = [1 if idx in idx_srr_save else 0 for idx in range_list_sample]
             genotypes.append(genotype)
 
         # Transposing the matrix
         transposed_genotypes = list(map(list, zip(*genotypes)))
-        df = pd.DataFrame(transposed_genotypes, index=column_headers_header, columns=column_headers)
+        df = pd.DataFrame(transposed_genotypes, index=self.list_samples, columns=column_headers)
         return df
 
     def sm_ols(self, x, y) :
@@ -440,7 +417,6 @@ if __name__ == "__main__" :
     print(f"Time Matrix : {time.time() - start} s")
     start = time.time()
     snarl = parse_snarl_path_file(args.snarl)
-    print(f"Time snarl path parseing : {time.time() - start} s")
 
     if args.binary:
         binary_group = parse_group_file(args.binary)

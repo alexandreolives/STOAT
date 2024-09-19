@@ -33,10 +33,11 @@ python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -
 ### Run test
 ```bash
 python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
+python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -q test/pheno.txt
 ```
 
 ### Output
-- Case of binary phenotype (-b option) :
+- Example of binary phenotype analysis (-b option) :
 ```bash
 Snarl	        P_value_Fisher	    P_value_Chi2	    Table_sum	Inter_group	Average
 5262721_5262719	0.46359729745943223	0.518292726549784	286	2	    137	        143.0
@@ -44,7 +45,7 @@ Snarl	        P_value_Fisher	    P_value_Chi2	    Table_sum	Inter_group	Average
 5262717_5262714	0.2120778233741457	0.2363840346684607	286	2	    134	        143.0
 ```
 
-- Case of quantitative phenotype (-q option) :
+- Example of quantitative phenotype analysis (-q option) :
 ```bash
 Snarl	            P_value
 >5262719>5262721	0.9099354411737626
