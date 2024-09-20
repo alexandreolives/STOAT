@@ -80,14 +80,20 @@ def plot_manhattan_quantitative(file_path, output_file_manh):
     plt.legend(loc='upper right')
     plt.savefig(output_file_manh, format='png', dpi=300)
 
-file_path = 'output/droso_binary.tsv'
-output_file_dist = "output/distribution_plot_binary.png"
-output_file_manh = "output/manhattan_plot_binary.png"
-plot_p_value_distribution_binary(file_path, output_file_dist)
-plot_manhattan_binary(file_path, output_file_manh)
+# file_path = 'output/pgtest_100_binary.tsv'
+# output_file_dist = "output/pgtest_100_distribution_plot_binary.png"
+# output_file_manh = "output/pgtest_100_manhattan_plot_binary.png"
+# plot_p_value_distribution_binary(file_path, output_file_dist)
+# plot_manhattan_binary(file_path, output_file_manh)
 
-file_path = 'output/droso_quantitative.tsv'
-output_file_dist = "output/distribution_plot_quantitative.png"
-output_file_manh = "output/manhattan_plot_quantitative.png"
+file_path = 'output/simulation_quantitative.tsv'
+output_file_dist = "output/pgtest_1000_distribution_plot_quantitative.png"
+output_file_manh = "output/pgtest_1000_manhattan_plot_quantitative.png"
 plot_p_value_distribution_quantitative(file_path, output_file_dist)
 plot_manhattan_quantitative(file_path, output_file_manh)
+
+# file_path = 'output/droso_quantitative.tsv'
+# output_file_dist = "output/distribution_plot_quantitative.png"
+# output_file_manh = "output/manhattan_plot_quantitative.png"
+# plot_p_value_distribution_quantitative(file_path, output_file_dist)
+# plot_manhattan_quantitative(file_path, output_file_manh)

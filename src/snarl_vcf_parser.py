@@ -3,7 +3,6 @@ from cyvcf2 import VCF
 from typing import List
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
 import statsmodels.api as sm
 from collections import defaultdict
 from scipy.stats import chi2_contingency
@@ -36,11 +35,11 @@ class Matrix :
         self.matrix[idx_snarl, idx_geno] = 1
 
     def __str__(self) :
-        return f"{self.row_header[0]} {self.matrix[0]} \n" \
-               f"{self.row_header[1]} {self.matrix[1]} \n" \
-               f"{self.row_header[2]} {self.matrix[2]} \n" \
-               f"{self.row_header[3]} {self.matrix[3]} \n" \
-               f"{self.row_header[4]} {self.matrix[4]} \n"
+        return f"{self.matrix[0]} \n" \
+               f"{self.matrix[1]} \n" \
+               f"{self.matrix[2]} \n" \
+               f"{self.matrix[3]} \n" \
+               f"{self.matrix[4]} \n"
 
 class SnarlProcessor:
     def __init__(self, vcf_path: str):
@@ -151,7 +150,7 @@ class SnarlProcessor:
     def check_pheno_group(self, group) :
         """Check if all sample name in the matrix are matching with phenotype else return error"""
         if type(group) == tuple :
-            list_group = group[0] + group[1]
+            list_group = list(group[0].keys()) + list(group[1].keys())
         elif type(group) == dict :
             list_group = [i for i in group.keys()]
         else :
@@ -162,11 +161,11 @@ class SnarlProcessor:
         missing_elements = set_sample - set_group
 
         if missing_elements:
-            raise ValueError(f"The following elements from set_sample are not present in set_group: {missing_elements}")
+            raise ValueError(f"The following sample name from merged vcf are not present in group.txt : {missing_elements}")
 
     def binary_table(self, snarls, binary_groups, output="output/binary_output.tsv") : 
 
-        #self.check_pheno_group(binary_groups)
+        self.check_pheno_group(binary_groups)
 
         with open(output, 'wb') as outf:
             headers = 'Snarl\tP_value_Fisher\tP_value_Chi2\tTable_sum\tInter_group\tAverage\n'
@@ -180,18 +179,18 @@ class SnarlProcessor:
 
     def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
 
-        #self.check_pheno_group(quantitative)
+        self.check_pheno_group(quantitative)
 
         with open(output, 'wb') as outf:
             headers = 'Snarl\tP_value\n'
             outf.write(headers.encode('utf-8'))
+            
+            for snarl, list_snarl in snarls.items() :
 
-            for _, snarl in snarls.items() :
-                df = self.create_quantitative_table(snarl)
-                list_snarl, list_pvalue = self.linear_regression(df, quantitative)
-                for snarl, pvalue in zip(list_snarl, list_pvalue) : 
-                    data = '{}\t{}\n'.format(snarl, pvalue)
-                    outf.write(data.encode('utf-8'))
+                df = self.create_quantitative_table(list_snarl)
+                pvalue = self.linear_regression(df, quantitative)
+                data = '{}\t{}\n'.format(snarl, pvalue)
+                outf.write(data.encode('utf-8'))
 
     def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
         """
@@ -199,22 +198,24 @@ class SnarlProcessor:
         """
         matrix = self.matrix.get_matrix()
         rows_to_check = []
-        
+        print('decomposed_snarl : ', decomposed_snarl)
+
         for snarl in decomposed_snarl :
-            if "*" not in snarl and snarl in row_headers_dict :
+            if "*" in snarl :
+                continue
+
+            if snarl in row_headers_dict :
                 idx_row = row_headers_dict[snarl]
                 rows_to_check.append(idx_row)
+
             else:
                 return [] 
-            
-        if not rows_to_check :
-            return []
-
+        
         rows_to_check = np.array(rows_to_check)
         extracted_rows = matrix[rows_to_check, :]
         columns_all_ones = np.all(extracted_rows == 1, axis=0)
         idx_srr_save = np.where(columns_all_ones)[0].tolist()
-        
+
         return idx_srr_save
 
     def create_binary_table(self, groups, list_path_snarl) -> pd.DataFrame :
@@ -245,39 +246,41 @@ class SnarlProcessor:
         # Create and return the DataFrame
         df = pd.DataFrame([g0, g1], index=['G0', 'G1'], columns=list_path_snarl)
         return df
-
+    
     def create_quantitative_table(self, column_headers : list) -> pd.DataFrame:
         row_headers_dict = self.matrix.get_row_header()
-        range_list_sample = range(len(self.list_samples))
+        length_sample = len(self.list_samples)
         genotypes = []
 
         # Iterate over each path_snarl in column_headers
         for path_snarl in column_headers:
-            idx_srr_save = list(range_list_sample)
             decomposed_snarl = self.decompose_string(path_snarl)
-            idx_srr_save = self.identify_correct_path(decomposed_snarl, row_headers_dict, idx_srr_save)
+            idx_srr_save = self.identify_correct_path(decomposed_snarl, row_headers_dict, list(range(length_sample)))
+            genotypes.append([0]*length_sample)
 
-            genotype = [1 if idx in idx_srr_save else 0 for idx in range_list_sample]
-            genotypes.append(genotype)
+            for idx in idx_srr_save :
+                srr_idx = idx//2
+                genotypes[-1][srr_idx] += 1
 
         # Transposing the matrix
         transposed_genotypes = list(map(list, zip(*genotypes)))
         df = pd.DataFrame(transposed_genotypes, index=self.list_samples, columns=column_headers)
+
         return df
 
     def sm_ols(self, x, y) :
 
         # Fit the regression model
-        scaler = StandardScaler()
-        x_scaled = scaler.fit_transform(x)
-        result = sm.OLS(y, x_scaled).fit()
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        print("x : ", x)
 
-        list_p_value = []
-        for _, p_value in result.pvalues.items():
-            formatted_p_value = "N/A" if pd.isna(p_value) else p_value
-            list_p_value.append(formatted_p_value)
+        x_with_const = sm.add_constant(x)
+        result = sm.OLS(y, x_with_const).fit()
+        print(result.summary())
+        pval = result.f_pvalue
 
-        return list_p_value
+        return pval
     
     def linear_regression(self, df, pheno : dict) -> float :
         
@@ -287,8 +290,7 @@ class SnarlProcessor:
         y = df['Target']
 
         pval = self.sm_ols(x, y)
-        index = df.columns.tolist()
-        return index, pval
+        return pval
 
     def chi2_test(self, df) -> float:
         """Calculate p_value from list of dataframe using chi-2 test"""
@@ -335,9 +337,9 @@ def parse_group_file(group_file : str):
     if not required_headers.issubset(df.columns):
         raise ValueError(f"Missing required columns. The file must contain the following columns: {required_headers}")
     
-    # Extract samples belonging to group 0 and group 1
-    group_0 = df[df['group'] == 0]['sample'].tolist()
-    group_1 = df[df['group'] == 1]['sample'].tolist()
+    # Create dictionaries for group 0 and group 1
+    group_0 = {sample: 0 for sample in df[df['group'] == 0]['sample']}
+    group_1 = {sample: 1 for sample in df[df['group'] == 1]['sample']}
     
     return group_0, group_1
  
@@ -415,6 +417,7 @@ if __name__ == "__main__" :
     vcf_object = SnarlProcessor(args.vcf_path)
     vcf_object.fill_matrix()
     print(f"Time Matrix : {time.time() - start} s")
+
     start = time.time()
     snarl = parse_snarl_path_file(args.snarl)
 
