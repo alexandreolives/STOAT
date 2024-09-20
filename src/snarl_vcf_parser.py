@@ -133,7 +133,7 @@ class SnarlProcessor:
 
             for index_column, genotype in enumerate(genotypes) :
 
-                allele_1, allele_2 = genotype[:2]  # Extract alleles
+                allele_1, allele_2 = genotype[:2]  # assume there are only 2 allele
                 col_idx = index_column * 2
 
                 list_decompose_allele_1 = list_list_decomposed_snarl[allele_1]
@@ -246,25 +246,23 @@ class SnarlProcessor:
         df = pd.DataFrame([g0, g1], index=['G0', 'G1'], columns=list_path_snarl)
         return df
     
-    def create_quantitative_table(self, column_headers : list) -> pd.DataFrame:
+    def create_quantitative_table(self, column_headers: list) -> pd.DataFrame:
         row_headers_dict = self.matrix.get_row_header()
         length_sample = len(self.list_samples)
-        genotypes = []
 
-        # Iterate over each path_snarl in column_headers
-        for path_snarl in column_headers:
+        # Initialize a zero matrix for genotypes with shape (length_sample, len(column_headers))
+        genotypes = np.zeros((length_sample, len(column_headers)), dtype=int)
+
+        # Iterate over each path_snarl and fill in the matrix
+        for col_idx, path_snarl in enumerate(column_headers):
             decomposed_snarl = self.decompose_string(path_snarl)
             idx_srr_save = self.identify_correct_path(decomposed_snarl, row_headers_dict, list(range(length_sample)))
-            genotypes.append([0]*length_sample)
 
-            for idx in idx_srr_save :
-                srr_idx = idx//2
-                genotypes[-1][srr_idx] += 1
+            for idx in idx_srr_save:
+                srr_idx = idx // 2  # Convert index to the appropriate sample index
+                genotypes[srr_idx, col_idx] += 1
 
-        # Transposing the matrix
-        transposed_genotypes = list(map(list, zip(*genotypes)))
-        df = pd.DataFrame(transposed_genotypes, index=self.list_samples, columns=column_headers)
-
+        df = pd.DataFrame(genotypes, index=self.list_samples, columns=column_headers)
         return df
 
     def sm_ols(self, x, y) :
