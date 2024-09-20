@@ -108,7 +108,7 @@ class SnarlProcessor:
     def push_matrix(self, idx_snarl, decomposed_snarl, row_header_dict, index_column):
         """Add True to the matrix if snarl is found"""
 
-        current_rows_number, _ = self.matrix.get_matrix().shape
+        current_rows_number = self.matrix.get_matrix().shape[0]
 
         # Retrieve or add the index in one step and calculate the length once
         length_ordered_dict = len(row_header_dict)
@@ -131,19 +131,19 @@ class SnarlProcessor:
             snarl_list = variant.INFO.get('AT', '').split(',')  # Extract and split snarl list once per variant
             list_list_decomposed_snarl = self.decompose_snarl(snarl_list)  # Decompose snarls once per variant
 
-            # Loop over each decomposed snarl list and genotype
-            for idx_snarl, list_decomposed_snarl in enumerate(list_list_decomposed_snarl):
-                for decomposed_snarl in list_decomposed_snarl:
-                    # Loop over genotypes with index_column tracking
-                    for index_column, genotype in enumerate(genotypes):
-                        allele_1, allele_2 = genotype[:2]  # Extract alleles
-                        col_idx = index_column * 2
+            for index_column, genotype in enumerate(genotypes) :
 
-                        if allele_1 == idx_snarl :
-                            self.push_matrix(idx_snarl, decomposed_snarl, row_header_dict, col_idx)
+                allele_1, allele_2 = genotype[:2]  # Extract alleles
+                col_idx = index_column * 2
 
-                        if allele_2 == idx_snarl :
-                            self.push_matrix(idx_snarl, decomposed_snarl, row_header_dict, col_idx + 1)
+                list_decompose_allele_1 = list_list_decomposed_snarl[allele_1]
+                list_decompose_allele_2 = list_list_decomposed_snarl[allele_2]
+
+                self.push_matrix(allele_1, list_decompose_allele_1[0], row_header_dict, col_idx)
+                self.push_matrix(allele_1, list_decompose_allele_1[1], row_header_dict, col_idx)
+
+                self.push_matrix(allele_2, list_decompose_allele_2[0], row_header_dict, col_idx + 1)
+                self.push_matrix(allele_2, list_decompose_allele_2[1], row_header_dict, col_idx + 1)
 
         self.matrix.set_row_header(row_header_dict)
 
@@ -198,7 +198,6 @@ class SnarlProcessor:
         """
         matrix = self.matrix.get_matrix()
         rows_to_check = []
-        print('decomposed_snarl : ', decomposed_snarl)
 
         for snarl in decomposed_snarl :
             if "*" in snarl :
@@ -271,13 +270,13 @@ class SnarlProcessor:
     def sm_ols(self, x, y) :
 
         # Fit the regression model
-        pd.set_option('display.max_rows', None)
-        pd.set_option('display.max_columns', None)
-        print("x : ", x)
+        # pd.set_option('display.max_rows', None)
+        # pd.set_option('display.max_columns', None)
+        # print("x : ", x)
 
         x_with_const = sm.add_constant(x)
         result = sm.OLS(y, x_with_const).fit()
-        print(result.summary())
+        # print(result.summary())
         pval = result.f_pvalue
 
         return pval
@@ -299,7 +298,7 @@ class SnarlProcessor:
         if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
             try:
                 # Perform Chi-Square test
-                chi2, p_value, dof, expected = chi2_contingency(df)
+                p_value = chi2_contingency(df)[1]
             except ValueError as e:
                 p_value = "Error"
         else:
@@ -311,7 +310,7 @@ class SnarlProcessor:
         """Calcul p_value using fisher exact test"""
 
         try:
-            odds_ratio, p_value = fisher_exact(df)
+            p_value = fisher_exact(df)[1]
 
         except ValueError as e: 
             p_value = 'N/A'
