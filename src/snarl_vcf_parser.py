@@ -108,14 +108,13 @@ class SnarlProcessor:
     def push_matrix(self, idx_snarl, decomposed_snarl, row_header_dict, index_column):
         """Add True to the matrix if snarl is found"""
 
-        current_rows_number = self.matrix.get_matrix().shape[0]
-
         # Retrieve or add the index in one step and calculate the length once
         length_ordered_dict = len(row_header_dict)
         idx_snarl = self.get_or_add_index(row_header_dict, decomposed_snarl, length_ordered_dict)
 
         # Check if a new matrix chunk is needed (only if length > 1)
-        if length_ordered_dict > 1 and length_ordered_dict > current_rows_number -1 :
+        current_rows_number = self.matrix.get_matrix().shape[0]
+        if length_ordered_dict > current_rows_number -1 :
             self.expand_matrix()
 
         # Add data to the matrix
@@ -130,7 +129,6 @@ class SnarlProcessor:
             genotypes = variant.genotypes  # Extract genotypes once per variant
             snarl_list = variant.INFO.get('AT', '').split(',')  # Extract and split snarl list once per variant
             list_list_decomposed_snarl = self.decompose_snarl(snarl_list)  # Decompose snarls once per variant
-            print("list_list_decomposed_snarl : ", list_list_decomposed_snarl)
 
             for index_column, genotype in enumerate(genotypes) :
 
@@ -142,7 +140,7 @@ class SnarlProcessor:
 
                 for decompose_allele_1 in list_decompose_allele_1 :
                     self.push_matrix(allele_1, decompose_allele_1, row_header_dict, col_idx)
-                
+
                 for decompose_allele_2 in list_decompose_allele_2 :
                     self.push_matrix(allele_2, decompose_allele_2, row_header_dict, col_idx + 1)
 
@@ -198,20 +196,18 @@ class SnarlProcessor:
         Return a list of column index where all specifique element of this column of matrix are 1
         """
         matrix = self.matrix.get_matrix()
-        rows_to_check = []
+        rows_to_check = np.array([], dtype=int)
 
         for snarl in decomposed_snarl :
             if "*" in snarl :
                 continue
 
             if snarl in row_headers_dict :
-                idx_row = row_headers_dict[snarl]
-                rows_to_check.append(idx_row)
+                rows_to_check = np.append(rows_to_check, row_headers_dict[snarl])
 
             else:
                 return [] 
         
-        rows_to_check = np.array(rows_to_check)
         extracted_rows = matrix[rows_to_check, :]
         columns_all_ones = np.all(extracted_rows == 1, axis=0)
         idx_srr_save = np.where(columns_all_ones)[0].tolist()
@@ -276,9 +272,8 @@ class SnarlProcessor:
         x_with_const = sm.add_constant(x)
         result = sm.OLS(y, x_with_const).fit()
         # print(result.summary())
-        pval = result.f_pvalue
 
-        return pval
+        return result.f_pvalue
     
     def linear_regression(self, df, pheno : dict) -> float :
         
