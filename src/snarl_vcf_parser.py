@@ -130,6 +130,7 @@ class SnarlProcessor:
             genotypes = variant.genotypes  # Extract genotypes once per variant
             snarl_list = variant.INFO.get('AT', '').split(',')  # Extract and split snarl list once per variant
             list_list_decomposed_snarl = self.decompose_snarl(snarl_list)  # Decompose snarls once per variant
+            print("list_list_decomposed_snarl : ", list_list_decomposed_snarl)
 
             for index_column, genotype in enumerate(genotypes) :
 
@@ -139,11 +140,11 @@ class SnarlProcessor:
                 list_decompose_allele_1 = list_list_decomposed_snarl[allele_1]
                 list_decompose_allele_2 = list_list_decomposed_snarl[allele_2]
 
-                self.push_matrix(allele_1, list_decompose_allele_1[0], row_header_dict, col_idx)
-                self.push_matrix(allele_1, list_decompose_allele_1[1], row_header_dict, col_idx)
-
-                self.push_matrix(allele_2, list_decompose_allele_2[0], row_header_dict, col_idx + 1)
-                self.push_matrix(allele_2, list_decompose_allele_2[1], row_header_dict, col_idx + 1)
+                for decompose_allele_1 in list_decompose_allele_1 :
+                    self.push_matrix(allele_1, decompose_allele_1, row_header_dict, col_idx)
+                
+                for decompose_allele_2 in list_decompose_allele_2 :
+                    self.push_matrix(allele_2, decompose_allele_2, row_header_dict, col_idx + 1)
 
         self.matrix.set_row_header(row_header_dict)
 
