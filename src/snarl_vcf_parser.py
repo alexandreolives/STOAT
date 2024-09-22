@@ -160,7 +160,7 @@ class SnarlProcessor:
         missing_elements = set_sample - set_group
 
         if missing_elements:
-            raise ValueError(f"The following sample name from merged vcf are not present in group.txt : {missing_elements}")
+            raise ValueError(f"The following sample name from merged vcf are not present in group file : {missing_elements}")
 
     def binary_table(self, snarls, binary_groups, output="output/binary_output.tsv") : 
 
@@ -183,9 +183,8 @@ class SnarlProcessor:
         with open(output, 'wb') as outf:
             headers = 'Snarl\tP_value\n'
             outf.write(headers.encode('utf-8'))
-            
-            for snarl, list_snarl in snarls.items() :
 
+            for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
                 pvalue = self.linear_regression(df, quantitative)
                 data = '{}\t{}\n'.format(snarl, pvalue)
@@ -201,10 +200,8 @@ class SnarlProcessor:
         for snarl in decomposed_snarl :
             if "*" in snarl :
                 continue
-
             if snarl in row_headers_dict :
                 rows_to_check = np.append(rows_to_check, row_headers_dict[snarl])
-
             else:
                 return [] 
         
