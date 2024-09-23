@@ -94,3 +94,5 @@ if __name__ == "__main__" :
     if args.cut :
         number_dead_children = children_cut_off(childrens, effs, cumulated_proportion, args.cut)
         print('{} children cut off after applyed the threshold proportion'.format(number_dead_children))
+
+    # python3 src/children_distribution.py -p ../../snarl_data/fly.pg -d ../../snarl_data/fly.dist -o output/children_distribution.tsv

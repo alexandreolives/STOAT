@@ -167,7 +167,7 @@ class SnarlProcessor:
         self.check_pheno_group(binary_groups)
 
         with open(output, 'wb') as outf:
-            headers = 'Snarl\tP_value_Fisher\tP_value_Chi2\tTable_sum\tInter_group\tAverage\n'
+            headers = 'Snarl\tP_value_Fisher\tP_value_Chi2\tTable_sum\tNumber_column\tInter_group\tAverage\n'
             outf.write(headers.encode('utf-8'))
 
             for snarl, list_snarl in snarls.items() :
@@ -278,6 +278,8 @@ class SnarlProcessor:
         df['Target'] = df.index.map(pheno)
         x = df.drop('Target', axis=1)
         y = df['Target']
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
 
         pval = self.sm_ols(x, y)
         return pval
@@ -356,6 +358,7 @@ def parse_snarl_path_file(path_file: str) -> dict:
     for snarl, paths in zip(df['snarl'], df['paths']):
         snarl_paths[snarl].extend(paths)
 
+    print("snarl_paths : ", snarl_paths)
     return snarl_paths
 
 def check_format_vcf_file(file_path : str) -> str:
@@ -420,6 +423,7 @@ if __name__ == "__main__" :
 
 # python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
 # python3 src/snarl_vcf_parser.py ../../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../../snarl_data/group.txt
+# python3 src/snarl_vcf_parser.py ../../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
 
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
@@ -432,3 +436,4 @@ if __name__ == "__main__" :
 
 # python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -q test/pheno.txt
 # python3 src/snarl_vcf_parser.py ../../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -q ../../snarl_data/updated_phenotypes.txt
+# python3 src/snarl_vcf_parser.py ../../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -q ../../snarl_data/simulation_1000vars_100samps/simulated_phenotypes.txt -o output/simulation_1000_quantitative.tsv

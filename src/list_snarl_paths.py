@@ -175,7 +175,7 @@ def write_output(output_file, snarl_id, pretty_paths) :
     with open(output_file, 'wt') as outf:
         outf.write('{}\t{}\n'.format(snarl_id, ','.join(pretty_paths)))
 
-def loop_over_snarls_write(stree, snarls, pg, threshold, output_file) :
+def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=99.8) :
     write_header_output(output_file)
 
     children = [0]
@@ -186,14 +186,14 @@ def loop_over_snarls_write(stree, snarls, pg, threshold, output_file) :
     # for each snarl, lists paths through the netgraph and write to output TSV
     for idx, snarl in enumerate(snarls):
         
-        # if idx > 0 and idx % 10000 == 0 :
-        #     print("idx : ", idx)
+        if idx > 0 and idx % 10000 == 0 :
+            print("idx : ", idx)
 
         if threshold :
             children = [0]
             stree.for_each_child(snarl, count_children)
             if children[0] >threshold :
-                print(f"number of children > {threshold}")
+                #print(f"number of children > {threshold}")
                 continue
 
         snarl_id = find_snarl_id(stree, snarl)
@@ -207,7 +207,7 @@ def loop_over_snarls_write(stree, snarls, pg, threshold, output_file) :
             path = paths.pop()
 
             if len(finished_paths) > 10000 :
-                print("len of finished_paths > 10000")
+                #print("len of finished_paths > 10000")
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
@@ -217,7 +217,7 @@ def loop_over_snarls_write(stree, snarls, pg, threshold, output_file) :
         pretty_paths = fill_pretty_paths(stree, finished_paths, pretty_paths)
         write_output(output_file, snarl_id, pretty_paths)
 
-def loop_over_snarls(stree, snarls, pg, threshold) :
+def loop_over_snarls(stree, snarls, pg, threshold=99.8) :
 
     snarl_paths = defaultdict(list)
 
@@ -227,13 +227,16 @@ def loop_over_snarls(stree, snarls, pg, threshold) :
         return (True)
 
     # for each snarl, lists paths through the netgraph and write to output TSV
-    for snarl in snarls:
+    for idx, snarl in enumerate(snarls):
         
+        if idx > 0 and idx % 10000 == 0 :
+            print("idx : ", idx)  
+                  
         if threshold :
             children = [0]
             stree.for_each_child(snarl, count_children)
-            if children[0] >threshold :
-                print(f"number of children > {threshold}")
+            if children[0] > threshold :
+                #print(f"number of children > {threshold}")
                 continue
 
         snarl_id = find_snarl_id(stree, snarl)
@@ -247,7 +250,7 @@ def loop_over_snarls(stree, snarls, pg, threshold) :
             path = paths.pop()
 
             if len(finished_paths) > 10000 :
-                print("len of finished_paths > 10000")
+                #print("len of finished_paths > 10000")
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
@@ -264,10 +267,12 @@ if __name__ == "__main__" :
     parser = argparse.ArgumentParser('List path through the netgraph of each snarl in a pangenome')
     parser.add_argument('-p', help='the input pangenome .pg file', required=True)
     parser.add_argument('-d', help='the input distance index .dist file',required=True)
-    parser.add_argument("-t", "--threshold", type=check_threshold, help='Children threshold', required=False)
+    parser.add_argument('-t', type=check_threshold, help='Children threshold', required=False)
     parser.add_argument('-o', help='the output TSV file', required=True)
     args = parser.parse_args()
 
     stree, pg, root = parse_graph_tree(args.p, args.d)
     snarls = create_snarls(stree, root)
     loop_over_snarls_write(stree, snarls, pg, args.t, args.o)
+
+    # python3 src/list_snarl_paths.py -p ../../snarl_data/fly.pg -d ../../snarl_data/fly.dist -o test_list_snarl.tsv
