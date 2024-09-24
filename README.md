@@ -18,11 +18,20 @@ pip install -r requirements.txt
 - pandas
 
 ## Usage
-Run the script from the command line, providing the paths to your VCF file, group file, and snarl file:
+Run the script from the command line, providing the paths to your VCF file, group file, and snarl file :
 
 ```bash
-python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -b <path_to_group_file.txt> -o output.tx
-python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -b <path_to_group_file.txt> -o output.tx
+python3 list_snarl_paths.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -o <output.tsv>
+python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -b <path_to_group_file.txt> -o output.txt
+or
+python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> -q <path_to_pheno_file.txt> -o output.txt
+```
+
+Run full tools :
+```bash
+python3 snarl_project.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -b <path_to_group_file.txt> -o output.tsv
+or 
+python3 snarl_project.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.tsv
 ```
 
 ### Input format file

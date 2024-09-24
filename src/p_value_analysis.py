@@ -5,8 +5,8 @@ import numpy as np
 def plot_p_value_distribution_binary(file_path, output_file_dist):
     df = pd.read_csv(file_path, sep='\t')
 
-    p_values_f = df.iloc[:, 0]
-    p_values_c = df.iloc[:, 1]
+    p_values_f = df['P_value_Fisher']
+    p_values_c = df['P_value_Chi2']
 
     plt.figure(figsize=(10, 6))
     plt.hist(p_values_f, bins=50, color='skyblue', edgecolor='black', alpha=0.7, label='P-value (Fisher)')
@@ -35,13 +35,13 @@ def plot_manhattan_binary(file_path, output_file_manh):
     df = pd.read_csv(file_path, sep='\t')
     
     # Convert 'N/A' to NaN and then to numeric, while filtering out NaN values
-    df['Snarl'] = pd.to_numeric(df['Snarl'], errors='coerce')
     df['P_value_Fisher'] = pd.to_numeric(df['P_value_Fisher'], errors='coerce')
-    df = df.dropna(subset=['Snarl', 'P_value_Fisher'])
+    df['P_value_Chi2'] = pd.to_numeric(df['P_value_Chi2'], errors='coerce')
+    df = df.dropna(subset=['P_value_Fisher', 'P_value_Chi2'])
 
     # Convert p-values to -log10(p-values) for plotting
-    df['-log10(P_value_Fisher)'] = -np.log10(df['Snarl'])
-    df['-log10(P_value_Chi2)'] = -np.log10(df['P_value_Fisher'])
+    df['-log10(P_value_Fisher)'] = -np.log10(df['P_value_Fisher'])
+    df['-log10(P_value_Chi2)'] = -np.log10(df['P_value_Chi2'])
     df['index'] = np.arange(len(df))
     
     plt.figure(figsize=(12, 6))
@@ -80,17 +80,23 @@ def plot_manhattan_quantitative(file_path, output_file_manh):
     plt.legend(loc='upper right')
     plt.savefig(output_file_manh, format='png', dpi=300)
 
-# file_path = 'output/pgtest_100_binary.tsv'
-# output_file_dist = "output/pgtest_100_distribution_plot_binary.png"
-# output_file_manh = "output/pgtest_100_manhattan_plot_binary.png"
-# plot_p_value_distribution_binary(file_path, output_file_dist)
-# plot_manhattan_binary(file_path, output_file_manh)
+file_path = 'output/simulation_1000_binary.tsv'
+output_file_dist = "output/pgtest_1000_distribution_plot_binary.png"
+output_file_manh = "output/pgtest_1000_manhattan_plot_binary.png"
+plot_p_value_distribution_binary(file_path, output_file_dist)
+plot_manhattan_binary(file_path, output_file_manh)
 
-file_path = 'output/simulation_quantitative.tsv'
-output_file_dist = "output/pgtest_1000_distribution_plot_quantitative.png"
-output_file_manh = "output/pgtest_1000_manhattan_plot_quantitative.png"
-plot_p_value_distribution_quantitative(file_path, output_file_dist)
-plot_manhattan_quantitative(file_path, output_file_manh)
+"""
+Number of p_values_f < 0.00001: 66
+Total number of p_values_f: 1532
+Percentage of p_values_f < 0.00001: 4.31%
+"""
+
+# file_path = 'output/simulation_quantitative.tsv'
+# output_file_dist = "output/pgtest_1000_distribution_plot_quantitative.png"
+# output_file_manh = "output/pgtest_1000_manhattan_plot_quantitative.png"
+# plot_p_value_distribution_quantitative(file_path, output_file_dist)
+# plot_manhattan_quantitative(file_path, output_file_manh)
 
 # file_path = 'output/droso_quantitative.tsv'
 # output_file_dist = "output/distribution_plot_quantitative.png"

@@ -54,6 +54,6 @@ if args.quantitative:
     p_value_analysis.plot_manhattan_quantitative(args.output, output_quantitative_file_manh)
 
 """
-    python3 src/setup.py -p ../../snarl_data/fly.pg -d ../../snarl_data/fly.dist -v ../../snarl_data/fly.merged.vcf \
+    python3 src/snarl_project.py -p ../../snarl_data/fly.pg -d ../../snarl_data/fly.dist -v ../../snarl_data/fly.merged.vcf \
     -q ../../snarl_data/updated_phenotypes.txt -o output/simulation_quantitative.tsv
 """
