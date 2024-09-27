@@ -1,6 +1,5 @@
 import bdsg
 import argparse
-import matplotlib.pyplot as plt
 from collections import Counter
 
 def count_children(net):

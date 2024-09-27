@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Function to process the frequency file and get result list with differences
-def process_file(file_path, threshold=0.4):
+def process_file(file_path, threshold=0.3):
     df = pd.read_csv(file_path, sep='\t')
     path_list = []
     true_labels = []
@@ -65,9 +65,9 @@ def print_confusion_matrix(predicted_labels_10_2, predicted_labels_10_5, true_la
     acc_10_2 = accuracy_score(true_labels, predicted_labels_10_2)
     recall_10_2 = recall_score(true_labels, predicted_labels_10_2)
     f1_10_2 = f1_score(true_labels, predicted_labels_10_2)
-    print(f"Accuracy: {acc_10_2:.2f}")
-    print(f"Recall: {recall_10_2:.2f}")
-    print(f"F1 Score: {f1_10_2:.2f}")
+    print(f"Accuracy: {acc_10_2:.3f}")
+    print(f"Recall: {recall_10_2:.3f}")
+    print(f"F1 Score: {f1_10_2:.3f}")
 
     # Plot confusion matrix for p-value < 0.01
     plt.figure(figsize=(8, 6))
@@ -89,9 +89,9 @@ def print_confusion_matrix(predicted_labels_10_2, predicted_labels_10_5, true_la
     acc_10_5 = accuracy_score(true_labels, predicted_labels_10_5)
     recall_10_5 = recall_score(true_labels, predicted_labels_10_5)
     f1_10_5 = f1_score(true_labels, predicted_labels_10_5)
-    print(f"Accuracy: {acc_10_5:.2f}")
-    print(f"Recall: {recall_10_5:.2f}")
-    print(f"F1 Score: {f1_10_5:.2f}")
+    print(f"Accuracy: {acc_10_5:.3f}")
+    print(f"Recall: {recall_10_5:.3f}")
+    print(f"F1 Score: {f1_10_5:.3f}")
 
     # Plot confusion matrix for p-value < 0.00001
     plt.figure(figsize=(8, 6))

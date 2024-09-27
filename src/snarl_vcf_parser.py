@@ -183,7 +183,6 @@ class SnarlProcessor:
         with open(output, 'wb') as outf:
             headers = 'Snarl\tP_value\n'
             outf.write(headers.encode('utf-8'))
-
             for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
                 pvalue = self.linear_regression(df, quantitative)
@@ -358,7 +357,6 @@ def parse_snarl_path_file(path_file: str) -> dict:
     for snarl, paths in zip(df['snarl'], df['paths']):
         snarl_paths[snarl].extend(paths)
 
-    print("snarl_paths : ", snarl_paths)
     return snarl_paths
 
 def check_format_vcf_file(file_path : str) -> str:
