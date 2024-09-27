@@ -107,8 +107,9 @@ if __name__ == "__main__" :
     # plot_p_value_distribution_quantitative(file_path, output_file_dist)
     # plot_manhattan_quantitative(file_path, output_file_manh)
 
-    file_path = 'output/droso_quantitative.tsv'
-    output_file_dist = "output/distribution_plot_quantitative.png"
-    output_file_manh = "output/manhattan_plot_quantitative.png"
+    file_path = 'output/droso_male_snarl_p_value.tsv'
+    output_file_dist = "output/droso_male_distribution_plot_quantitative.png"
+    output_file_manh = "output/droso_male_manhattan_plot_quantitative.png"
+    output_snarl = "output/droso_male_significative_snarl.tsv"
     plot_p_value_distribution_quantitative(file_path, output_file_dist)
-    plot_manhattan_quantitative(file_path, output_file_manh)
+    plot_manhattan_quantitative(file_path, output_file_manh, output_snarl)
