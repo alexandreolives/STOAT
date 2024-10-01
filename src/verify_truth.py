@@ -12,12 +12,11 @@ def process_file(freq_file, threshold=0.2):
     list_diff = []
 
     # Iterate in pairs and calculate the differences
-    itr = 0
     for i in range(0, len(df) - 1, 2):
         row_1 = df.iloc[i]
         row_2 = df.iloc[i + 1]
         diff = abs(row_1['freq'] - row_2['freq'])
-        
+
         if diff >= threshold:
             true_labels.append(0)
         else :
@@ -28,9 +27,10 @@ def process_file(freq_file, threshold=0.2):
 
     return path_list, true_labels, list_diff
 
-def match_snarl(path_list, true_labels, p_value_file):
+def match_snarl(path_list, true_labels, p_value_file, paths_file):
     p_value_df = pd.read_csv(p_value_file, sep='\t')
-    
+    paths_df = pd.read_csv(paths_file, sep='\t')
+
     # To store predicted labels
     predicted_labels_10_2 = []
     predicted_labels_10_5 = []
@@ -40,16 +40,26 @@ def match_snarl(path_list, true_labels, p_value_file):
     finded_row = 0
 
     for idx, snarl_id in enumerate(path_list):
+
+        # if idx == 15 :
+        #     exit()
         start_node, next_node = map(int, snarl_id.split('_'))
-        
         split = p_value_df['Snarl'].str.split('_')
-        matched_row = p_value_df[(split.str[1].astype(int) <= start_node) & 
-                                    (split.str[0].astype(int) >= next_node)]
+        _id_snarl = (split.str[1].astype(int) <= start_node) & (split.str[0].astype(int) >= next_node)
+        matched_row = p_value_df[_id_snarl]
 
-        if not matched_row.empty:
-            match = matched_row.iloc[0]
+        if not matched_row.empty :
+            if len(matched_row) > 1 :
+                split_paths = paths_df['paths'][_id_snarl]
+                indices = split_paths.index
+                for idx_paths, list_paths in enumerate(split_paths) :
+                    for path in list_paths.split(',') :
+                        if f"{next_node}>{start_node}" in path :
+                            match = matched_row.loc[indices[idx_paths]]
+
+            else :
+                match = matched_row.iloc[0]
             p_value_fisher = match['P_value_Fisher']
-
             predicted_labels_10_2.append(0 if p_value_fisher < 0.01 else 1)
             predicted_labels_10_5.append(0 if p_value_fisher < 0.00001 else 1)
             predicted_labels_10_8.append(0 if p_value_fisher < 0.00000001 else 1)
@@ -101,7 +111,7 @@ def print_confusion_matrix(predicted_labels_10_2, predicted_labels_10_5, predict
 def plot_diff_distribution(test_predicted_labels, cleaned_true_labels, list_diff):
     # Identify false negatives: True label is 1 (no difference), but predicted label is 0 (predicted a difference)
     true_negatives_indices = [i for i, (pred, true) in enumerate(zip(test_predicted_labels, cleaned_true_labels)) if pred == 1 and true == 0]
-    
+
     # Extract the corresponding differences for false negatives
     true_negative_diffs = [list_diff[i]*100 for i in true_negatives_indices]
 
@@ -114,10 +124,7 @@ def plot_diff_distribution(test_predicted_labels, cleaned_true_labels, list_diff
     plt.grid(False)
     plt.savefig(output + '_distribution_neg_neg.png', format='png', dpi=300)
 
-    # Identify false negatives: True label is 1 (no difference), but predicted label is 0 (predicted a difference)
     true_true_indices = [i for i, (pred, true) in enumerate(zip(test_predicted_labels, cleaned_true_labels)) if pred == 0 and true == 0]
-    
-    # Extract the corresponding differences for false negatives
     true_true_diffs = [list_diff[i]*100 for i in true_true_indices]
 
     # Plot the distribution of differences for false negatives
@@ -133,19 +140,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parse a file with start_node, next_node, group, and freq columns.")
     parser.add_argument("freq", help="Path to allele frequence file")
     parser.add_argument("p_value", help="Path to p_value file")
+    parser.add_argument("paths", help="Path to p_value file")
 
     args = parser.parse_args()
     path_list, true_labels, _ = process_file(args.freq)
 
     output = "output/truth_confusion_matrix"
     # Match the result_list with the p_value file and write to the output
-    predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels = match_snarl(path_list, true_labels, args.p_value)
+    predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels = match_snarl(path_list, true_labels, args.p_value, args.paths)
     print_confusion_matrix(predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels, output)
 
     # special case
     test_path_list, test_true_labels, list_diff = process_file(args.freq, 0.0000000000000001)
     p_val_10_2 = 0.01
-    test_predicted_labels_10_2, _, _, cleaned_true_labels = match_snarl(test_path_list, test_true_labels, args.p_value)
+    test_predicted_labels_10_2, _, _, cleaned_true_labels = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
     conf_mat_maker(p_val_10_2, test_predicted_labels_10_2, cleaned_true_labels, "output/test_truth_confusion_matrix")
     plot_diff_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff)
 
