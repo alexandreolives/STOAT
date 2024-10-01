@@ -135,13 +135,13 @@ class SnarlProcessor:
                 allele_1, allele_2 = genotype[:2]  # assume there are only 2 allele
                 col_idx = index_column * 2
 
-                list_decompose_allele_1 = list_list_decomposed_snarl[allele_1]
-                list_decompose_allele_2 = list_list_decomposed_snarl[allele_2]
+                if allele_1 == -1 or allele_2 == -1 : # case where we got ./.
+                    continue
 
-                for decompose_allele_1 in list_decompose_allele_1 :
+                for decompose_allele_1 in list_list_decomposed_snarl[allele_1] :
                     self.push_matrix(allele_1, decompose_allele_1, row_header_dict, col_idx)
 
-                for decompose_allele_2 in list_decompose_allele_2 :
+                for decompose_allele_2 in list_list_decomposed_snarl[allele_2] :
                     self.push_matrix(allele_2, decompose_allele_2, row_header_dict, col_idx + 1)
 
         self.matrix.set_row_header(row_header_dict)
