@@ -8,10 +8,11 @@ from collections import defaultdict
 from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact
 import os
+import re
 import time
     
 class Matrix :
-    def __init__(self, default_row_number=1000000, column_number=2):
+    def __init__(self, default_row_number=1_000_000, column_number=2):
         self.default_row_number = default_row_number 
         self.matrix = np.zeros((default_row_number, column_number),dtype=bool)
         self.row_header = None
@@ -44,8 +45,49 @@ class Matrix :
 class SnarlProcessor:
     def __init__(self, vcf_path: str):
         self.list_samples = VCF(vcf_path).samples
-        self.matrix = Matrix(1000000, len(self.list_samples)*2)
-        self.vcf_path = vcf_path
+        self.matrix = Matrix(1_000_000, len(self.list_samples)*2)
+        self.vcf_dict = self.parse_vcf_to_dict(vcf_path)
+
+    def get_first_snarl(self, s):
+
+        match = re.findall(r'\d+', s)
+
+        if match:
+            return int(match[0])
+        return None  # Return None if no integers are found
+
+
+    def parse_vcf_to_dict(self, vcf_file):
+        vcf_dict = {}
+
+        with open(vcf_file, 'r') as f:
+            for line in f:
+                # Skip header lines
+                if line.startswith('#'):
+                    continue
+
+                fields = line.strip().split('\t')
+                
+                chr = fields[0]  # 1er column is CHR
+                pos = fields[1]  # 2nd column is POS
+                snarl = self.get_first_snarl(fields[2])
+                vcf_dict[snarl] = (pos, chr)
+
+        return vcf_dict
+
+    # Function to match the snarl list against the VCF dictionary
+    def match_pos(self, snarl):
+
+        start_snarl, _ = snarl.split('_')
+
+        # Check if the modified snarl ID or its reversed form exists in the VCF dictionary
+        if start_snarl in self.vcf_dict:
+            return self.vcf_dict[start_snarl][0], self.vcf_dict[start_snarl][1] # CHR POS
+        else :
+            return "NA", "NA"
+ 
+            
+
 
     def expand_matrix(self):
         """
@@ -120,12 +162,12 @@ class SnarlProcessor:
         # Add data to the matrix
         self.matrix.add_data(idx_snarl, index_column)
 
-    def fill_matrix(self):
+    def fill_matrix(self, vcf_path):
         """Parse VCF file (main function)"""
         row_header_dict = dict()
 
         # Parse variant line by line
-        for variant in VCF(self.vcf_path):
+        for variant in VCF(vcf_path):
             genotypes = variant.genotypes  # Extract genotypes once per variant
             snarl_list = variant.INFO.get('AT', '').split(',')  # Extract and split snarl list once per variant
             list_list_decomposed_snarl = self.decompose_snarl(snarl_list)  # Decompose snarls once per variant
@@ -167,13 +209,14 @@ class SnarlProcessor:
         self.check_pheno_group(binary_groups)
 
         with open(output, 'wb') as outf:
-            headers = 'Snarl\tP_value_Fisher\tP_value_Chi2\tTable_sum\tNumber_column\tInter_group\tAverage\n'
+            headers = 'CHR\tPOS\tSnarl\tP_Fisher\tP_Chi2\tTable_sum\tNumber_column\tInter_group\tAverage\n'
             outf.write(headers.encode('utf-8'))
 
             for snarl, list_snarl in snarls.items() :
                 df = self.create_binary_table(binary_groups, list_snarl)
                 fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average = self.binary_stat_test(df)
-                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(snarl, fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average)
+                chrom, pos = self.match_pos(snarl)
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average)
                 outf.write(data.encode('utf-8'))
 
     def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
@@ -181,12 +224,13 @@ class SnarlProcessor:
         self.check_pheno_group(quantitative)
 
         with open(output, 'wb') as outf:
-            headers = 'Snarl\tP_value\n'
+            headers = 'CHR\tPOS\tSnarl\tP\n'
             outf.write(headers.encode('utf-8'))
             for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
                 pvalue = self.linear_regression(df, quantitative)
-                data = '{}\t{}\n'.format(snarl, pvalue)
+                chrom, pos = self.match_pos(snarl)
+                data = '{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, pvalue)
                 outf.write(data.encode('utf-8'))
 
     def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
@@ -406,7 +450,7 @@ if __name__ == "__main__" :
     
     start = time.time()
     vcf_object = SnarlProcessor(args.vcf_path)
-    vcf_object.fill_matrix()
+    vcf_object.fill_matrix(args.vcf_path)
     print(f"Time Matrix : {time.time() - start} s")
 
     start = time.time()

@@ -77,8 +77,8 @@ def find_snarl_id(stree, snarl) :
     sstart = stree.get_node_from_sentinel(sstart)
     send = stree.get_bound(snarl, True, True)
     send = stree.get_node_from_sentinel(send)
-    snarl_id = '{}_{}'.format(stree.node_id(sstart),
-                            stree.node_id(send))
+    snarl_id = '{}_{}'.format(stree.node_id(send),
+                            stree.node_id(sstart))
     
     return snarl_id
 

@@ -2,6 +2,7 @@ import argparse
 import list_snarl_paths
 import snarl_vcf_parser
 import p_value_analysis
+import snarl_annotation
 import time
 
 parser = argparse.ArgumentParser('List path through the netgraph of each snarl in a pangenome')
@@ -30,7 +31,7 @@ print(f"Time list snarl paths : {time.time() - start} s")
 # Parse vcf merge and fill the matrix
 start = time.time()
 vcf_object = snarl_vcf_parser.SnarlProcessor(args.v)
-vcf_object.fill_matrix()
+vcf_object.fill_matrix(args.vcf_path)
 print(f"Time Matrix : {time.time() - start} s")
 
 start = time.time()
@@ -59,6 +60,9 @@ if args.quantitative:
     output_quantitative_file_manh = "output/droso_female_manhattan_plot_quantitative.png"
     p_value_analysis.plot_p_value_distribution_quantitative(args.output, output_quantitative_file_dist)
     p_value_analysis.plot_manhattan_quantitative(args.output, output_quantitative_file_manh)
+
+vcf_dict = snarl_annotation.parse_vcf_to_dict(args.vcf)
+snarl_annotation.match_snarl_to_vcf(args.snarl, vcf_dict)
 
 print(f"Time P-value : {time.time() - start} s")
 
