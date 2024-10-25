@@ -14,7 +14,7 @@ Conventional GWAS tools typically rely on a single-reference genome, often overl
 ## Installation
 
 ````bash
-git clone https://github.com/yourusername/snarl_project.git
+git clone https://github.com/Plogeur/snarl_project.git
 cd snarl_project
 pip install -r requirements.txt
 ````
