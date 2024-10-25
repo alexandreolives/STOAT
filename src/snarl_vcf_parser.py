@@ -43,57 +43,14 @@ class Matrix :
                f"{self.matrix[4]} \n"
 
 class SnarlProcessor:
-    def __init__(self, vcf_path: str):
+    def __init__(self, vcf_path: str, vcf_dic : dict):
         self.list_samples = VCF(vcf_path).samples
         self.matrix = Matrix(1_000_000, len(self.list_samples)*2)
-        self.vcf_dict = self.parse_vcf_to_dict(vcf_path)
-
-    def get_first_snarl(self, s):
-
-        match = re.findall(r'\d+', s)
-
-        if match:
-            return int(match[0])
-        return None  # Return None if no integers are found
-
-
-    def parse_vcf_to_dict(self, vcf_file):
-        vcf_dict = {}
-
-        with open(vcf_file, 'r') as f:
-            for line in f:
-                # Skip header lines
-                if line.startswith('#'):
-                    continue
-
-                fields = line.strip().split('\t')
-                
-                chr = fields[0]  # 1er column is CHR
-                pos = fields[1]  # 2nd column is POS
-                snarl = self.get_first_snarl(fields[2])
-                vcf_dict[snarl] = (pos, chr)
-
-        return vcf_dict
-
-    # Function to match the snarl list against the VCF dictionary
-    def match_pos(self, snarl):
-
-        start_snarl, _ = snarl.split('_')
-
-        # Check if the modified snarl ID or its reversed form exists in the VCF dictionary
-        if start_snarl in self.vcf_dict:
-            return self.vcf_dict[start_snarl][0], self.vcf_dict[start_snarl][1] # CHR POS
-        else :
-            return "NA", "NA"
- 
-            
+        self.vcf_dict = vcf_dic
 
 
     def expand_matrix(self):
-        """
-        Expands a given numpy matrix by doubling the number of rows.
-        """
-
+        """Expands a given numpy matrix by doubling the number of rows."""
         data_matrix = self.matrix.get_matrix()
         current_rows, current_cols = data_matrix.shape
         new_rows = current_rows + self.matrix.get_default_row_number() # add + default_row_number row  
@@ -204,19 +161,34 @@ class SnarlProcessor:
         if missing_elements:
             raise ValueError(f"The following sample name from merged vcf are not present in group file : {missing_elements}")
 
+    # Function to match the snarl list against the VCF dictionary
+    def match_pos(self, snarl):
+
+        start_snarl, _ = snarl.split('_')
+
+        # Check if the modified snarl ID or its reversed form exists in the VCF dictionary
+        if start_snarl in self.vcf_dict:
+            return self.vcf_dict[start_snarl]
+        else :
+            return None
+
     def binary_table(self, snarls, binary_groups, output="output/binary_output.tsv") : 
 
         self.check_pheno_group(binary_groups)
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSnarl\tP_Fisher\tP_Chi2\tTable_sum\tNumber_column\tInter_group\tAverage\n'
+            headers = 'CHR\tPOS\tSNAL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tTable_sum\tNumber_column\tInter_group\tAverage\n'
             outf.write(headers.encode('utf-8'))
 
             for snarl, list_snarl in snarls.items() :
                 df = self.create_binary_table(binary_groups, list_snarl)
                 fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average = self.binary_stat_test(df)
-                chrom, pos = self.match_pos(snarl)
-                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average)
+                info = self.match_pos(snarl)
+                if info :
+                    chrom, pos, type_var, ref, alt = info
+                else :
+                    chrom = pos = type_var = ref = alt = "NA"
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average)
                 outf.write(data.encode('utf-8'))
 
     def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
@@ -224,13 +196,17 @@ class SnarlProcessor:
         self.check_pheno_group(quantitative)
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSnarl\tP\n'
+            headers = 'CHR\tPOS\tSNAL\tTYPE\tREF\tALT\tP\n'
             outf.write(headers.encode('utf-8'))
             for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
                 pvalue = self.linear_regression(df, quantitative)
-                chrom, pos = self.match_pos(snarl)
-                data = '{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, pvalue)
+                info = self.match_pos(snarl)
+                if info :
+                    chrom, pos, type_var, ref, alt = info
+                else :
+                    chrom = pos = type_var = ref = alt = "NA"
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, pvalue)
                 outf.write(data.encode('utf-8'))
 
     def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
@@ -364,27 +340,20 @@ class SnarlProcessor:
         return fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average
 
 def parse_group_file(group_file : str):
-    # Read the file into a DataFrame
+
     df = pd.read_csv(group_file, sep='\t')
     
-    # Check if the required columns are present
-    required_headers = {'sample', 'group'}
-    if not required_headers.issubset(df.columns):
-        raise ValueError(f"Missing required columns. The file must contain the following columns: {required_headers}")
-    
     # Create dictionaries for group 0 and group 1
-    group_0 = {sample: 0 for sample in df[df['group'] == 0]['sample']}
-    group_1 = {sample: 1 for sample in df[df['group'] == 1]['sample']}
-    
+    group_0 = {sample: 0 for sample in df[df['GROUP'] == 0]['SAMPLE']}
+    group_1 = {sample: 1 for sample in df[df['GROUP'] == 1]['SAMPLE']}
     return group_0, group_1
  
 def parse_pheno_file(file_path : str) -> dict:
-    # Read the file into a DataFrame
+
     df = pd.read_csv(file_path, sep='\t')
 
     # Extract the IID (second column) and PHENO (third column) and convert PHENO to float
     parsed_pheno = dict(zip(df['IID'], df['PHENO']))
-
     return parsed_pheno
 
 def parse_snarl_path_file(path_file: str) -> dict:
@@ -425,8 +394,11 @@ def check_format_group_snarl(file_path : str) -> str :
         raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid group/snarl file. It must have a .txt extension or .tsv.")
     return file_path
     
-def check_format_pheno(file_path : str) -> str :
+def check_format_pheno_q(file_path : str) -> str :
 
+    if not os.path.isfile(file_path):
+        raise argparse.ArgumentTypeError(f"The file {file_path} does not exist.")
+    
     with open(file_path, 'r') as file:
         first_line = file.readline().strip()
     
@@ -437,19 +409,72 @@ def check_format_pheno(file_path : str) -> str :
     
     return file_path
 
+def check_format_pheno_b(file_path : str) -> str :
+
+    if not os.path.isfile(file_path):
+        raise argparse.ArgumentTypeError(f"The file {file_path} does not exist.")
+    
+    with open(file_path, 'r') as file:
+        first_line = file.readline().strip()
+    
+    header = first_line.split('\t')
+    expected_header = ['SAMPLE', 'GROUP']
+    if header != expected_header:
+        raise ValueError(f"The file must contain the following headers: {expected_header} and be split by tabulation")
+    
+    return file_path
+
+def get_first_snarl(s):
+
+    match = re.findall(r'\d+', s)
+    if match:
+        return int(match[0])
+    return None  # Return None if no integers are found
+
+def classify_variant(ref, alt) :
+
+    if len(ref) == len(alt) == 1:
+        return "SNP"
+    elif len(ref) > len(alt) and alt != "<DEL>":
+        return "DEL"
+    elif len(ref) < len(alt):
+        return "INS"
+    elif len(ref) == len(alt) and len(ref) > 1:
+        return "MNP"
+    else :
+        raise ValueError(f"what is this ref : {ref}, alt : {alt}")
+
+def parse_vcf_to_dict(vcf_file):
+    vcf_dict = {}
+
+    for record in VCF(vcf_file):
+        # Extract VCF fields
+        chr = record.CHROM       # Chromosome
+        pos = record.POS         # Position
+        snarl = get_first_snarl(record.ID) if record.ID else None
+        ref = record.REF         # Reference allele
+        alt = record.ALT[0]      # First alternative allele (assuming biallelic)
+        
+        variant_type = classify_variant(ref, alt)
+        vcf_dict[snarl] = (chr, pos, variant_type, ref, alt)
+
+    return vcf_dict
+    
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
     parser.add_argument("vcf_path", type=check_format_vcf_file, help="Path to the vcf file (.vcf or .vcf.gz)")
     parser.add_argument("snarl", type=check_format_group_snarl, help="Path to the snarl file that containt snarl and aT (.txt or .tsv)")
+    parser.add_argument("vcf_pangenome", type=check_format_vcf_file, help="Path to the vcf referencing all position of snarl")
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-b", "--binary", type=check_format_group_snarl, help="Path to the binary group file (.txt or .tsv)")
-    group.add_argument("-q", "--quantitative", type=check_format_pheno, help="Path to the quantitative phenotype file (.txt or .tsv)")
+    group.add_argument("-b", "--binary", type=check_format_pheno_b, help="Path to the binary group file (.txt or .tsv)")
+    group.add_argument("-q", "--quantitative", type=check_format_pheno_q, help="Path to the quantitative phenotype file (.txt or .tsv)")
     parser.add_argument("-o", "--output", type=str, required=False, help="Path to the output file")
     args = parser.parse_args()
     
     start = time.time()
-    vcf_object = SnarlProcessor(args.vcf_path)
+    vcf_dict = parse_vcf_to_dict(args.vcf_pangenome)
+    vcf_object = SnarlProcessor(args.vcf_path, vcf_dict)
     vcf_object.fill_matrix(args.vcf_path)
     print(f"Time Matrix : {time.time() - start} s")
 
@@ -463,10 +488,6 @@ if __name__ == "__main__" :
         else :
             vcf_object.binary_table(snarl, binary_group)
 
-# python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
-# python3 src/snarl_vcf_parser.py ../../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../../snarl_data/group.txt
-# python3 src/snarl_vcf_parser.py ../../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
-
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
         if args.output :
@@ -475,7 +496,3 @@ if __name__ == "__main__" :
             vcf_object.quantitative_table(snarl, quantitative)
 
     print(f"Time P-value: {time.time() - start} s")
-
-# python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -q test/pheno.txt
-# python3 src/snarl_vcf_parser.py ../../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -q ../../snarl_data/updated_phenotypes.txt
-# python3 src/snarl_vcf_parser.py ../../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -q ../../snarl_data/simulation_1000vars_100samps/simulated_phenotypes.txt -o output/simulation_1000_quantitative.tsv

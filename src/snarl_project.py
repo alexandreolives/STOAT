@@ -2,7 +2,6 @@ import argparse
 import list_snarl_paths
 import snarl_vcf_parser
 import p_value_analysis
-import snarl_annotation
 import time
 
 parser = argparse.ArgumentParser('List path through the netgraph of each snarl in a pangenome')
@@ -10,6 +9,8 @@ parser.add_argument('-p', help='the input pangenome .pg file', required=True)
 parser.add_argument('-d', help='the input distance index .dist file',required=True)
 parser.add_argument("-t", type=list_snarl_paths.check_threshold, help='Children threshold', required=False)
 parser.add_argument("-v", type=snarl_vcf_parser.check_format_vcf_file, help="Path to the vcf file (.vcf or .vcf.gz)", required=True)
+parser.add_argument("-r", type=snarl_vcf_parser.check_format_vcf_file, help="Path to the vcf file referencing all position of snarl (.vcf or .vcf.gz)")
+
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("-b", "--binary", type=snarl_vcf_parser.check_format_group_snarl, help="Path to the binary group file (.txt or .tsv)")
 group.add_argument("-q", "--quantitative", type=snarl_vcf_parser.check_format_pheno, help="Path to the quantitative phenotype file (.txt or .tsv)")
@@ -30,7 +31,8 @@ print(f"Time list snarl paths : {time.time() - start} s")
 
 # Parse vcf merge and fill the matrix
 start = time.time()
-vcf_object = snarl_vcf_parser.SnarlProcessor(args.v)
+vcf_dict = snarl_vcf_parser.parse_vcf_to_dict(args.vcf_pangenome)
+vcf_object = snarl_vcf_parser.SnarlProcessor(args.v, vcf_dict)
 vcf_object.fill_matrix(args.vcf_path)
 print(f"Time Matrix : {time.time() - start} s")
 
@@ -43,10 +45,12 @@ if args.binary:
     else :
         vcf_object.binary_table(snarl_paths, binary_group)
 
-    output_binary_file_dist = "output/distribution_plot_binary.png"
     output_binary_file_manh = "output/manhattan_plot_binary.png"
-    p_value_analysis.plot_p_value_distribution_binary(args.output, output_binary_file_dist)
+    output_binary_file_qq = "output/qq_plot_binary.png"
+    output_binary_file_significatif = "output/top_variant_quantitative.tsv"
+    p_value_analysis.significative_snarl_binary(args.output, output_binary_file_significatif)
     p_value_analysis.plot_manhattan_binary(args.output, output_binary_file_manh)
+    p_value_analysis.qq_plot(args.output, output_binary_file_qq)
 
 # Quantitative case 
 if args.quantitative:
@@ -56,13 +60,12 @@ if args.quantitative:
     else :
         vcf_object.quantitative_table(snarl_paths, quantitative)
 
-    output_quantitative_file_dist = "output/droso_female_distribution_plot_quantitative.png"
-    output_quantitative_file_manh = "output/droso_female_manhattan_plot_quantitative.png"
-    p_value_analysis.plot_p_value_distribution_quantitative(args.output, output_quantitative_file_dist)
+    output_quantitative_file_manh = "output/manhattan_plot_quantitative.png"
+    output_quantitative_file_qq = "output/qq_plot_quantitative.png"
+    output_quantitative_file_significatif = "output/top_variant_quantitative.tsv"
+    p_value_analysis.significative_snarl_quantitatif(args.output, output_quantitative_file_significatif)
     p_value_analysis.plot_manhattan_quantitative(args.output, output_quantitative_file_manh)
-
-vcf_dict = snarl_annotation.parse_vcf_to_dict(args.vcf)
-snarl_annotation.match_snarl_to_vcf(args.snarl, vcf_dict)
+    p_value_analysis.qq_plot(args.output, output_quantitative_file_qq)
 
 print(f"Time P-value : {time.time() - start} s")
 
