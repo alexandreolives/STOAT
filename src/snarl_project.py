@@ -53,13 +53,14 @@ if args.binary:
     binary_group = snarl_vcf_parser.parse_group_file(args.binary)
     output_file = args.output or "output/binary_analysis.tsv"
     vcf_object.binary_table(snarl_paths, binary_group, output_file)
+    snarl_vcf_parser.write_pos_snarl(args.vcf_pangenome, output_file)
     logger.info("Binary analysis table created.")
 
     output_manh = "output/manhattan_plot_binary.png"
     output_qq = "output/qq_plot_binary.png"
     output_significative = "output/top_variant_binary.tsv"
     p_value_analysis.significative_snarl_binary(output_file, output_significative)
-    p_value_analysis.plot_manhattan_binary(output_file, output_manh)
+    p_value_analysis.plot_manhattan(output_file, output_manh)
     p_value_analysis.qq_plot(output_file, output_qq)
     logger.info("Binary p-value analysis completed with Manhattan and QQ plots.")
 
@@ -67,13 +68,14 @@ if args.quantitative:
     quantitative_pheno = snarl_vcf_parser.parse_pheno_file(args.quantitative)
     output_file = args.output or "output/quantitative_analysis.tsv"
     vcf_object.quantitative_table(snarl_paths, quantitative_pheno, output_file)
+    snarl_vcf_parser.write_pos_snarl(args.r, output_file)
     logger.info("Quantitative analysis table created.")
 
     output_manh = "output/manhattan_plot_quantitative.png"
     output_qq = "output/qq_plot_quantitative.png"
     output_significative = "output/top_variant_quantitative.tsv"
     p_value_analysis.significative_snarl_quantitatif(output_file, output_significative)
-    p_value_analysis.plot_manhattan_quantitative(output_file, output_manh)
+    p_value_analysis.plot_manhattan(output_file, output_manh)
     p_value_analysis.qq_plot(output_file, output_qq)
     logger.info("Quantitative p-value analysis completed with Manhattan and QQ plots.")
 

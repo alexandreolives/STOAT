@@ -43,10 +43,9 @@ class Matrix :
                f"{self.matrix[4]} \n"
 
 class SnarlProcessor:
-    def __init__(self, vcf_path: str, vcf_dic : dict):
+    def __init__(self, vcf_path: str):
         self.list_samples = VCF(vcf_path).samples
         self.matrix = Matrix(1_000_000, len(self.list_samples)*2)
-        self.vcf_dict = vcf_dic
         self.vcf_path = vcf_path
 
     def expand_matrix(self):
@@ -161,17 +160,6 @@ class SnarlProcessor:
         if missing_elements:
             raise ValueError(f"The following sample name from merged vcf are not present in group file : {missing_elements}")
 
-    # Function to match the snarl list against the VCF dictionary
-    def match_pos(self, snarl):
-
-        start_snarl, _ = snarl.split('_')
-
-        # Check if the modified snarl ID or its reversed form exists in the VCF dictionary
-        if start_snarl in self.vcf_dict:
-            return self.vcf_dict[start_snarl]
-        else :
-            return None
-
     def binary_table(self, snarls, binary_groups, output="output/binary_output.tsv") : 
 
         self.check_pheno_group(binary_groups)
@@ -183,11 +171,7 @@ class SnarlProcessor:
             for snarl, list_snarl in snarls.items() :
                 df = self.create_binary_table(binary_groups, list_snarl)
                 fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average = self.binary_stat_test(df)
-                info = self.match_pos(snarl)
-                if info :
-                    chrom, pos, type_var, ref, alt = info
-                else :
-                    chrom = pos = type_var = ref = alt = "NA"
+                chrom = pos = type_var = ref = alt = ""
                 data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average)
                 outf.write(data.encode('utf-8'))
 
@@ -201,11 +185,7 @@ class SnarlProcessor:
             for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
                 pvalue = self.linear_regression(df, quantitative)
-                info = self.match_pos(snarl)
-                if info :
-                    chrom, pos, type_var, ref, alt = info
-                else :
-                    chrom = pos = type_var = ref = alt = "NA"
+                chrom = pos = type_var = ref = alt = ""
                 data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, pvalue)
                 outf.write(data.encode('utf-8'))
 
@@ -444,22 +424,56 @@ def classify_variant(ref, alt) :
     else :
         raise ValueError(f"what is this ref : {ref}, alt : {alt}")
 
-def parse_vcf_to_dict(vcf_file):
-    vcf_dict = {}
+def write_pos_snarl(vcf_file, output_file):
+    vcf_dict = parse_vcf_to_dict(vcf_file)
+    
+    # Read the output file, fill placeholders, and collect lines for rewrite
+    with open(output_file, 'r', encoding='utf-8') as out_f:
+        lines = out_f.readlines()
 
+    with open(output_file, 'w', encoding='utf-8') as out_f:
+        for line in lines:
+            columns = line.strip().split('\t')
+            snarl = columns[2]  # Assuming SNARL is in column 3 (index 2)
+            info = match_pos(snarl, vcf_dict)
+            
+            if info:
+                chrom, pos, type_var, ref, alt = info
+            else:
+                chrom = pos = type_var = ref = alt = "NA"
+            
+            # Replace placeholders with actual values in the correct columns
+            columns[0] = chrom
+            columns[1] = pos
+            columns[3] = type_var
+            columns[4] = ref
+            columns[5] = alt
+
+            # Write the modified line
+            out_f.write('\t'.join(columns) + '\n')
+
+def match_pos(snarl, vcf_dict):
+    """Matches the SNARL to an entry in the VCF dictionary, if available."""
+    start_snarl, _ = snarl.split('_')
+    return vcf_dict.get(start_snarl, None)
+
+def parse_vcf_to_dict(vcf_file):
+    """Parses a VCF file and returns a dictionary with SNARL IDs as keys."""
+    vcf_dict = {}
+    
     for record in VCF(vcf_file):
-        # Extract VCF fields
-        chr = record.CHROM       # Chromosome
-        pos = record.POS         # Position
+        chrom = record.CHROM  # Chromosome
+        pos = record.POS      # Position
         snarl = get_first_snarl(record.ID) if record.ID else None
-        ref = record.REF         # Reference allele
-        alt = record.ALT[0]      # First alternative allele (assuming biallelic)
+        ref = record.REF      # Reference allele
+        alt = record.ALT[0]   # First alternative allele (assuming biallelic)
         
         variant_type = classify_variant(ref, alt)
-        vcf_dict[snarl] = (chr, pos, variant_type, ref, alt)
+        if snarl:  # Only add entries with a valid snarl
+            vcf_dict[snarl] = (chrom, pos, variant_type, ref, alt)
 
     return vcf_dict
-    
+
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
     parser.add_argument("vcf_path", type=check_format_vcf_file, help="Path to the vcf file (.vcf or .vcf.gz)")
@@ -473,26 +487,22 @@ if __name__ == "__main__" :
     args = parser.parse_args()
     
     start = time.time()
-    vcf_dict = parse_vcf_to_dict(args.vcf_pangenome)
-    vcf_object = SnarlProcessor(args.vcf_path, vcf_dict)
+    vcf_object = SnarlProcessor(args.vcf_path)
     vcf_object.fill_matrix()
     print(f"Time Matrix : {time.time() - start} s")
 
     start = time.time()
     snarl = parse_snarl_path_file(args.snarl)
+    output = args.output if args.output else None
 
     if args.binary:
         binary_group = parse_group_file(args.binary)
-        if args.output :
-            vcf_object.binary_table(snarl, binary_group, args.output)
-        else :
-            vcf_object.binary_table(snarl, binary_group)
+        vcf_object.binary_table(snarl, binary_group, output)
 
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
-        if args.output :
-            vcf_object.quantitative_table(snarl, quantitative, args.output)
-        else :
-            vcf_object.quantitative_table(snarl, quantitative)
+        vcf_object.quantitative_table(snarl, quantitative, output)
 
-    print(f"Time P-value: {time.time() - start} s")
+    #write_pos_snarl(args.vcf_pangenome, args.output)
+    print(f"Time : {time.time() - start} s")
+
