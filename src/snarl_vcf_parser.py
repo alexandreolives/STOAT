@@ -47,7 +47,7 @@ class SnarlProcessor:
         self.list_samples = VCF(vcf_path).samples
         self.matrix = Matrix(1_000_000, len(self.list_samples)*2)
         self.vcf_dict = vcf_dic
-
+        self.vcf_path = vcf_path
 
     def expand_matrix(self):
         """Expands a given numpy matrix by doubling the number of rows."""
@@ -119,12 +119,12 @@ class SnarlProcessor:
         # Add data to the matrix
         self.matrix.add_data(idx_snarl, index_column)
 
-    def fill_matrix(self, vcf_path):
+    def fill_matrix(self):
         """Parse VCF file (main function)"""
         row_header_dict = dict()
 
         # Parse variant line by line
-        for variant in VCF(vcf_path):
+        for variant in VCF(self.vcf_path):
             genotypes = variant.genotypes  # Extract genotypes once per variant
             snarl_list = variant.INFO.get('AT', '').split(',')  # Extract and split snarl list once per variant
             list_list_decomposed_snarl = self.decompose_snarl(snarl_list)  # Decompose snarls once per variant
@@ -177,7 +177,7 @@ class SnarlProcessor:
         self.check_pheno_group(binary_groups)
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSNAL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tTable_sum\tNumber_column\tInter_group\tAverage\n'
+            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tTable_sum\tNumber_column\tInter_group\tAverage\n'
             outf.write(headers.encode('utf-8'))
 
             for snarl, list_snarl in snarls.items() :
@@ -196,7 +196,7 @@ class SnarlProcessor:
         self.check_pheno_group(quantitative)
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSNAL\tTYPE\tREF\tALT\tP\n'
+            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n'
             outf.write(headers.encode('utf-8'))
             for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
@@ -475,7 +475,7 @@ if __name__ == "__main__" :
     start = time.time()
     vcf_dict = parse_vcf_to_dict(args.vcf_pangenome)
     vcf_object = SnarlProcessor(args.vcf_path, vcf_dict)
-    vcf_object.fill_matrix(args.vcf_path)
+    vcf_object.fill_matrix()
     print(f"Time Matrix : {time.time() - start} s")
 
     start = time.time()

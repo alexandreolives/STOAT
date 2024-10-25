@@ -26,13 +26,19 @@ def significative_snarl_quantitatif(file_path, output_snarl):
 
 def write_significative_snarl_binary(tupple_snarl, output_snarl) :
     with open(output_snarl, "w") as f :
-        for CHR, POS, P_Fisher, P_Chi2 in tupple_snarl :
-            f.write(f'{CHR}\t{POS}\t{P_Fisher}\t{P_Chi2}\n')
+        headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tTable_sum\tNumber_column\tInter_group\tAverage\n'
+        f.write(headers.encode('utf-8'))
+        for chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average in tupple_snarl :
+            data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average)
+            f.write(data.encode('utf-8'))
 
 def write_significative_snarl_quantitatif(tupple_snarl, output_snarl) :
     with open(output_snarl, "w") as f :
-        for CHR, POS, P in tupple_snarl :
-            f.write(f'{CHR}\t{POS}\t{P}\n')
+        headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n'
+        f.write(headers.encode('utf-8'))
+        for chrom, pos, snarl, type_var, ref, alt, pvalue in tupple_snarl :
+            data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, pvalue)
+            f.write(data.encode('utf-8'))
 
 def qq_plot(file_path, output_qqplot="output/qq_plot.png") :
     
@@ -63,7 +69,6 @@ def plot_manhattan_quantitative(file_path, output_manhattan="output/manhattan_pl
                 snp="POS",
                 xlabel="Chromosome",
                 ylabel=r"$-log_{10}{(P)}$",
-                is_annotate_topsnp=True,
                 text_kws={"fontsize": 12,  # The fontsize of annotate text
                             "arrowprops": dict(arrowstyle="-", color="k", alpha=0.6)},
                 ax=ax)
@@ -81,16 +86,9 @@ def plot_manhattan_binary(file_path, output_manhattan="output/manhattan_plot_bin
                   chrom="CHR",
                   sign_marker_p=1e-6,  # Genome wide significant p-value
                   sign_marker_color="r",
-                  snp="ID",
-
+                  snp="POS",
                   xlabel="Chromosome",
                   ylabel=r"$-log_{10}{(P)}$",
-
-                  sign_line_cols=["#D62728", "#2CA02C"],
-                  hline_kws={"linestyle": "--", "lw": 1.3},
-
-                  is_annotate_topsnp=True,
-                  ld_block_size=500000,  # 500000 bp
                   text_kws={"fontsize": 12,  # The fontsize of annotate text
                             "arrowprops": dict(arrowstyle="-", color="k", alpha=0.6)},
                   ax=ax)
@@ -102,7 +100,7 @@ if __name__ == "__main__" :
     file_path = 'output/snarl_pan.tsv'
     output_snarl = "output/droso_top_significative_snarl.tsv"
     significative_snarl_quantitatif(file_path, output_snarl)
-    qq_plot(file_path, output_qqplot="output/qq_plot.png")
+    qq_plot(file_path)
     plot_manhattan_quantitative(file_path)
 
     #python3 src/p_value_analysis.py 
