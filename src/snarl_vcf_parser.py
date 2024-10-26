@@ -10,7 +10,7 @@ from scipy.stats import fisher_exact
 import os
 import re
 import time
-    
+
 class Matrix :
     def __init__(self, default_row_number=1_000_000, column_number=2):
         self.default_row_number = default_row_number 
@@ -180,13 +180,13 @@ class SnarlProcessor:
         self.check_pheno_group(quantitative)
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n'
+            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\tBETA\tSE\n'
             outf.write(headers.encode('utf-8'))
             for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
-                pvalue = self.linear_regression(df, quantitative)
+                p_value, beta, se = self.linear_regression(df, quantitative)
                 chrom = pos = type_var = ref = alt = ""
-                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, pvalue)
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, p_value, beta, se)
                 outf.write(data.encode('utf-8'))
 
     def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
@@ -260,16 +260,14 @@ class SnarlProcessor:
 
     def sm_ols(self, x, y) :
 
-        # Fit the regression model
-        # pd.set_option('display.max_rows', None)
-        # pd.set_option('display.max_columns', None)
-        # print("x : ", x)
-
         x_with_const = sm.add_constant(x)
         result = sm.OLS(y, x_with_const).fit()
+        beta = result.params  # The coefficients (including intercept)
+        se = result.bse  # The standard errors of the coefficients
+        p_value = result.f_pvalue
         # print(result.summary())
 
-        return result.f_pvalue
+        return p_value, beta, se
     
     def linear_regression(self, df, pheno : dict) -> float :
         
@@ -277,35 +275,31 @@ class SnarlProcessor:
         df['Target'] = df.index.map(pheno)
         x = df.drop('Target', axis=1)
         y = df['Target']
-        pd.set_option('display.max_rows', None)
-        pd.set_option('display.max_columns', None)
+        p_value, beta, se = self.sm_ols(x, y)
 
-        pval = self.sm_ols(x, y)
-        return pval
+        return p_value, beta, se
 
     def chi2_test(self, df) -> float:
         """Calculate p_value from list of dataframe using chi-2 test"""
 
-        # Check if dataframe has at least 2 columns and more than 0 counts in every cell
-        if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
-            try:
-                # Perform Chi-Square test
-                p_value = chi2_contingency(df)[1]
-            except ValueError as e:
-                p_value = "Error"
-        else:
-            p_value = "N/A"
+        try:
+            # Perform Chi-Square test
+            p_value = chi2_contingency(df)[1]
 
+        except ValueError as e:
+            p_value = "Error"
+    
         return p_value
 
     def fisher_test(self, df) -> float : 
         """Calcul p_value using fisher exact test"""
 
         try:
+            # Perform Fisher exact test
             p_value = fisher_exact(df)[1]
 
         except ValueError as e: 
-            p_value = 'N/A'
+            p_value = "Error"
         
         return p_value
      
