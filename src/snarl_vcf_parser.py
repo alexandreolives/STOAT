@@ -435,7 +435,7 @@ def write_pos_snarl(vcf_file, output_file):
                 chrom, pos, type_var, ref, alt = vcf_dict[start_snarl]
             except KeyError:
                 chrom, pos, type_var, ref, alt = vcf_dict[save_snarl]
-                ref, alt = "NA", "NA"
+                type_var, ref, alt = "NA", "NA", "NA"
 
             save_snarl = start_snarl
 
