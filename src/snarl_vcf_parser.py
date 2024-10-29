@@ -174,7 +174,7 @@ class SnarlProcessor:
                 chrom = pos = type_var = ref = alt = ""
                 data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average)
                 outf.write(data.encode('utf-8'))
-
+ 
     def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
 
         self.check_pheno_group(quantitative)
