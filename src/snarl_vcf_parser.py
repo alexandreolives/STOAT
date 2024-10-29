@@ -420,6 +420,7 @@ def classify_variant(ref, alt) :
 
 def write_pos_snarl(vcf_file, output_file):
     vcf_dict = parse_vcf_to_dict(vcf_file)
+    save_snarl = 1
     
     # Read the output file, fill placeholders, and collect lines for rewrite
     with open(output_file, 'r', encoding='utf-8') as out_f:
@@ -429,7 +430,9 @@ def write_pos_snarl(vcf_file, output_file):
         for line in lines:
             columns = line.strip().split('\t')
             snarl = columns[2]  # Assuming SNARL is in column 3 (index 2)
-            info = match_pos(snarl, vcf_dict)
+            start_snarl, _ = snarl.split('_')
+            info = vcf_dict.get(start_snarl, save_snarl)
+            save_snarl = start_snarl
             
             if info:
                 chrom, pos, type_var, ref, alt = info
@@ -445,11 +448,6 @@ def write_pos_snarl(vcf_file, output_file):
 
             # Write the modified line
             out_f.write('\t'.join(columns) + '\n')
-
-def match_pos(snarl, vcf_dict):
-    """Matches the SNARL to an entry in the VCF dictionary, if available."""
-    start_snarl, _ = snarl.split('_')
-    return vcf_dict.get(start_snarl, None)
 
 def parse_vcf_to_dict(vcf_file):
     """Parses a VCF file and returns a dictionary with SNARL IDs as keys."""
