@@ -15,7 +15,7 @@ parser.add_argument('-p', help='The input pangenome .pg file', required=True)
 parser.add_argument('-d', help='The input distance index .dist file', required=True)
 parser.add_argument("-t", type=list_snarl_paths.check_threshold, help='Children threshold', required=False)
 parser.add_argument("-v", type=snarl_vcf_parser.check_format_vcf_file, help="Path to the merged VCF file (.vcf or .vcf.gz)", required=True)
-parser.add_argument("-r", type=snarl_vcf_parser.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (.vcf or .vcf.gz)")
+parser.add_argument("-r", type=snarl_vcf_parser.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (.vcf or .vcf.gz)", required=False)
 
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("-b", "--binary", type=snarl_vcf_parser.check_format_pheno_b, help="Path to the binary group file (.txt or .tsv)")
@@ -46,6 +46,8 @@ vcf_object = snarl_vcf_parser.SnarlProcessor(args.v, vcf_dict)
 vcf_object.fill_matrix()
 logger.info(f"Matrix populated in {time.time() - start_time:.2f} seconds.")
 
+reference_vcf = args.r if args.r else args.v
+
 # Step 3: P-value Analysis (Binary or Quantitative)
 start_time = time.time()
 
@@ -53,7 +55,7 @@ if args.binary:
     binary_group = snarl_vcf_parser.parse_group_file(args.binary)
     output_file = args.output or "output/binary_analysis.tsv"
     vcf_object.binary_table(snarl_paths, binary_group, output_file)
-    snarl_vcf_parser.write_pos_snarl(args.vcf_pangenome, output_file)
+    snarl_vcf_parser.write_pos_snarl(reference_vcf, output_file)
     logger.info("Binary analysis table created.")
 
     output_manh = "output/manhattan_plot_binary.png"
@@ -68,7 +70,7 @@ if args.quantitative:
     quantitative_pheno = snarl_vcf_parser.parse_pheno_file(args.quantitative)
     output_file = args.output or "output/quantitative_analysis.tsv"
     vcf_object.quantitative_table(snarl_paths, quantitative_pheno, output_file)
-    snarl_vcf_parser.write_pos_snarl(args.r, output_file)
+    snarl_vcf_parser.write_pos_snarl(reference_vcf, output_file)
     logger.info("Quantitative analysis table created.")
 
     output_manh = "output/manhattan_plot_quantitative.png"
