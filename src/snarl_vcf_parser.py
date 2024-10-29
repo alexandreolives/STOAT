@@ -444,6 +444,39 @@ def classify_variant(ref, alt) :
     else :
         raise ValueError(f"what is this ref : {ref}, alt : {alt}")
 
+def write_pos_snarl(vcf_file, output_file):
+    vcf_dict = parse_vcf_to_dict(vcf_file)
+    
+    # Read the output file, fill placeholders, and collect lines for rewrite
+    with open(output_file, 'r', encoding='utf-8') as out_f:
+        lines = out_f.readlines()
+
+    with open(output_file, 'w', encoding='utf-8') as out_f:
+        for line in lines:
+            columns = line.strip().split('\t')
+            snarl = columns[2]  # Assuming SNARL is in column 3 (index 2)
+            info = match_pos(snarl, vcf_dict)
+            
+            if info:
+                chrom, pos, type_var, ref, alt = info
+            else:
+                chrom = pos = type_var = ref = alt = "NA"
+            
+            # Replace placeholders with actual values in the correct columns
+            columns[0] = chrom
+            columns[1] = pos
+            columns[3] = type_var
+            columns[4] = ref
+            columns[5] = alt
+
+            # Write the modified line
+            out_f.write('\t'.join(columns) + '\n')
+
+def match_pos(snarl, vcf_dict):
+    """Matches the SNARL to an entry in the VCF dictionary, if available."""
+    start_snarl, _ = snarl.split('_')
+    return vcf_dict.get(start_snarl, None)
+
 def parse_vcf_to_dict(vcf_file):
     vcf_dict = {}
 
