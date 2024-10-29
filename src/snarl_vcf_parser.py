@@ -431,14 +431,14 @@ def write_pos_snarl(vcf_file, output_file):
             columns = line.strip().split('\t')
             snarl = columns[2]  # Assuming SNARL is in column 3 (index 2)
             start_snarl, _ = snarl.split('_')
-            info = vcf_dict.get(start_snarl, save_snarl)
+            try:
+                chrom, pos, type_var, ref, alt = vcf_dict[start_snarl]
+            except KeyError:
+                chrom, pos, type_var, ref, alt = vcf_dict[save_snarl]
+                ref, alt = "NA", "NA"
+
             save_snarl = start_snarl
-            
-            if info:
-                chrom, pos, type_var, ref, alt = info
-            else:
-                chrom = pos = type_var = ref = alt = "NA"
-            
+
             # Replace placeholders with actual values in the correct columns
             columns[0] = chrom
             columns[1] = pos
