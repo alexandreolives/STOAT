@@ -165,15 +165,20 @@ class SnarlProcessor:
         self.check_pheno_group(binary_groups)
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tTable_sum\tMin_sample\tNumber_column\tInter_group\tAverage\n'
+            #headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tTable_sum\tMin_sample\tNumber_column\tInter_group\tAverage\n'
+            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tGROUP_1_PATH_1\tGROUP_1_PATH_2\tGROUP_2_PATH_1\tGROUP_2_PATH_2\n'
+
             outf.write(headers.encode('utf-8'))
 
             for snarl, list_snarl in snarls.items() :
                 df = self.create_binary_table(binary_groups, list_snarl)
-                fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average = self.binary_stat_test(df)
+                #fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average = self.binary_stat_test(df)
+                fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII = self.binary_stat_test(df)
 
                 chrom = pos = type_var = ref = alt = "NA"
-                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average)
+                #data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average)
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII)
+
                 outf.write(data.encode('utf-8'))
 
     def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
@@ -314,6 +319,12 @@ class SnarlProcessor:
  
         fisher_p_value = self.fisher_test(df)
         chi2_p_value = self.chi2_test(df)
+        group_I_path_I = df.iloc[0, 0]
+        group_I_path_II = df.iloc[0, 1]
+        group_II_path_I = df.iloc[1, 0]
+        group_II_path_II = df.iloc[1, 1]
+        
+        """
         total_sum = int(df.values.sum())
         inter_group = int(df.min().sum())
         numb_colum = df.shape[1]
@@ -322,7 +333,10 @@ class SnarlProcessor:
         row_sums = df.sum(axis=1)
         min_row_index = row_sums.min()
 
-        return fisher_p_value, chi2_p_value, total_sum, min_row_index, numb_colum, inter_group, average
+        return fisher_p_value, chi2_p_value, total_sum, min_row_index, inter_group, average
+        """
+        
+        return fisher_p_value, chi2_p_value, group_I_path_I, group_I_path_II, group_II_path_I, group_II_path_II
 
 def parse_group_file(group_file : str):
 

@@ -48,10 +48,12 @@ snarls = list_snarl_paths.save_snarls(stree, root)
 logger.info(f"Total of snarls found : {len(snarls)}")
 logger.info("Saving snarl path decomposition...")
 
+output_snarl_paths = os.path.join(output_dir, "snarl_paths.tsv")
+
 if args.t:
-    snarl_paths = list_snarl_paths.loop_over_snarls(stree, snarls, pg, args.t)
+    snarl_paths = list_snarl_paths.loop_over_snarls_write(stree, snarls, pg, output_snarl_paths, args.t)
 else:
-    snarl_paths = list_snarl_paths.loop_over_snarls(stree, snarls, pg)
+    snarl_paths = list_snarl_paths.loop_over_snarls_write(stree, snarls, pg, output_snarl_paths)
 
 # Step 2: Parse VCF Files and Fill the Matrix
 vcf_object = snarl_vcf_parser.SnarlProcessor(args.v)
