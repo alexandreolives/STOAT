@@ -26,10 +26,6 @@ def process_file(freq_file, threshold=0.2):
         path_list.append(f"{int(row_1['next_node'])}_{int(row_1['start_node'])}")
         list_diff.append(float(diff))
 
-    print("21 paths : ", path_list[1033])
-    print("17 paths : ", path_list[613])
-    print("55 paths : ", path_list[2025])
-
     return path_list, true_labels, list_diff
 
 def match_snarl(path_list, true_labels, p_value_file, paths_file):
@@ -129,10 +125,6 @@ def p_value_distribution(test_predicted_labels, cleaned_true_labels, list_diff, 
         i for i, (pred, true, diff) in enumerate(zip(test_predicted_labels, cleaned_true_labels, list_diff))
         if (pred == 0 and true == 0) and diff > 0
     ]
-
-    print('21 false_negatives_indices : ', false_negatives_indices[21])
-    print('17 false_negatives_indices : ', false_negatives_indices[17])
-    print('55 false_negatives_indices : ', false_negatives_indices[55])
 
     # Extract data for false negatives
     diff_false_negatives = [list_diff[i] for i in false_negatives_indices]

@@ -108,7 +108,7 @@ def follow_edges(stree, finished_paths, path, paths, pg) :
     # from the last thing in the path
     stree.follow_net_edges(path[-1], pg, False, add_to_path)
 
-def create_snarls(stree, root) :
+def save_snarls(stree, root) :
 
     # list storing the snarl objects
     snarls = []
@@ -122,8 +122,8 @@ def create_snarls(stree, root) :
         return (True)
     
     stree.for_each_child(root, save_snarl_tree_node)
-    snarls_length = len(snarls)
-    print('{} snarls found'.format(snarls_length))
+    # snarls_length = len(snarls)
+    # print('{} snarls found'.format(snarls_length))
 
     return snarls
 
@@ -267,7 +267,7 @@ if __name__ == "__main__" :
     args = parser.parse_args()
 
     stree, pg, root = parse_graph_tree(args.p, args.d)
-    snarls = create_snarls(stree, root)
+    snarls = save_snarls(stree, root)
 
     if args.t :
         loop_over_snarls_write(stree, snarls, pg, args.o, args.t)

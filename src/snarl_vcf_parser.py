@@ -171,8 +171,7 @@ class SnarlProcessor:
             for snarl, list_snarl in snarls.items() :
                 df = self.create_binary_table(binary_groups, list_snarl)
                 fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average = self.binary_stat_test(df)
-                # if snarl == "2842_2839" :
-                #     print(df)
+
                 chrom = pos = type_var = ref = alt = "NA"
                 data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average)
                 outf.write(data.encode('utf-8'))
@@ -234,7 +233,7 @@ class SnarlProcessor:
 
                 if srr in groups[0]:
                     g0[idx_g] += 1
-                if srr in groups[1]:  
+                if srr in groups[1]:
                     g1[idx_g] += 1
 
         # Create and return the DataFrame
@@ -414,7 +413,7 @@ def get_first_snarl(s):
 
     match = re.findall(r'\d+', s)
     if match:
-        return int(match[0])
+        return str(match[0])
     return None  # Return None if no integers are found
 
 def classify_variant(ref, alt) :
@@ -432,46 +431,40 @@ def classify_variant(ref, alt) :
 
 def write_pos_snarl(vcf_file, output_file):
     vcf_dict = parse_vcf_to_dict(vcf_file)
-    save_snarl = 1
+    save_info = vcf_dict.get(1, ("NA", "NA", "NA", "NA", "NA"))
     
-    # Read the output file, fill placeholders, and collect lines for rewrite
-    with open(output_file, 'r', encoding='utf-8') as out_f:
-        lines = out_f.readlines()
+    # Use a temporary file to write the updated lines
+    temp_output_file = output_file + ".tmp"
 
-    with open(output_file, 'w', encoding='utf-8') as out_f:
-        for line in lines:
+    with open(output_file, 'r', encoding='utf-8') as in_f, open(temp_output_file, 'w', encoding='utf-8') as out_f:
+        out_f.write("CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n")
+        next(in_f)
+        for line in in_f:
             columns = line.strip().split('\t')
-            snarl = columns[2]  # Assuming SNARL is in column 3 (index 2)
-            start_snarl, _ = snarl.split('_')
-            try:
-                chrom, pos, type_var, ref, alt = vcf_dict[start_snarl]
-            except KeyError:
-                chrom, pos, type_var, ref, alt = vcf_dict[save_snarl]
-                type_var, ref, alt = "NA", "NA", "NA"
+            snarl = columns[2]
+            start_snarl = snarl.split('_')[0]
 
-            save_snarl = start_snarl
+            # Get VCF data or fallback to "NA" if key is not found
+            chrom, pos, type_var, ref, alt = vcf_dict.get(start_snarl, (*save_info[:2], "NA", "NA", "NA"))
+            save_info = (chrom, pos, type_var, ref, alt)
+            columns[0], columns[1], columns[3], columns[4], columns[5] = chrom, pos, type_var, ref, alt
 
-            # Replace placeholders with actual values in the correct columns
-            columns[0] = chrom
-            columns[1] = pos
-            columns[3] = type_var
-            columns[4] = ref
-            columns[5] = alt
-
-            # Write the modified line
+            # Write the modified line to the temp file
             out_f.write('\t'.join(columns) + '\n')
+
+    # Replace the original file with the updated temp file
+    os.replace(temp_output_file, output_file)
 
 def parse_vcf_to_dict(vcf_file):
     vcf_dict = {}
 
     for record in VCF(vcf_file):
         # Extract VCF fields
-        chr = record.CHROM       # Chromosome
-        pos = record.POS         # Position
-        snarl = get_first_snarl(record.ID) if record.ID else None
-        ref = record.REF         # Reference allele
-        alt = record.ALT[0]      # First alternative allele (assuming biallelic)
-        
+        chr = str(record.CHROM)       # Chromosome
+        pos = str(record.POS )        # Position
+        snarl = get_first_snarl(record.ID) # Snarl start
+        ref = str(record.REF)         # Reference allele
+        alt = str(record.ALT[0] )     # First alternative allele (assuming biallelic)
         variant_type = classify_variant(ref, alt)
         vcf_dict[snarl] = (chr, pos, variant_type, ref, alt)
 
@@ -515,3 +508,5 @@ if __name__ == "__main__" :
             vcf_object.quantitative_table(snarl, quantitative)
 
     print(f"Time P-value: {time.time() - start} s")
+
+
