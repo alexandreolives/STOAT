@@ -417,7 +417,7 @@ def classify_variant(ref, alt) :
         return "MNP"
     else :
         raise ValueError(f"what is this ref : {ref}, alt : {alt}")
-
+ 
 def write_pos_snarl(vcf_file, output_file):
     vcf_dict = parse_vcf_to_dict(vcf_file)
     save_snarl = 1
