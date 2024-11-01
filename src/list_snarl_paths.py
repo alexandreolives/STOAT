@@ -108,7 +108,7 @@ def follow_edges(stree, finished_paths, path, paths, pg) :
     # from the last thing in the path
     stree.follow_net_edges(path[-1], pg, False, add_to_path)
 
-def create_snarls(stree, root) :
+def save_snarls(stree, root) :
 
     # list storing the snarl objects
     snarls = []
@@ -122,8 +122,8 @@ def create_snarls(stree, root) :
         return (True)
     
     stree.for_each_child(root, save_snarl_tree_node)
-    snarls_length = len(snarls)
-    print('{} snarls found'.format(snarls_length))
+    # snarls_length = len(snarls)
+    # print('{} snarls found'.format(snarls_length))
 
     return snarls
 
@@ -176,6 +176,8 @@ def write_output(output_file, snarl_id, pretty_paths) :
         outf.write('{}\t{}\n'.format(snarl_id, ','.join(pretty_paths)))
 
 def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
+
+    snarl_paths = defaultdict(list)
     write_header_output(output_file)
 
     children = [0]
@@ -214,6 +216,9 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
         pretty_paths = []
         pretty_paths = fill_pretty_paths(stree, finished_paths, pretty_paths)
         write_output(output_file, snarl_id, pretty_paths)
+        snarl_paths[snarl_id].extend(pretty_paths)
+
+    return snarl_paths
 
 def loop_over_snarls(stree, snarls, pg, threshold=50) :
 
@@ -267,7 +272,7 @@ if __name__ == "__main__" :
     args = parser.parse_args()
 
     stree, pg, root = parse_graph_tree(args.p, args.d)
-    snarls = create_snarls(stree, root)
+    snarls = save_snarls(stree, root)
 
     if args.t :
         loop_over_snarls_write(stree, snarls, pg, args.o, args.t)
@@ -275,5 +280,4 @@ if __name__ == "__main__" :
         loop_over_snarls_write(stree, snarls, pg, args.o)
 
     # python3 src/list_snarl_paths.py -p ../../snarl_data/fly.pg -d ../../snarl_data/fly.dist -o test_list_snarl.tsv
-
     # vg find -x ../snarl_data/fly.gbz -r 5176878:5176884 -c 10 | vg view -dp - | dot -Tsvg -o ../snarl_data/subgraph.svg

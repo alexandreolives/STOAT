@@ -10,7 +10,7 @@ from scipy.stats import fisher_exact
 import os
 import re
 import time
-
+    
 class Matrix :
     def __init__(self, default_row_number=1_000_000, column_number=2):
         self.default_row_number = default_row_number 
@@ -165,28 +165,34 @@ class SnarlProcessor:
         self.check_pheno_group(binary_groups)
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tTable_sum\tNumber_column\tInter_group\tAverage\n'
+            #headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tTable_sum\tMin_sample\tNumber_column\tInter_group\tAverage\n'
+            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tGROUP_1_PATH_1\tGROUP_1_PATH_2\tGROUP_2_PATH_1\tGROUP_2_PATH_2\n'
+
             outf.write(headers.encode('utf-8'))
 
             for snarl, list_snarl in snarls.items() :
                 df = self.create_binary_table(binary_groups, list_snarl)
-                fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average = self.binary_stat_test(df)
-                chrom = pos = type_var = ref = alt = ""
-                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average)
+                #fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average = self.binary_stat_test(df)
+                fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII = self.binary_stat_test(df)
+
+                chrom = pos = type_var = ref = alt = "NA"
+                #data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average)
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII)
+
                 outf.write(data.encode('utf-8'))
- 
+
     def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
 
         self.check_pheno_group(quantitative)
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\tBETA\tSE\n'
+            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n'
             outf.write(headers.encode('utf-8'))
             for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
-                p_value, beta, se = self.linear_regression(df, quantitative)
-                chrom = pos = type_var = ref = alt = ""
-                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, p_value, beta, se)
+                pvalue = self.linear_regression(df, quantitative)
+                chrom = pos = type_var = ref = alt = "NA"
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, pvalue)
                 outf.write(data.encode('utf-8'))
 
     def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
@@ -232,7 +238,7 @@ class SnarlProcessor:
 
                 if srr in groups[0]:
                     g0[idx_g] += 1
-                if srr in groups[1]:  
+                if srr in groups[1]:
                     g1[idx_g] += 1
 
         # Create and return the DataFrame
@@ -260,14 +266,16 @@ class SnarlProcessor:
 
     def sm_ols(self, x, y) :
 
+        # Fit the regression model
+        # pd.set_option('display.max_rows', None)
+        # pd.set_option('display.max_columns', None)
+        # print("x : ", x)
+
         x_with_const = sm.add_constant(x)
         result = sm.OLS(y, x_with_const).fit()
-        beta = result.params  # The coefficients (including intercept)
-        se = result.bse  # The standard errors of the coefficients
-        p_value = result.f_pvalue
         # print(result.summary())
 
-        return p_value, beta, se
+        return result.f_pvalue
     
     def linear_regression(self, df, pheno : dict) -> float :
         
@@ -275,31 +283,35 @@ class SnarlProcessor:
         df['Target'] = df.index.map(pheno)
         x = df.drop('Target', axis=1)
         y = df['Target']
-        p_value, beta, se = self.sm_ols(x, y)
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
 
-        return p_value, beta, se
+        pval = self.sm_ols(x, y)
+        return pval
 
     def chi2_test(self, df) -> float:
         """Calculate p_value from list of dataframe using chi-2 test"""
 
-        try:
-            # Perform Chi-Square test
-            p_value = chi2_contingency(df)[1]
+        # Check if dataframe has at least 2 columns and more than 0 counts in every cell
+        if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
+            try:
+                # Perform Chi-Square test
+                p_value = chi2_contingency(df)[1]
+            except ValueError as e:
+                p_value = "Error"
+        else:
+            p_value = "N/A"
 
-        except ValueError as e:
-            p_value = "Error"
-    
         return p_value
 
     def fisher_test(self, df) -> float : 
         """Calcul p_value using fisher exact test"""
 
         try:
-            # Perform Fisher exact test
             p_value = fisher_exact(df)[1]
 
         except ValueError as e: 
-            p_value = "Error"
+            p_value = 'N/A'
         
         return p_value
      
@@ -307,11 +319,24 @@ class SnarlProcessor:
  
         fisher_p_value = self.fisher_test(df)
         chi2_p_value = self.chi2_test(df)
+        group_I_path_I = df.iloc[0, 0]
+        group_I_path_II = df.iloc[0, 1]
+        group_II_path_I = df.iloc[1, 0]
+        group_II_path_II = df.iloc[1, 1]
+        
+        """
         total_sum = int(df.values.sum())
         inter_group = int(df.min().sum())
         numb_colum = df.shape[1]
         average = float(total_sum / numb_colum)
-        return fisher_p_value, chi2_p_value, total_sum, numb_colum, inter_group, average
+
+        row_sums = df.sum(axis=1)
+        min_row_index = row_sums.min()
+
+        return fisher_p_value, chi2_p_value, total_sum, min_row_index, inter_group, average
+        """
+        
+        return fisher_p_value, chi2_p_value, group_I_path_I, group_I_path_II, group_II_path_I, group_II_path_II
 
 def parse_group_file(group_file : str):
 
@@ -379,7 +404,7 @@ def check_format_pheno_q(file_path : str) -> str :
     header = first_line.split('\t')
     expected_header = ['FID', 'IID', 'PHENO']
     if header != expected_header:
-        raise ValueError(f"The file must contain the following headers: {expected_header} and be split by tabulation")
+        raise argparse.ArgumentTypeError(f"The file must contain the following headers: {expected_header} and be split by tabulation")
     
     return file_path
 
@@ -387,22 +412,22 @@ def check_format_pheno_b(file_path : str) -> str :
 
     if not os.path.isfile(file_path):
         raise argparse.ArgumentTypeError(f"The file {file_path} does not exist.")
-    
+
     with open(file_path, 'r') as file:
         first_line = file.readline().strip()
-    
+
     header = first_line.split('\t')
     expected_header = ['SAMPLE', 'GROUP']
     if header != expected_header:
-        raise ValueError(f"The file must contain the following headers: {expected_header} and be split by tabulation")
-    
+        raise argparse.ArgumentTypeError(f"The file must contain the following headers: {expected_header} and be split by tabulation")
+
     return file_path
 
 def get_first_snarl(s):
 
     match = re.findall(r'\d+', s)
     if match:
-        return int(match[0])
+        return str(match[0])
     return None  # Return None if no integers are found
 
 def classify_variant(ref, alt) :
@@ -420,57 +445,49 @@ def classify_variant(ref, alt) :
  
 def write_pos_snarl(vcf_file, output_file):
     vcf_dict = parse_vcf_to_dict(vcf_file)
-    save_snarl = 1
+    save_info = vcf_dict.get(1, ("NA", "NA", "NA", "NA", "NA"))
     
-    # Read the output file, fill placeholders, and collect lines for rewrite
-    with open(output_file, 'r', encoding='utf-8') as out_f:
-        lines = out_f.readlines()
+    # Use a temporary file to write the updated lines
+    temp_output_file = output_file + ".tmp"
 
-    with open(output_file, 'w', encoding='utf-8') as out_f:
-        for line in lines:
+    with open(output_file, 'r', encoding='utf-8') as in_f, open(temp_output_file, 'w', encoding='utf-8') as out_f:
+        out_f.write("CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n")
+        next(in_f)
+        for line in in_f:
             columns = line.strip().split('\t')
-            snarl = columns[2]  # Assuming SNARL is in column 3 (index 2)
-            start_snarl, _ = snarl.split('_')
-            try:
-                chrom, pos, type_var, ref, alt = vcf_dict[start_snarl]
-            except KeyError:
-                chrom, pos, type_var, ref, alt = vcf_dict[save_snarl]
-                type_var, ref, alt = "NA", "NA", "NA"
+            snarl = columns[2]
+            start_snarl = snarl.split('_')[0]
 
-            save_snarl = start_snarl
+            # Get VCF data or fallback to "NA" if key is not found
+            chrom, pos, type_var, ref, alt = vcf_dict.get(start_snarl, (*save_info[:2], "NA", "NA", "NA"))
+            save_info = (chrom, pos, type_var, ref, alt)
+            columns[0], columns[1], columns[3], columns[4], columns[5] = chrom, pos, type_var, ref, alt
 
-            # Replace placeholders with actual values in the correct columns
-            columns[0] = chrom
-            columns[1] = pos
-            columns[3] = type_var
-            columns[4] = ref
-            columns[5] = alt
-
-            # Write the modified line
+            # Write the modified line to the temp file
             out_f.write('\t'.join(columns) + '\n')
 
+    # Replace the original file with the updated temp file
+    os.replace(temp_output_file, output_file)
+
 def parse_vcf_to_dict(vcf_file):
-    """Parses a VCF file and returns a dictionary with SNARL IDs as keys."""
     vcf_dict = {}
-    
+
     for record in VCF(vcf_file):
-        chrom = record.CHROM  # Chromosome
-        pos = record.POS      # Position
-        snarl = get_first_snarl(record.ID) if record.ID else None
-        ref = record.REF      # Reference allele
-        alt = record.ALT[0]   # First alternative allele (assuming biallelic)
-        
+        # Extract VCF fields
+        chr = str(record.CHROM)       # Chromosome
+        pos = str(record.POS )        # Position
+        snarl = get_first_snarl(record.ID) # Snarl start
+        ref = str(record.REF)         # Reference allele
+        alt = str(record.ALT[0] )     # First alternative allele (assuming biallelic)
         variant_type = classify_variant(ref, alt)
-        if snarl:  # Only add entries with a valid snarl
-            vcf_dict[snarl] = (chrom, pos, variant_type, ref, alt)
+        vcf_dict[snarl] = (chr, pos, variant_type, ref, alt)
 
     return vcf_dict
-
+    
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
     parser.add_argument("vcf_path", type=check_format_vcf_file, help="Path to the vcf file (.vcf or .vcf.gz)")
     parser.add_argument("snarl", type=check_format_group_snarl, help="Path to the snarl file that containt snarl and aT (.txt or .tsv)")
-    parser.add_argument("vcf_pangenome", type=check_format_vcf_file, help="Path to the vcf referencing all position of snarl")
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-b", "--binary", type=check_format_pheno_b, help="Path to the binary group file (.txt or .tsv)")
@@ -485,16 +502,25 @@ if __name__ == "__main__" :
 
     start = time.time()
     snarl = parse_snarl_path_file(args.snarl)
-    output = args.output if args.output else None
 
     if args.binary:
         binary_group = parse_group_file(args.binary)
-        vcf_object.binary_table(snarl, binary_group, output)
+        if args.output :
+            vcf_object.binary_table(snarl, binary_group, args.output)
+        else :
+            vcf_object.binary_table(snarl, binary_group)
+
+    # python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
+    # python3 src/snarl_vcf_parser.py ../../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../../snarl_data/group.txt
+    # python3 src/snarl_vcf_parser.py ../../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
 
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
-        vcf_object.quantitative_table(snarl, quantitative, output)
+        if args.output :
+            vcf_object.quantitative_table(snarl, quantitative, args.output)
+        else :
+            vcf_object.quantitative_table(snarl, quantitative)
 
-    #write_pos_snarl(args.vcf_pangenome, args.output)
-    print(f"Time : {time.time() - start} s")
+    print(f"Time P-value: {time.time() - start} s")
+
 
