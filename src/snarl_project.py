@@ -103,6 +103,6 @@ logger.info(f"GWAS analysis completed in {time.time() - start_time:.2f} seconds.
 
 """
 Usage example:
-    python3 src/snarl_project.py -p ../../snarl_data/fly.pg -d ../../snarl_data/fly.dist -v ../../droso_data/pangenome.dm6.vcf \
-    -r ../../snarl_data/fly.vcf -q ../../droso_data/pangenome_phenotype.tsv -o output
+    python3 src/snarl_project.py -p ../snarl_data/fly.pg -d ../snarl_data/fly.dist -v ../droso_data/pangenome.dm6.vcf \
+    -r ../snarl_data/fly.vcf -q ../droso_data/pangenome_phenotype.tsv -o output
 """

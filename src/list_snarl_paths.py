@@ -186,15 +186,12 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
         return (True)
 
     # for each snarl, lists paths through the netgraph and write to output TSV
-    for idx, snarl in enumerate(snarls):
-
-        if idx > 0 and idx % 10000 == 0 :
-            print("idx : ", idx)
+    for snarl in snarls:
 
         children = [0]
         stree.for_each_child(snarl, count_children)
         if children[0] > threshold :
-            print(f"number of children > {threshold}")
+            #print(f"number of children > {threshold}")
             continue
 
         snarl_id = find_snarl_id(stree, snarl)
@@ -207,7 +204,7 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
             path = paths.pop()
 
             if len(finished_paths) > 10000 :
-                print("len of finished_paths > 10000")
+                #print("len of finished_paths > 10000")
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
