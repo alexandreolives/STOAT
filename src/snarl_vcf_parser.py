@@ -296,7 +296,7 @@ class SnarlProcessor:
         if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
             try:
                 # Perform Chi-Square test
-                p_value = chi2_contingency(df)[1]
+                p_value = chi2_contingency(df)[1] # from scipy.stats import chi2_contingency
             except ValueError as e:
                 p_value = "Error"
         else:
@@ -308,7 +308,7 @@ class SnarlProcessor:
         """Calcul p_value using fisher exact test"""
 
         try:
-            p_value = fisher_exact(df)[1]
+            p_value = fisher_exact(df)[1] # from scipy.stats import fisher_exact
 
         except ValueError as e: 
             p_value = 'N/A'
