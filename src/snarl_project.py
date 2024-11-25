@@ -5,6 +5,7 @@ import p_value_analysis
 import time
 import logging
 import os
+import sys
 from datetime import datetime
 
 # Argument Parsing
@@ -38,6 +39,10 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Log the exact command used to launch the script
+command_line = " ".join(sys.argv)
+logger.info(f"Command: {command_line}")
 logger.info(f"Output directory: {output_dir}")
 
 # Step 1: Parse the Pangenome Graph and Create Snarl Paths to Test
@@ -104,5 +109,5 @@ logger.info(f"GWAS analysis completed in {time.time() - start_time:.2f} seconds.
 """
 Usage example:
     python3 src/snarl_project.py -p ../snarl_data/fly.pg -d ../snarl_data/fly.dist -v ../droso_data/pangenome.dm6.vcf \
-    -r ../snarl_data/fly.vcf -q ../droso_data/pangenome_phenotype.tsv -o output
+    -r ../droso_data/fly.normalized.vg_deconstruct.vcf -q ../droso_data/pangenome_phenotype.tsv -o output
 """

@@ -172,8 +172,13 @@ class SnarlProcessor:
 
             for snarl, list_snarl in snarls.items() :
                 df = self.create_binary_table(binary_groups, list_snarl)
+
                 #fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average = self.binary_stat_test(df)
                 fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII = self.binary_stat_test(df)
+
+                if snarl == "5_2" :
+                    print(df)
+                    print(fisher_p_value)
 
                 chrom = pos = type_var = ref = alt = "NA"
                 #data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average)
@@ -197,29 +202,39 @@ class SnarlProcessor:
 
     def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
         """
-        Return a list of column index where all specifique element of this column of matrix are 1
+        Return a list of column indices where all specific elements of this column in the matrix are 1.
         """
-        matrix = self.matrix.get_matrix()
+        matrix = self.matrix.get_matrix()  # Assuming this returns the matrix as a numpy array
         rows_to_check = np.array([], dtype=int)
 
-        for snarl in decomposed_snarl :
-            if "*" in snarl :
+        # Print the decomposed_snarl and row_headers_dict
+
+        for snarl in decomposed_snarl:
+            if "*" in snarl:
                 continue
-            if snarl in row_headers_dict :
-                rows_to_check = np.append(rows_to_check, row_headers_dict[snarl])
+            if snarl in row_headers_dict:
+                row_index = row_headers_dict[snarl]
+                rows_to_check = np.append(rows_to_check, row_index)
             else:
-                return [] 
-        
+                return []
+
+        # Extract the rows from the matrix using rows_to_check
         extracted_rows = matrix[rows_to_check, :]
+
+        # Check if all elements in the columns are 1 for the specified rows
         columns_all_ones = np.all(extracted_rows == 1, axis=0)
+
+        # Find the column indices where all elements are 1
         idx_srr_save = np.where(columns_all_ones)[0].tolist()
 
         return idx_srr_save
 
-    def create_binary_table(self, groups, list_path_snarl) -> pd.DataFrame :
+    def create_binary_table(self, groups, list_path_snarl) -> pd.DataFrame:
         """Generates a binary table DataFrame indicating the presence of snarl paths in given groups based on matrix data"""
+        
         row_headers_dict = self.matrix.get_row_header()
         list_samples = self.list_samples
+
         length_column_headers = len(list_path_snarl)
 
         # Initialize g0 and g1 with zeros, corresponding to the length of column_headers
@@ -231,20 +246,21 @@ class SnarlProcessor:
             idx_srr_save = list(range(len(list_samples)))
             decomposed_snarl = self.decompose_string(path_snarl)
             idx_srr_save = self.identify_correct_path(decomposed_snarl, row_headers_dict, idx_srr_save)
-            
+
             # Count occurrences in g0 and g1 based on the updated idx_srr_save
-            for idx in idx_srr_save :
-                srr = list_samples[idx//2]
+            for idx in idx_srr_save:
+                srr = list_samples[idx // 2]
 
                 if srr in groups[0]:
                     g0[idx_g] += 1
+
                 if srr in groups[1]:
                     g1[idx_g] += 1
 
         # Create and return the DataFrame
         df = pd.DataFrame([g0, g1], index=['G0', 'G1'], columns=list_path_snarl)
         return df
-    
+
     def create_quantitative_table(self, column_headers: list) -> pd.DataFrame:
         row_headers_dict = self.matrix.get_row_header()
         length_sample = len(self.list_samples)
@@ -474,11 +490,11 @@ def parse_vcf_to_dict(vcf_file):
 
     for record in VCF(vcf_file):
         # Extract VCF fields
-        chr = str(record.CHROM)       # Chromosome
-        pos = str(record.POS )        # Position
+        chr = str(record.CHROM)            # Chromosome
+        pos = str(record.POS)              # Position
         snarl = get_first_snarl(record.ID) # Snarl start
-        ref = str(record.REF)         # Reference allele
-        alt = str(record.ALT[0] )     # First alternative allele (assuming biallelic)
+        ref = str(record.REF)              # Reference allele
+        alt = str(record.ALT[0])           # First alternative allele (assuming biallelic)
         variant_type = classify_variant(ref, alt)
         vcf_dict[snarl] = (chr, pos, variant_type, ref, alt)
 

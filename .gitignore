@@ -7,3 +7,4 @@ test/list_snarl_short.txt
 output/compare.txt
 test/list_snarl_short.txt
 output/*
+src/test.py

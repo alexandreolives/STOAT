@@ -1,6 +1,7 @@
 import bdsg
 import argparse
 from collections import defaultdict
+import time 
 
 # class to help make paths from BDSG objects
 # and deal with orientation, flipping, etc
@@ -177,7 +178,6 @@ def write_output(output_file, snarl_id, pretty_paths) :
 
 def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
 
-    snarl_paths = defaultdict(list)
     write_header_output(output_file)
 
     children = [0]
@@ -204,7 +204,6 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
             path = paths.pop()
 
             if len(finished_paths) > 10000 :
-                #print("len of finished_paths > 10000")
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
@@ -213,9 +212,6 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
         pretty_paths = []
         pretty_paths = fill_pretty_paths(stree, finished_paths, pretty_paths)
         write_output(output_file, snarl_id, pretty_paths)
-        snarl_paths[snarl_id].extend(pretty_paths)
-
-    return snarl_paths
 
 def loop_over_snarls(stree, snarls, pg, threshold=50) :
 
@@ -247,7 +243,6 @@ def loop_over_snarls(stree, snarls, pg, threshold=50) :
             path = paths.pop()
 
             if len(finished_paths) > 10000 :
-                #print("len of finished_paths > 10000")
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
@@ -278,3 +273,4 @@ if __name__ == "__main__" :
 
     # python3 src/list_snarl_paths.py -p ../../snarl_data/fly.pg -d ../../snarl_data/fly.dist -o test_list_snarl.tsv
     # vg find -x ../snarl_data/fly.gbz -r 5176878:5176884 -c 10 | vg view -dp - | dot -Tsvg -o ../snarl_data/subgraph.svg
+    
