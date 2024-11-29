@@ -78,9 +78,8 @@ def find_snarl_id(stree, snarl) :
     sstart = stree.get_node_from_sentinel(sstart)
     send = stree.get_bound(snarl, True, True)
     send = stree.get_node_from_sentinel(send)
-    snarl_id = '{}_{}'.format(stree.node_id(send),
-                            stree.node_id(sstart))
-    
+    snarl_id = '{}_{}'.format(stree.node_id(sstart), stree.node_id(send))
+
     return snarl_id
 
 def follow_edges(stree, finished_paths, path, paths, pg) :
@@ -123,9 +122,6 @@ def save_snarls(stree, root) :
         return (True)
     
     stree.for_each_child(root, save_snarl_tree_node)
-    # snarls_length = len(snarls)
-    # print('{} snarls found'.format(snarls_length))
-
     return snarls
 
 def parse_graph_tree(pg_file, dist_file) :
@@ -176,9 +172,18 @@ def write_output(output_file, snarl_id, pretty_paths) :
     with open(output_file, 'a') as outf:
         outf.write('{}\t{}\n'.format(snarl_id, ','.join(pretty_paths)))
 
-def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
+def write_header_output_not_analyse(output_file) :
+    with open(output_file, 'w') as outf:
+        outf.write('snarl\treason\n')
+
+def write_output_not_analyse(output_file, snarl_id, reason) :
+    with open(output_file, 'a') as outf:
+        outf.write('{}\t{}\n'.format(snarl_id, reason))
+
+def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_analyse, threshold=50) :
 
     write_header_output(output_file)
+    write_header_output_not_analyse(output_snarl_not_analyse)
 
     children = [0]
     def count_children(net):
@@ -189,9 +194,11 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
     for snarl in snarls:
 
         children = [0]
+        snarl_id = find_snarl_id(stree, snarl)
+
         stree.for_each_child(snarl, count_children)
         if children[0] > threshold :
-            #print(f"number of children > {threshold}")
+            write_output_not_analyse(output_snarl_not_analyse, snarl_id, "too_many_children")
             continue
 
         snarl_id = find_snarl_id(stree, snarl)
@@ -204,6 +211,7 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
             path = paths.pop()
 
             if len(finished_paths) > 10000 :
+                write_output_not_analyse(output_snarl_not_analyse, snarl_id, "number_of_paths_to_hight")
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
@@ -213,9 +221,12 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, threshold=50) :
         pretty_paths = fill_pretty_paths(stree, finished_paths, pretty_paths)
         write_output(output_file, snarl_id, pretty_paths)
 
-def loop_over_snarls(stree, snarls, pg, threshold=50) :
+def loop_over_snarls(stree, snarls, pg, output_snarl_not_analyse, threshold=50) :
+
+    write_header_output_not_analyse(output_snarl_not_analyse)
 
     snarl_paths = defaultdict(list)
+    snarl_number_analysis = 0
 
     children = [0]
     def count_children(net):
@@ -225,14 +236,13 @@ def loop_over_snarls(stree, snarls, pg, threshold=50) :
     # for each snarl, lists paths through the netgraph and write to output TSV
     for snarl in snarls:
         
-        if threshold :
-            children = [0]
-            stree.for_each_child(snarl, count_children)
-            if children[0] > threshold :
-                #print(f"number of children > {threshold}")
-                continue
-
+        children = [0]
         snarl_id = find_snarl_id(stree, snarl)
+
+        stree.for_each_child(snarl, count_children)
+        if children[0] > threshold :
+            write_output_not_analyse(output_snarl_not_analyse, snarl_id, "too_many_children")
+            continue
         
         # we'll traverse the netgraph starting at the left boundary
         # init unfinished paths to the first boundary node
@@ -243,6 +253,7 @@ def loop_over_snarls(stree, snarls, pg, threshold=50) :
             path = paths.pop()
 
             if len(finished_paths) > 10000 :
+                write_output_not_analyse(output_snarl_not_analyse, snarl_id, "number_of_paths_to_hight")
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
@@ -251,8 +262,9 @@ def loop_over_snarls(stree, snarls, pg, threshold=50) :
         pretty_paths = []
         pretty_paths = fill_pretty_paths(stree, finished_paths, pretty_paths)
         snarl_paths[snarl_id].extend(pretty_paths)
+        snarl_number_analysis += len(pretty_paths)
 
-    return snarl_paths
+    return snarl_paths, snarl_number_analysis
 
 if __name__ == "__main__" :
 
