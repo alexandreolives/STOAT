@@ -23,7 +23,8 @@ def classify_variant(ref, alt) :
         raise ValueError(f"what is this ref : {ref}, alt : {alt}")
  
 def write_pos_snarl(vcf_file, output_file):
-    vcf_dict = parse_vcf_to_dict(vcf_file)
+    #vcf_dict = parse_vcf_to_dict(vcf_file)
+    vcf_dict = parse_vcf_to_dict_special(vcf_file)
     save_info = vcf_dict.get(1, ("NA", "NA", "NA", "NA", "NA"))
     
     # Use a temporary file to write the updated lines
@@ -64,8 +65,36 @@ def parse_vcf_to_dict(vcf_file):
 
     return vcf_dict
 
+def parse_vcf_to_dict_special(vcf_file):
+    vcf_dict = {}
+    number_pass = 0
+    with open(vcf_file, 'r') as file:
+        for line in file:
+            if line.startswith("#"):
+                continue  # Skip headers and comments
+
+            fields = line.strip().split('\t')
+            if len(fields) < 4 :
+                print(fields) 
+                number_pass += 1
+                continue
+
+            chr = fields[0]          # Chromosome
+            pos = fields[1]          # Position
+            snarl = get_first_snarl(fields[2])  # Use pre-defined function
+            ref = fields[3]          # Reference allele
+            alt = fields[4]          # Alternative allele(s), take the first
+            alt = alt.split(",")[0] if alt else ""
+            variant_type = classify_variant(ref, alt)  # Use pre-defined function
+
+            if snarl not in vcf_dict:
+                vcf_dict[snarl] = (chr, pos, variant_type, ref, alt)
+
+    print("number of variant not parsed : ", number_pass)
+    return vcf_dict
+
 if __name__ == "__main__" :
-    reference = "/home/mbagarre/Bureau/droso_data/pangenome.dm6.vcf"
+    reference = "/home/mbagarre/Bureau/snarl_data/fly.deconstruct.normalized.vcf"
     output_file = "output/run_20241128_101551/quantitative_analysis.tsv"
     write_pos_snarl(reference, output_file)
 

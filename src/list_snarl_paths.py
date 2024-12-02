@@ -1,7 +1,7 @@
 import bdsg
 import argparse
 from collections import defaultdict
-import time 
+#import time 
 
 # class to help make paths from BDSG objects
 # and deal with orientation, flipping, etc
@@ -78,7 +78,7 @@ def find_snarl_id(stree, snarl) :
     sstart = stree.get_node_from_sentinel(sstart)
     send = stree.get_bound(snarl, True, True)
     send = stree.get_node_from_sentinel(send)
-    snarl_id = '{}_{}'.format(stree.node_id(sstart), stree.node_id(send))
+    snarl_id = '{}_{}'.format(stree.node_id(send), stree.node_id(sstart))
 
     return snarl_id
 
@@ -278,11 +278,13 @@ if __name__ == "__main__" :
     stree, pg, root = parse_graph_tree(args.p, args.d)
     snarls = save_snarls(stree, root)
 
-    if args.t :
-        loop_over_snarls_write(stree, snarls, pg, args.o, args.t)
-    else : 
-        loop_over_snarls_write(stree, snarls, pg, args.o)
+    output_snarl_not_analyse = "snarl_not_analyse.tsv"
 
-    # python3 src/list_snarl_paths.py -p ../../snarl_data/fly.pg -d ../../snarl_data/fly.dist -o test_list_snarl.tsv
+    if args.t :
+        loop_over_snarls_write(stree, snarls, pg, args.o, output_snarl_not_analyse, args.t)
+    else : 
+        loop_over_snarls_write(stree, snarls, pg, args.o, output_snarl_not_analyse)
+
+    # python3 src/list_snarl_paths.py -p ../snarl_data/fly.pg -d ../snarl_data/fly.dist -o test_list_snarl.tsv
     # vg find -x ../snarl_data/fly.gbz -r 5176878:5176884 -c 10 | vg view -dp - | dot -Tsvg -o ../snarl_data/subgraph.svg
     
