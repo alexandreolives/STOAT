@@ -19,6 +19,7 @@ parser.add_argument("-r", type=snarl_vcf_parser.check_format_vcf_file, help="Pat
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("-b", "--binary", type=snarl_vcf_parser.check_format_pheno_b, help="Path to the binary group file (.txt or .tsv)")
 group.add_argument("-q", "--quantitative", type=snarl_vcf_parser.check_format_pheno_q, help="Path to the quantitative phenotype file (.txt or .tsv)")
+parser.add_argument("-c", "--covariate", type=snarl_vcf_parser.check_covariate_file, required=False, help="Path to the covariate file (.txt or .tsv)")
 parser.add_argument("-o", "--output", type=str, required=False, help="Base path for the output directory")
 args = parser.parse_args()
 

@@ -7,8 +7,9 @@ import statsmodels.api as sm
 from collections import defaultdict
 from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact
+from limix.stats import logisticMixedModel
+from limix.qtl import scan
 import os
-import re
 import time
     
 class Matrix :
@@ -160,35 +161,61 @@ class SnarlProcessor:
         if missing_elements:
             raise ValueError(f"The following sample name from merged vcf are not present in group file : {missing_elements}")
 
-    def binary_table(self, snarls, binary_groups, output="output/binary_output.tsv") : 
+    def check_covariate_group(self, group):
+        """
+        Check if all sample names in the covariate dictionary match with the provided group of samples (from VCF or phenotype).
+        """
+        # Check the type of the group and extract the sample names
+        if isinstance(group, tuple):
+            list_group = list(group[0].keys()) + list(group[1].keys())
+        elif isinstance(group, dict):
+            list_group = list(group.keys())
+        else:
+            raise ValueError(f"Group type: {type(group)} is not a dict or tuple.")
+
+        # Get the set of sample names from both covariates and the provided group
+        set_samples = set(self.list_samples)
+        set_group = set(list_group)
+
+        # Find missing elements (samples that are in covariates but not in the provided group)
+        missing_elements = set_samples - set_group
+
+        if missing_elements:
+            raise ValueError(f"The following sample names from the covariate file are not present in the provided group: {missing_elements}")
+
+    def binary_table(self, snarls, binary_groups, covar, output="output/binary_output.tsv") : 
 
         self.check_pheno_group(binary_groups)
+        if covar :
+            self.check_covar(covar)
+            with open(output, 'wb') as outf:
+                headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tGROUP_1_PATH_1\tGROUP_1_PATH_2\tGROUP_2_PATH_1\tGROUP_2_PATH_2\n'
+                outf.write(headers.encode('utf-8'))
+                for snarl, list_snarl in snarls.items() :
+                    df = self.create_binary_table(binary_groups, list_snarl, covar)
+                    fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII = self.binary_stat_test(df)
+                    fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII = self.binary_stat_test(df)
 
-        with open(output, 'wb') as outf:
-            #headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tTable_sum\tMin_sample\tNumber_column\tInter_group\tAverage\n'
-            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tGROUP_1_PATH_1\tGROUP_1_PATH_2\tGROUP_2_PATH_1\tGROUP_2_PATH_2\n'
+                    chrom = pos = type_var = ref = alt = "NA"
+                    data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII)
+                    outf.write(data.encode('utf-8'))
 
-            outf.write(headers.encode('utf-8'))
+        else : 
+            with open(output, 'wb') as outf:
+                headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tGROUP_1_PATH_1\tGROUP_1_PATH_2\tGROUP_2_PATH_1\tGROUP_2_PATH_2\n'
+                outf.write(headers.encode('utf-8'))
+                for snarl, list_snarl in snarls.items() :
+                    df = self.create_binary_table(binary_groups, list_snarl)
+                    fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII = self.binary_stat_test(df)
+                    chrom = pos = type_var = ref = alt = "NA"
+                    data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII)
+                    outf.write(data.encode('utf-8'))
 
-            for snarl, list_snarl in snarls.items() :
-                df = self.create_binary_table(binary_groups, list_snarl)
-
-                #fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average = self.binary_stat_test(df)
-                fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII = self.binary_stat_test(df)
-
-                if snarl == "5_2" :
-                    print(df)
-                    print(fisher_p_value)
-
-                chrom = pos = type_var = ref = alt = "NA"
-                #data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average)
-                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII)
-
-                outf.write(data.encode('utf-8'))
-
-    def quantitative_table(self, snarls, quantitative, output="output/quantitative_output.tsv") :
+    def quantitative_table(self, snarls, quantitative, covar, output="output/quantitative_output.tsv") :
 
         self.check_pheno_group(quantitative)
+        if covar :
+            self.check_covar(covar)
 
         with open(output, 'wb') as outf:
             headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n'
@@ -283,14 +310,8 @@ class SnarlProcessor:
     def sm_ols(self, x, y) :
 
         # Fit the regression model
-        # pd.set_option('display.max_rows', None)
-        # pd.set_option('display.max_columns', None)
-        # print("x : ", x)
-
         x_with_const = sm.add_constant(x)
         result = sm.OLS(y, x_with_const).fit()
-        # print(result.summary())
-
         return result.f_pvalue
     
     def linear_regression(self, df, pheno : dict) -> float :
@@ -299,11 +320,49 @@ class SnarlProcessor:
         df['Target'] = df.index.map(pheno)
         x = df.drop('Target', axis=1)
         y = df['Target']
-        pd.set_option('display.max_rows', None)
-        pd.set_option('display.max_columns', None)
-
         pval = self.sm_ols(x, y)
         return pval
+
+    def compute_kinship_matrix(self, df):
+        """
+        Compute the kinship matrix for a given genotypic dataset.
+        """
+        # Compute allele frequencies for each SNP
+        allele_frequencies = df.mean() / 2  # Average genotype value, assuming 0, 1, 2 coding.
+
+        # Center the genotypes by subtracting allele frequencies
+        centered_genotypes = df - allele_frequencies
+
+        # The kinship coefficient between individuals i and j is the sum of the product of centered genotypes across SNPs, divided by 2
+        kinship_matrix = centered_genotypes.T.dot(centered_genotypes) / (2 * df.shape[1])
+        return kinship_matrix
+
+    # Linear Mixed Model
+    def LMM_quantitatif(self, kinship_matrix, covar: dict, pheno: dict) -> tuple:
+        """
+        Perform Linear Mixed Model (LMM) for quantitative phenotype data.
+        """
+
+        # Ensure the covariate matrix is in a DataFrame and map the covariates and phenotype correctly
+        covar_df = pd.DataFrame(covar)
+        covar_df['Target'] = covar_df.index.map(pheno)  # Map phenotype values
+        
+        # Extract dependent (y) and independent variables (x)
+        y = covar_df['Target']
+        x = covar_df.drop('Target', axis=1)  # Remove target from covariates
+        x = sm.add_constant(x)  # Add constant for intercept term
+        
+        # Perform Linear Mixed Model scan (assuming a function like scan)
+        results = self.scan(y=y, K=kinship_matrix, covariates=x)  # Assuming this is a method that fits the model
+        
+        # Extract metrics from the results object (p-value, beta, beta_se, log-likelihood, heritability)
+        p_value = results.stats["pv"]  # P-values for each covariate
+        beta = results.stats["beta"]  # Effect sizes (coefficients for covariates)
+        beta_se = results.stats["beta_se"]  # Standard errors for effect sizes
+        ll = results.stats["ll"]  # Log-likelihood of the model
+        heritability = results.stats["h2"]  # Heritability estimate (proportion of variance explained by GRM)
+
+        return p_value, beta, beta_se, ll, heritability
 
     def chi2_test(self, df) -> float:
         """Calculate p_value from list of dataframe using chi-2 test"""
@@ -330,7 +389,32 @@ class SnarlProcessor:
             p_value = 'N/A'
         
         return p_value
-     
+
+    # Logistic Mixed Model
+
+    def LMM_binary(df, pheno, covar):
+        """
+        Perform Logistic Mixed Model on a binary phenotype.
+        """
+        # Ensure phenotype mapping
+        if not all(ind in df.index for ind in pheno.keys()):
+            raise ValueError("Some individuals in the phenotype file do not match the genotype file.")
+
+        # Map phenotype to df
+        df['Target'] = df.index.map(pheno)
+        y = df['Target'].values
+        X = covar[df.index].values  # Covariates should match the index of genotype data
+        K = np.corrcoef(df.T)  # This is a placeholder for the kinship matrix (should be computed properly in practice)
+        lmm = logisticMixedModel(y=y, K=K)
+        
+        # Fit the model with covariates
+        lmm.fit(X)
+        beta = lmm.beta       # Effect sizes (log-odds for covariates)
+        p_value = lmm.pv      # P-values for fixed effects
+        vcomp = lmm.vcomp     # Variance components (relatedness)
+
+        return p_value, beta, vcomp
+    
     def binary_stat_test(self, df) :
  
         fisher_p_value = self.fisher_test(df)
@@ -353,6 +437,11 @@ class SnarlProcessor:
         """
         
         return fisher_p_value, chi2_p_value, group_I_path_I, group_I_path_II, group_II_path_I, group_II_path_II
+
+def parse_covariate_file(filepath):
+    
+    covariates = pd.read_csv(filepath)
+    return covariates.set_index("ID").to_dict(orient="index")
 
 def parse_group_file(group_file : str):
 
@@ -386,6 +475,13 @@ def parse_snarl_path_file(path_file: str) -> dict:
         snarl_paths[snarl].extend(paths)
 
     return snarl_paths
+
+def parse_covariate_file(covar_path : str) -> dict :
+
+    covariates = pd.read_csv(covar_path)
+
+    # Convert to dictionary with ID as the key and the rest of the row as the value
+    return covariates.set_index("ID").to_dict(orient="index")
 
 def check_format_vcf_file(file_path : str) -> str:
     """
@@ -439,66 +535,43 @@ def check_format_pheno_b(file_path : str) -> str :
 
     return file_path
 
-def get_first_snarl(s):
-
-    match = re.findall(r'\d+', s)
-    if match:
-        return str(match[0])
-    return None  # Return None if no integers are found
-
-def classify_variant(ref, alt) :
-
-    if len(ref) == len(alt) == 1:
-        return "SNP"
-    elif len(ref) > len(alt) and alt != "<DEL>":
-        return "DEL"
-    elif len(ref) < len(alt):
-        return "INS"
-    elif len(ref) == len(alt) and len(ref) > 1:
-        return "MNP"
-    else :
-        raise ValueError(f"what is this ref : {ref}, alt : {alt}")
- 
-def write_pos_snarl(vcf_file, output_file):
-    vcf_dict = parse_vcf_to_dict(vcf_file)
-    save_info = vcf_dict.get(1, ("NA", "NA", "NA", "NA", "NA"))
+def check_covariate_file(file_path):
     
-    # Use a temporary file to write the updated lines
-    temp_output_file = output_file + ".tmp"
-
-    with open(output_file, 'r', encoding='utf-8') as in_f, open(temp_output_file, 'w', encoding='utf-8') as out_f:
-        out_f.write("CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n")
-        next(in_f)
-        for line in in_f:
-            columns = line.strip().split('\t')
-            snarl = columns[2]
-            start_snarl = snarl.split('_')[0]
-
-            # Get VCF data or fallback to "NA" if key is not found
-            chrom, pos, type_var, ref, alt = vcf_dict.get(start_snarl, (*save_info[:2], "NA", "NA", "NA"))
-            save_info = (chrom, pos, type_var, ref, alt)
-            columns[0], columns[1], columns[3], columns[4], columns[5] = chrom, pos, type_var, ref, alt
-
-            # Write the modified line to the temp file
-            out_f.write('\t'.join(columns) + '\n')
-
-    # Replace the original file with the updated temp file
-    os.replace(temp_output_file, output_file)
-
-def parse_vcf_to_dict(vcf_file):
-    vcf_dict = {}
-
-    for record in VCF(vcf_file):
-        # Extract VCF fields
-        chr = str(record.CHROM)            # Chromosome
-        pos = str(record.POS)              # Position
-        snarl = get_first_snarl(record.ID) # Snarl start
-        ref = str(record.REF)              # Reference allele
-        alt = str(record.ALT[0])           # First alternative allele (assuming biallelic)
-        variant_type = classify_variant(ref, alt)
-        vcf_dict[snarl] = (chr, pos, variant_type, ref, alt)
-
-    return vcf_dict
+    # Check if the file exists
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+    
+    try:
+        covariates = pd.read_csv(file_path, delim_whitespace=True, header=None)
+    except Exception as e:
+        raise ValueError(f"Error reading the file: {e}")
+    
+    # Check if the file has at least 5 columns (FID, IID, Age, Sex, PC1)
+    if covariates.shape[1] < 5:
+        raise ValueError("File must have at least 5 columns: FID, IID, Age, Sex, PC1, PC2")
+    
+    # Name the columns (PLINK-style file doesn't have headers)
+    covariates.columns = ["FID", "IID", "Age", "Sex", "PC1", "PC2"] + [f"PC{i}" for i in range(3, covariates.shape[1])]
+    
+    # Check for duplicate IDs (FID, IID should be unique)
+    if covariates["IID"].duplicated().any():
+        raise ValueError("Duplicate IDs found in the file.")
+    
+    # Check for missing data
+    if covariates.isnull().any().any():
+        raise ValueError("There are missing values in the file.")
+    
+    # Check data types
+    if not pd.api.types.is_numeric_dtype(covariates["Age"]):
+        raise ValueError("Age column should be numeric.")
+    
+    if covariates["Sex"].dtype != 'object':
+        raise ValueError("Sex column should be categorical.")
+    
+    if not pd.api.types.is_numeric_dtype(covariates["PC1"]) or not pd.api.types.is_numeric_dtype(covariates["PC2"]):
+        raise ValueError("PC1 and PC2 columns should be numeric.")
+    
+    return file_path
     
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
@@ -508,6 +581,7 @@ if __name__ == "__main__" :
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-b", "--binary", type=check_format_pheno_b, help="Path to the binary group file (.txt or .tsv)")
     group.add_argument("-q", "--quantitative", type=check_format_pheno_q, help="Path to the quantitative phenotype file (.txt or .tsv)")
+    parser.add_argument("-c", "--covariate", type=check_covariate_file, required=False, help="Path to the covariate file (.txt or .tsv)")
     parser.add_argument("-o", "--output", type=str, required=False, help="Path to the output file")
     args = parser.parse_args()
     
@@ -518,13 +592,14 @@ if __name__ == "__main__" :
 
     start = time.time()
     snarl = parse_snarl_path_file(args.snarl)
+    covar = parse_covariate_file(args.covariate) if args.covariate else ""
 
     if args.binary:
         binary_group = parse_group_file(args.binary)
         if args.output :
-            vcf_object.binary_table(snarl, binary_group, args.output)
+            vcf_object.binary_table(snarl, binary_group, covar, args.output)
         else :
-            vcf_object.binary_table(snarl, binary_group)
+            vcf_object.binary_table(snarl, binary_group, covar)
 
     # python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
     # python3 src/snarl_vcf_parser.py ../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../snarl_data/group.txt
@@ -533,9 +608,9 @@ if __name__ == "__main__" :
     if args.quantitative:
         quantitative = parse_pheno_file(args.quantitative)
         if args.output :
-            vcf_object.quantitative_table(snarl, quantitative, args.output)
+            vcf_object.quantitative_table(snarl, quantitative, covar, args.output)
         else :
-            vcf_object.quantitative_table(snarl, quantitative)
+            vcf_object.quantitative_table(snarl, quantitative, covar)
 
     print(f"Time P-value: {time.time() - start} s")
 
