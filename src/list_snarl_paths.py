@@ -1,5 +1,6 @@
 import bdsg
 import argparse
+import re
 from collections import defaultdict
 #import time 
 
@@ -64,6 +65,26 @@ class Path:
     def nreversed(self):
         # counts how many nodes are traversed in reverse
         return (sum(['<' == orient for orient in self.orients]))
+
+def split_paths(path) :
+    return re.findall(r'\d+', path)
+
+def length_node(pg, node_id) :
+    sequence = pg.get_node_sequence(node_id)
+    return len(sequence)
+
+def calcul_type_variant(pg, pretty_paths) :
+    """ 
+    Calcul the type variant of a tested snarl
+    If snarl are only node of length 1 => SNP 
+    Else => COMPLEX (unknow variant type)
+    """
+    for path in pretty_paths :
+        list_node = split_paths(path)
+        if len(list_node) > 3 or length_node(pg, list_node[1]) > 1 :
+            return "COMPLEX"
+
+    return "SNP"
 
 def check_threshold(proportion) :
     proportion = float(proportion)
@@ -166,11 +187,11 @@ def fill_pretty_paths(stree, finished_paths, pretty_paths) :
 
 def write_header_output(output_file) :
     with open(output_file, 'w') as outf:
-        outf.write('snarl\tpaths\n')
+        outf.write('snarl\tpaths\ttype\n')
 
-def write_output(output_file, snarl_id, pretty_paths) :
+def write_output(output_file, snarl_id, pretty_paths, type_variant) :
     with open(output_file, 'a') as outf:
-        outf.write('{}\t{}\n'.format(snarl_id, ','.join(pretty_paths)))
+        outf.write('{}\t{}\t{}\n'.format(snarl_id, ','.join(pretty_paths), type_variant))
 
 def write_header_output_not_analyse(output_file) :
     with open(output_file, 'w') as outf:
@@ -219,7 +240,8 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
         # prepare path list to output and write each path directly to the file
         pretty_paths = []
         pretty_paths = fill_pretty_paths(stree, finished_paths, pretty_paths)
-        write_output(output_file, snarl_id, pretty_paths)
+        type_variant = calcul_type_variant(pg, pretty_paths)
+        write_output(output_file, snarl_id, pretty_paths, type_variant)
 
 def loop_over_snarls(stree, snarls, pg, output_snarl_not_analyse, threshold=50) :
 
