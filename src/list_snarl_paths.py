@@ -2,7 +2,7 @@ import bdsg
 import argparse
 import re
 from collections import defaultdict
-#import time 
+import time 
 
 # class to help make paths from BDSG objects
 # and deal with orientation, flipping, etc
@@ -92,8 +92,8 @@ def calcul_type_variant(pg, pretty_paths) :
 
 def check_threshold(proportion) :
     proportion = float(proportion)
-    if proportion <= 0 or proportion >= 10000 :
-        raise ValueError("Proportion value must be >0 and <10000.")
+    if proportion <= 0 :
+        raise argparse.ArgumentTypeError("Proportion value must be >0.")
 
     return proportion
 
@@ -205,27 +205,15 @@ def write_output_not_analyse(output_file, snarl_id, reason) :
     with open(output_file, 'a') as outf:
         outf.write('{}\t{}\n'.format(snarl_id, reason))
 
-def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_analyse, threshold=50) :
+def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_analyse, time_threshold=10) :
 
     write_header_output(output_file)
     write_header_output_not_analyse(output_snarl_not_analyse)
 
-    children = [0]
-    def count_children(net):
-        children[0] += 1
-        return (True)
-
     # for each snarl, lists paths through the netgraph and write to output TSV
     for snarl in snarls:
 
-        children = [0]
-        snarl_id = find_snarl_id(stree, snarl)
-
-        stree.for_each_child(snarl, count_children)
-        if children[0] > threshold :
-            write_output_not_analyse(output_snarl_not_analyse, snarl_id, "too_many_children")
-            continue
-
+        snarl_time = time.time()
         snarl_id = find_snarl_id(stree, snarl)
 
         # we'll traverse the netgraph starting at the left boundary
@@ -235,8 +223,8 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
         while len(paths) > 0 :
             path = paths.pop()
 
-            if len(finished_paths) > 10000 :
-                write_output_not_analyse(output_snarl_not_analyse, snarl_id, "number_of_paths_to_hight")
+            if snarl_time > time_threshold :
+                write_output_not_analyse(output_snarl_not_analyse, snarl_id, "time_calculation_out")
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
@@ -297,7 +285,7 @@ if __name__ == "__main__" :
     parser = argparse.ArgumentParser('List path through the netgraph of each snarl in a pangenome')
     parser.add_argument('-p', help='the input pangenome .pg file', required=True)
     parser.add_argument('-d', help='the input distance index .dist file',required=True)
-    parser.add_argument('-t', type=check_threshold, help='Children threshold', required=False)
+    parser.add_argument('-t', type=check_threshold, help='time calculation threshold', required=False)
     parser.add_argument('-o', help='the output TSV file', type=str, required=True)
     args = parser.parse_args()
 

@@ -23,7 +23,7 @@ class Matrix :
         self.default_row_number = default_row_number 
         self.matrix = np.zeros((default_row_number, column_number), dtype=bool)
         self.row_header = None
-    
+
     def get_matrix(self):
         return self.matrix
 
@@ -157,17 +157,17 @@ class SnarlProcessor:
         """
         headers = ('CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\t'
                 'MIN_ROW_INDEX\tINTER_GROUP\tAVERAGE\n')
-        
+
         with open(output, 'wb') as outf:
             outf.write(headers.encode('utf-8'))
-            
+
             for snarl, list_snarl in snarls.items():
                 # Create the binary table, considering covariates if provided
                 if covar:
                     df = self.create_binary_table(binary_groups, list_snarl, covar)
                 else:
                     df = self.create_binary_table(binary_groups, list_snarl)
-                
+
                 # Perform statistical tests and compute descriptive statistics
                 fisher_p_value, chi2_p_value, total_sum, min_row_index, inter_group, average = self.binary_stat_test(df)
                 chrom = pos = type_var = ref = alt = "NA"
@@ -316,7 +316,7 @@ class SnarlProcessor:
         results = scan(y=y, K=kinship_matrix, covariates=x)
         
         # Extract metrics from the results object (p-value, beta, beta_se, log-likelihood, heritability)
-        p_value = round(results.stats["pv"],4)  # P-values for each covariate
+        p_value = round(results.stats["pv"], 4)  # P-values for each covariate
         beta = results.stats["beta"]            # Effect sizes (coefficients for covariates)
         beta_se = results.stats["beta_se"]      # Standard errors for effect sizes
         ll = results.stats["ll"]                # Log-likelihood of the model
