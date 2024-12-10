@@ -57,7 +57,7 @@ if args.covariate :
 if args.binary:
     pheno = snarl_vcf_parser.parse_pheno_binary_file(args.binary)
 
-if args.quantitative:
+elif args.quantitative:
     pheno = snarl_vcf_parser.parse_pheno_quantitatif_file(args.quantitative)
 
 snarl_vcf_parser.check_mathing(pheno, list_samples, "phenotype")

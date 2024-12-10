@@ -79,12 +79,16 @@ def calcul_type_variant(pg, pretty_paths) :
     If snarl are only node of length 1 => SNP 
     Else => COMPLEX (unknow variant type)
     """
+    list_type_variant = []
     for path in pretty_paths :
         list_node = split_paths(path)
-        if len(list_node) > 3 or length_node(pg, list_node[1]) > 1 :
-            return "COMPLEX"
+        length_middle_node = length_node(pg, list_node[1])
+        if len(list_node) > 3 :
+            list_type_variant.append("COMPLEX")
+        else :
+            list_type_variant.append(str(length_middle_node))
 
-    return "SNP"
+    return ",".join(list_type_variant)
 
 def check_threshold(proportion) :
     proportion = float(proportion)
