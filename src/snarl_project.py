@@ -2,6 +2,7 @@ import argparse
 import list_snarl_paths
 import snarl_vcf_parser
 import p_value_analysis
+import write_position
 import time
 import logging
 import os
@@ -10,8 +11,8 @@ from datetime import datetime
 
 # Argument Parsing
 parser = argparse.ArgumentParser(description='Parse and analyze snarl from VCF file')
-parser.add_argument('-p', help='The input pangenome .pg file', required=True)
-parser.add_argument('-d', help='The input distance index .dist file', required=True)
+parser.add_argument('-p', type=snarl_vcf_parser.check_file, help='The input pangenome .pg file', required=True)
+parser.add_argument('-d', type=snarl_vcf_parser.check_file, help='The input distance index .dist file', required=True)
 parser.add_argument("-t", type=list_snarl_paths.check_threshold, help='Children threshold', required=False)
 parser.add_argument("-v", type=snarl_vcf_parser.check_format_vcf_file, help="Path to the merged VCF file (.vcf or .vcf.gz)", required=True)
 parser.add_argument("-r", type=snarl_vcf_parser.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (.vcf or .vcf.gz)", required=False)
@@ -46,6 +47,21 @@ command_line = " ".join(sys.argv)
 logger.info(f"Command: {command_line}")
 logger.info(f"Output directory: {output_dir}")
 
+# Check vcf samples matching other files (pheno, covar)
+list_samples = snarl_vcf_parser.parsing_samples_vcf(args.v)
+
+if args.covariate :
+    covar = snarl_vcf_parser.parse_covariate_file(args.covariate)
+    snarl_vcf_parser.check_mathing(covar, list_samples, "covariate")
+
+if args.binary:
+    pheno = snarl_vcf_parser.parse_pheno_binary_file(args.binary)
+
+if args.quantitative:
+    pheno = snarl_vcf_parser.parse_pheno_quantitatif_file(args.quantitative)
+
+snarl_vcf_parser.check_mathing(pheno, list_samples, "phenotype")
+
 # Step 1: Parse the Pangenome Graph and Create Snarl Paths to Test
 start_time = time.time()
 logger.info("Starting snarl path decomposition...")
@@ -64,7 +80,7 @@ else:
 logger.info(f"Total of paths analyse : {snarl_number_analysis}")
 
 # Step 2: Parse VCF Files and Fill the Matrix
-vcf_object = snarl_vcf_parser.SnarlProcessor(args.v)
+vcf_object = snarl_vcf_parser.SnarlProcessor(args.v, list_samples)
 logger.info("Starting fill matrix...")
 vcf_object.fill_matrix()
 
@@ -74,12 +90,11 @@ reference_vcf = args.r if args.r else args.v
 # Handle Binary Analysis
 if args.binary:
     logger.info("Parsing binary phenotype...")
-    binary_group = snarl_vcf_parser.parse_group_file(args.binary)
     output_file = os.path.join(output_dir, "binary_analysis.tsv")
     logger.info("Binary table creation...")
-    vcf_object.binary_table(snarl_paths, binary_group, output_file)
+    vcf_object.binary_table(snarl_paths, pheno, output_file)
     logger.info("Writing position...")
-    snarl_vcf_parser.write_pos_snarl(reference_vcf, output_file)
+    write_position.write_pos_snarl(reference_vcf, output_file)
 
     output_manh = os.path.join(output_dir, "manhattan_plot_binary.png")
     output_qq = os.path.join(output_dir, "qq_plot_binary.png")
@@ -90,14 +105,13 @@ if args.binary:
     p_value_analysis.qq_plot(output_file, output_qq)
 
 # Handle Quantitative Analysis
-if args.quantitative:
+elif args.quantitative:
     logger.info("Parsing quantitative phenotype...")
-    quantitative_pheno = snarl_vcf_parser.parse_pheno_file(args.quantitative)
     output_file = os.path.join(output_dir, "quantitative_analysis.tsv")
     logger.info("Quantitative table creation...")
-    vcf_object.quantitative_table(snarl_paths, quantitative_pheno, output_file)
+    vcf_object.quantitative_table(snarl_paths, pheno, output_file)
     logger.info("Writing position...")
-    snarl_vcf_parser.write_pos_snarl(reference_vcf, output_file)
+    write_position.write_pos_snarl(reference_vcf, output_file)
 
     output_manh = os.path.join(output_dir, "manhattan_plot_quantitative.png")
     output_qq = os.path.join(output_dir, "qq_plot_quantitative.png")
@@ -113,4 +127,7 @@ logger.info(f"GWAS analysis completed in {time.time() - start_time:.2f} seconds.
 Usage example:
     python3 src/snarl_project.py -p ../snarl_data/fly.pg -d ../snarl_data/fly.dist -v ../droso_data/pangenome.dm6.vcf \
     -r ../droso_data/fly.normalized.vg_deconstruct.vcf -q ../droso_data/pangenome_phenotype.tsv -o output
+
+Usage test:
+    python3 src/snarl_project.py -p ...
 """

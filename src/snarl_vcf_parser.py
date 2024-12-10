@@ -8,14 +8,19 @@ from collections import defaultdict
 from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact
 from limix.stats import logisticMixedModel
-from limix.qtl import scan
 import os
 import time
-    
+
+def parsing_samples_vcf(vcf_path) :
+    try :
+        return VCF(vcf_path).samples
+    except :
+        raise f"Error : VCF parsing error, verify {vcf_path} format"
+
 class Matrix :
     def __init__(self, default_row_number=1_000_000, column_number=2):
         self.default_row_number = default_row_number 
-        self.matrix = np.zeros((default_row_number, column_number),dtype=bool)
+        self.matrix = np.zeros((default_row_number, column_number), dtype=bool)
         self.row_header = None
     
     def get_matrix(self):
@@ -44,8 +49,8 @@ class Matrix :
                f"{self.matrix[4]} \n"
 
 class SnarlProcessor:
-    def __init__(self, vcf_path: str):
-        self.list_samples = VCF(vcf_path).samples
+    def __init__(self, vcf_path: str, list_samples):
+        self.list_samples = list_samples
         self.matrix = Matrix(1_000_000, len(self.list_samples)*2)
         self.vcf_path = vcf_path
 
@@ -145,77 +150,31 @@ class SnarlProcessor:
 
         self.matrix.set_row_header(row_header_dict)
 
-    def check_pheno_group(self, group) :
-        """Check if all sample name in the matrix are matching with phenotype else return error"""
-        if type(group) == tuple :
-            list_group = list(group[0].keys()) + list(group[1].keys())
-        elif type(group) == dict :
-            list_group = [i for i in group.keys()]
-        else :
-            raise ValueError(f"group type : {type(group)} not an dict or a tuple.")
-
-        set_sample = set(self.list_samples)
-        set_group = set(list_group)
-        missing_elements = set_sample - set_group
-
-        if missing_elements:
-            raise ValueError(f"The following sample name from merged vcf are not present in group file : {missing_elements}")
-
-    def check_covariate_group(self, group):
+    def binary_table(self, snarls, binary_groups, covar=None, output="output/binary_output.tsv"):
         """
-        Check if all sample names in the covariate dictionary match with the provided group of samples (from VCF or phenotype).
+        Generate a binary table with statistical results and write to a file.
         """
-        # Check the type of the group and extract the sample names
-        if isinstance(group, tuple):
-            list_group = list(group[0].keys()) + list(group[1].keys())
-        elif isinstance(group, dict):
-            list_group = list(group.keys())
-        else:
-            raise ValueError(f"Group type: {type(group)} is not a dict or tuple.")
-
-        # Get the set of sample names from both covariates and the provided group
-        set_samples = set(self.list_samples)
-        set_group = set(list_group)
-
-        # Find missing elements (samples that are in covariates but not in the provided group)
-        missing_elements = set_samples - set_group
-
-        if missing_elements:
-            raise ValueError(f"The following sample names from the covariate file are not present in the provided group: {missing_elements}")
-
-    def binary_table(self, snarls, binary_groups, covar, output="output/binary_output.tsv") : 
-
-        self.check_pheno_group(binary_groups)
-        if covar :
-            self.check_covar(covar)
-            with open(output, 'wb') as outf:
-                headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tGROUP_1_PATH_1\tGROUP_1_PATH_2\tGROUP_2_PATH_1\tGROUP_2_PATH_2\n'
-                outf.write(headers.encode('utf-8'))
-                for snarl, list_snarl in snarls.items() :
+        headers = ('CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\t'
+                'MIN_ROW_INDEX\tINTER_GROUP\tAVERAGE\n')
+        
+        with open(output, 'wb') as outf:
+            outf.write(headers.encode('utf-8'))
+            
+            for snarl, list_snarl in snarls.items():
+                # Create the binary table, considering covariates if provided
+                if covar:
                     df = self.create_binary_table(binary_groups, list_snarl, covar)
-                    fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII = self.binary_stat_test(df)
-                    fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII = self.binary_stat_test(df)
-
-                    chrom = pos = type_var = ref = alt = "NA"
-                    data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII)
-                    outf.write(data.encode('utf-8'))
-
-        else : 
-            with open(output, 'wb') as outf:
-                headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tGROUP_1_PATH_1\tGROUP_1_PATH_2\tGROUP_2_PATH_1\tGROUP_2_PATH_2\n'
-                outf.write(headers.encode('utf-8'))
-                for snarl, list_snarl in snarls.items() :
+                else:
                     df = self.create_binary_table(binary_groups, list_snarl)
-                    fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII = self.binary_stat_test(df)
-                    chrom = pos = type_var = ref = alt = "NA"
-                    data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, fisher_p_value, chi2_p_value, GIPI, GIPII, GIIPI, GIIPII)
-                    outf.write(data.encode('utf-8'))
+                
+                # Perform statistical tests and compute descriptive statistics
+                fisher_p_value, chi2_p_value, total_sum, min_row_index, inter_group, average = self.binary_stat_test(df)
+                chrom = pos = type_var = ref = alt = "NA"
+                data = (f'{chrom}\t{pos}\t{snarl}\t{type_var}\t{ref}\t{alt}\t{fisher_p_value}\t'
+                        f'{chi2_p_value}\t{total_sum}\t{min_row_index}\t{inter_group}\t{average}\n')
+                outf.write(data.encode('utf-8'))
 
-    def quantitative_table(self, snarls, quantitative, covar, output="output/quantitative_output.tsv") :
-
-        self.check_pheno_group(quantitative)
-        if covar :
-            self.check_covar(covar)
+    def quantitative_table(self, snarls, quantitative, covar=None, output="output/quantitative_output.tsv") :
 
         with open(output, 'wb') as outf:
             headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n'
@@ -256,7 +215,7 @@ class SnarlProcessor:
 
         return idx_srr_save
 
-    def create_binary_table(self, groups, list_path_snarl) -> pd.DataFrame:
+    def create_binary_table(self, groups, list_path_snarl, covar=None) -> pd.DataFrame:
         """Generates a binary table DataFrame indicating the presence of snarl paths in given groups based on matrix data"""
         
         row_headers_dict = self.matrix.get_row_header()
@@ -314,13 +273,13 @@ class SnarlProcessor:
         result = sm.OLS(y, x_with_const).fit()
         return result.f_pvalue
     
-    def linear_regression(self, df, pheno : dict) -> float :
+    def linear_regression(self, df, pheno : dict, covar=None) -> float :
         
         df = df.astype(int)
         df['Target'] = df.index.map(pheno)
         x = df.drop('Target', axis=1)
         y = df['Target']
-        pval = self.sm_ols(x, y)
+        pval = round(self.sm_ols(x, y), 4)
         return pval
 
     def compute_kinship_matrix(self, df):
@@ -356,7 +315,7 @@ class SnarlProcessor:
         results = self.scan(y=y, K=kinship_matrix, covariates=x)  # Assuming this is a method that fits the model
         
         # Extract metrics from the results object (p-value, beta, beta_se, log-likelihood, heritability)
-        p_value = results.stats["pv"]  # P-values for each covariate
+        p_value = round(results.stats["pv"],4)  # P-values for each covariate
         beta = results.stats["beta"]  # Effect sizes (coefficients for covariates)
         beta_se = results.stats["beta_se"]  # Standard errors for effect sizes
         ll = results.stats["ll"]  # Log-likelihood of the model
@@ -371,7 +330,7 @@ class SnarlProcessor:
         if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
             try:
                 # Perform Chi-Square test
-                p_value = chi2_contingency(df)[1] # from scipy.stats import chi2_contingency
+                p_value = round(chi2_contingency(df)[1], 4) # from scipy.stats import chi2_contingency
             except ValueError as e:
                 p_value = "Error"
         else:
@@ -383,7 +342,7 @@ class SnarlProcessor:
         """Calcul p_value using fisher exact test"""
 
         try:
-            p_value = fisher_exact(df)[1] # from scipy.stats import fisher_exact
+            p_value = round(fisher_exact(df)[1], 4) # from scipy.stats import fisher_exact
 
         except ValueError as e: 
             p_value = 'N/A'
@@ -391,7 +350,6 @@ class SnarlProcessor:
         return p_value
 
     # Logistic Mixed Model
-
     def LMM_binary(df, pheno, covar):
         """
         Perform Logistic Mixed Model on a binary phenotype.
@@ -410,49 +368,44 @@ class SnarlProcessor:
         # Fit the model with covariates
         lmm.fit(X)
         beta = lmm.beta       # Effect sizes (log-odds for covariates)
-        p_value = lmm.pv      # P-values for fixed effects
+        p_value = round(lmm.pv, 4)      # P-values for fixed effects
         vcomp = lmm.vcomp     # Variance components (relatedness)
 
         return p_value, beta, vcomp
     
     def binary_stat_test(self, df) :
- 
+        """ Perform statistical tests and calculate descriptive statistics on a binary data frame. """
         fisher_p_value = self.fisher_test(df)
         chi2_p_value = self.chi2_test(df)
-        group_I_path_I = df.iloc[0, 0]
-        group_I_path_II = df.iloc[0, 1]
-        group_II_path_I = df.iloc[1, 0]
-        group_II_path_II = df.iloc[1, 1]
         
-        """
-        total_sum = int(df.values.sum())
-        inter_group = int(df.min().sum())
-        numb_colum = df.shape[1]
-        average = float(total_sum / numb_colum)
-
-        row_sums = df.sum(axis=1)
-        min_row_index = row_sums.min()
-
+        total_sum = int(df.values.sum()) # Calculate the total sum of all elements in the DataFrame
+        inter_group = int(df.min().sum()) # Calculate the inter-group value: the sum of the minimum values in each column
+        numb_colum = df.shape[1] # Number of columns in the DataFrame
+        average = float(total_sum / numb_colum) # Calculate the average value across all elements divided by the number of columns
+        row_sums = df.sum(axis=1) # Calculate the sum of each row
+        min_row_index = row_sums.min() # Find the minimum row sum across all rows
+    
         return fisher_p_value, chi2_p_value, total_sum, min_row_index, inter_group, average
-        """
-        
-        return fisher_p_value, chi2_p_value, group_I_path_I, group_I_path_II, group_II_path_I, group_II_path_II
 
 def parse_covariate_file(filepath):
     
     covariates = pd.read_csv(filepath)
     return covariates.set_index("ID").to_dict(orient="index")
 
-def parse_group_file(group_file : str):
+def parse_pheno_binary_file(group_file : str) -> tuple:
 
     df = pd.read_csv(group_file, sep='\t')
     
+    # Ensure binary phenotype is valid
+    if not set(df['GROUP'].dropna()).issubset({0, 1}):
+        raise ValueError("The 'GROUP' column must contain only binary values (0 or 1).")
+
     # Create dictionaries for group 0 and group 1
     group_0 = {sample: 0 for sample in df[df['GROUP'] == 0]['SAMPLE']}
     group_1 = {sample: 1 for sample in df[df['GROUP'] == 1]['SAMPLE']}
     return group_0, group_1
  
-def parse_pheno_file(file_path : str) -> dict:
+def parse_pheno_quantitatif_file(file_path : str) -> dict:
 
     df = pd.read_csv(file_path, sep='\t')
 
@@ -483,12 +436,26 @@ def parse_covariate_file(covar_path : str) -> dict :
     # Convert to dictionary with ID as the key and the rest of the row as the value
     return covariates.set_index("ID").to_dict(orient="index")
 
+def check_file(file_path) :
+    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        raise argparse.ArgumentTypeError(f"Error: File '{file_path}' not found or is not a valid file.")
+    return file_path
+
+def check_mathing(elements, list_samples, file_name) :
+    """Check if all sample name in the pheno file are matching with vcf sample name else return error"""
+    
+    set_sample = set(list_samples)
+    set_elements = set(elements)
+    missing_elements = set_sample - set_elements
+
+    if missing_elements :
+        raise ValueError(f"The following sample name from vcf are not present in {file_name} file : {missing_elements}")
+
 def check_format_vcf_file(file_path : str) -> str:
     """
     Function to check if the provided file path is a valid VCF file.
     """
-    if not os.path.isfile(file_path):
-        raise argparse.ArgumentTypeError(f"The file {file_path} does not exist.")
+    check_file(file_path)
 
     if not file_path.lower().endswith('.vcf') and not file_path.lower().endswith('.vcf.gz'):
         raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid VCF file. It must have a .vcf extension or .vcf.gz.")
@@ -498,8 +465,7 @@ def check_format_group_snarl(file_path : str) -> str :
     """
     Function to check if the provided file path is a valid group file.
     """
-    if not os.path.isfile(file_path):
-        raise argparse.ArgumentTypeError(f"The file {file_path} does not exist.")
+    check_file(file_path)
     
     if not file_path.lower().endswith('.txt') and not file_path.lower().endswith('.tsv'):
         raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid group/snarl file. It must have a .txt extension or .tsv.")
@@ -507,8 +473,7 @@ def check_format_group_snarl(file_path : str) -> str :
     
 def check_format_pheno_q(file_path : str) -> str :
 
-    if not os.path.isfile(file_path):
-        raise argparse.ArgumentTypeError(f"The file {file_path} does not exist.")
+    check_file(file_path)
     
     with open(file_path, 'r') as file:
         first_line = file.readline().strip()
@@ -522,8 +487,7 @@ def check_format_pheno_q(file_path : str) -> str :
 
 def check_format_pheno_b(file_path : str) -> str :
 
-    if not os.path.isfile(file_path):
-        raise argparse.ArgumentTypeError(f"The file {file_path} does not exist.")
+    check_file(file_path)
 
     with open(file_path, 'r') as file:
         first_line = file.readline().strip()
@@ -538,38 +502,37 @@ def check_format_pheno_b(file_path : str) -> str :
 def check_covariate_file(file_path):
     
     # Check if the file exists
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
+    check_file(file_path)
     
     try:
         covariates = pd.read_csv(file_path, delim_whitespace=True, header=None)
     except Exception as e:
-        raise ValueError(f"Error reading the file: {e}")
+        raise argparse.ArgumentTypeError(f"Error reading the file: {e}")
     
     # Check if the file has at least 5 columns (FID, IID, Age, Sex, PC1)
     if covariates.shape[1] < 5:
-        raise ValueError("File must have at least 5 columns: FID, IID, Age, Sex, PC1, PC2")
+        raise argparse.ArgumentTypeError("File must have at least 5 columns: FID, IID, Age, Sex, PC1, PC2")
     
     # Name the columns (PLINK-style file doesn't have headers)
     covariates.columns = ["FID", "IID", "Age", "Sex", "PC1", "PC2"] + [f"PC{i}" for i in range(3, covariates.shape[1])]
     
     # Check for duplicate IDs (FID, IID should be unique)
     if covariates["IID"].duplicated().any():
-        raise ValueError("Duplicate IDs found in the file.")
+        raise argparse.ArgumentTypeError("Duplicate IDs found in the file.")
     
     # Check for missing data
     if covariates.isnull().any().any():
-        raise ValueError("There are missing values in the file.")
+        raise argparse.ArgumentTypeError("There are missing values in the file.")
     
     # Check data types
     if not pd.api.types.is_numeric_dtype(covariates["Age"]):
-        raise ValueError("Age column should be numeric.")
+        raise argparse.ArgumentTypeError("Age column should be numeric.")
     
     if covariates["Sex"].dtype != 'object':
-        raise ValueError("Sex column should be categorical.")
+        raise argparse.ArgumentTypeError("Sex column should be categorical.")
     
     if not pd.api.types.is_numeric_dtype(covariates["PC1"]) or not pd.api.types.is_numeric_dtype(covariates["PC2"]):
-        raise ValueError("PC1 and PC2 columns should be numeric.")
+        raise argparse.ArgumentTypeError("PC1 and PC2 columns should be numeric.")
     
     return file_path
     
@@ -595,7 +558,7 @@ if __name__ == "__main__" :
     covar = parse_covariate_file(args.covariate) if args.covariate else ""
 
     if args.binary:
-        binary_group = parse_group_file(args.binary)
+        binary_group = parse_pheno_binary_file(args.binary)
         if args.output :
             vcf_object.binary_table(snarl, binary_group, covar, args.output)
         else :
@@ -606,7 +569,7 @@ if __name__ == "__main__" :
     # python3 src/snarl_vcf_parser.py ../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
 
     if args.quantitative:
-        quantitative = parse_pheno_file(args.quantitative)
+        quantitative = parse_pheno_quantitatif_file(args.quantitative)
         if args.output :
             vcf_object.quantitative_table(snarl, quantitative, covar, args.output)
         else :

@@ -14,13 +14,13 @@ def process_file(file_path, cols, p_col, output_snarl, writer_function):
     writer_function(filtered_df.itertuples(index=False, name=None), output_snarl)
 
 def significative_snarl_binary(file_path, output_snarl):
-    process_file(file_path, ['CHR', 'POS', 'P_Fisher', 'P_Chi2'], 'P_Fisher', output_snarl, write_significative_snarl_binary)
+    process_file(file_path, ['CHR', 'POS', 'P_FISHER', 'P_CHI2'], 'P_FISHER', output_snarl, write_significative_snarl_binary)
 
 def significative_snarl_quantitatif(file_path, output_snarl):
     process_file(file_path, ['CHR', 'POS', 'P'], 'P', output_snarl, write_significative_snarl_quantitatif)
 
 def write_significative_snarl_binary(tupple_snarl, output_snarl):
-    headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_Fisher\tP_Chi2\tTable_sum\tNumber_column\tInter_group\tAverage\n'
+    headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tINTER_GROUP\tAVERAGE\n'
     with open(output_snarl, "wb") as f:
         f.write(headers.encode('utf-8'))
         for row in tupple_snarl:
