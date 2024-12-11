@@ -70,10 +70,9 @@ def split_paths(path) :
     return re.findall(r'\d+', path)
 
 def length_node(pg, node_id) :
-    sequence = pg.get_node_sequence(node_id)
-    return len(sequence)
+    return pg.get_length(node_id)
 
-def calcul_type_variant(pg, pretty_paths) :
+def calcul_type_variant(stree, pretty_paths) :
     """ 
     Calcul the type variant of a tested snarl
     If snarl are only node of length 1 => SNP 
@@ -82,13 +81,17 @@ def calcul_type_variant(pg, pretty_paths) :
     list_type_variant = []
     for path in pretty_paths :
         list_node = split_paths(path)
-        length_middle_node = length_node(pg, list_node[1])
-        if len(list_node) > 3 :
-            list_type_variant.append("COMPLEX")
-        else :
+        if len(list_node) == 3 : # Case simple path len 3
+            length_middle_node = length_node(stree, list_node[1])
             list_type_variant.append(str(length_middle_node))
 
-    return ",".join(list_type_variant)
+        if len(list_node) > 3 : # Case snarl in snarl / Indel
+            list_type_variant.append("COMPLEX")
+
+        else : # Deletion
+            list_type_variant.append("0")
+
+    return list_type_variant
 
 def check_threshold(proportion) :
     proportion = float(proportion)
@@ -162,17 +165,28 @@ def parse_graph_tree(pg_file, dist_file) :
     root = stree.get_root()
     return stree, pg, root
 
-def fill_pretty_paths(stree, finished_paths, pretty_paths) :
+def fill_pretty_paths(stree, pg, finished_paths) :
+    pretty_paths = []
+    length_net_paths = []
 
     for path in finished_paths:
         ppath = Path()
+        length_net = []
         for net in path:
             if stree.is_sentinel(net):
                 net = stree.get_node_from_sentinel(net)
-            # Bug enter here with True False
+
             if stree.is_node(net) or stree.is_trivial_chain(net):
                 # if it's a node, add it to the path
                 ppath.addNodeHandle(net, stree)
+                if stree.is_node(net) :
+                    length_net.append(str(stree.node_length(net)))
+
+                else :
+                    stn_start = stree.get_bound(net, False, True)
+                    stree.node_id(stn_start)
+                    net_trivial_chain = stree.get_handle(stn_start, pg)
+                    length_net.append(str(stree.node_length(net_trivial_chain)))
 
             elif stree.is_chain(net):
                 # if it's a chain, we need to write someting like ">Nl>*>Nr"
@@ -181,21 +195,23 @@ def fill_pretty_paths(stree, finished_paths, pretty_paths) :
                 ppath.addNodeHandle(nodl, stree)
                 ppath.addNode('*', '>')
                 ppath.addNodeHandle(nodr, stree)
+                length_net.append("-1")
 
         # check if path is mostly traversing nodes in reverse orientation
         if ppath.nreversed() > ppath.size() / 2:
             ppath.flip()
         pretty_paths.append(ppath.print())
-    
-    return pretty_paths
+        length_net_paths.extend(length_net)
+
+    return pretty_paths, length_net_paths
 
 def write_header_output(output_file) :
     with open(output_file, 'w') as outf:
         outf.write('snarl\tpaths\ttype\n')
 
-def write_output(output_file, snarl_id, pretty_paths, type_variant) :
+def write_output(output_file, snarl_id, pretty_paths, type_variants) :
     with open(output_file, 'a') as outf:
-        outf.write('{}\t{}\t{}\n'.format(snarl_id, ','.join(pretty_paths), type_variant))
+        outf.write('{}\t{}\t{}\n'.format(snarl_id, ','.join(pretty_paths), ','.join(type_variants)))
 
 def write_header_output_not_analyse(output_file) :
     with open(output_file, 'w') as outf:
@@ -223,17 +239,20 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
         while len(paths) > 0 :
             path = paths.pop()
 
-            if snarl_time > time_threshold :
+            if snarl_time - time.time() > time_threshold :
                 write_output_not_analyse(output_snarl_not_analyse, snarl_id, "time_calculation_out")
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
 
         # prepare path list to output and write each path directly to the file
-        pretty_paths = []
-        pretty_paths = fill_pretty_paths(stree, finished_paths, pretty_paths)
-        type_variant = calcul_type_variant(pg, pretty_paths)
-        write_output(output_file, snarl_id, pretty_paths, type_variant)
+        pretty_paths, type_variants = fill_pretty_paths(stree, pg, finished_paths)
+        print("pretty_paths : ", pretty_paths)
+        print("type_variants : ", type_variants)
+        # type_variants_2 = calcul_type_variant(pg, pretty_paths)
+        # print("type_variants_2 : ", type_variants_2)
+        exit()
+        write_output(output_file, snarl_id, pretty_paths, type_variants)
 
 def loop_over_snarls(stree, snarls, pg, output_snarl_not_analyse, threshold=50) :
 
@@ -273,8 +292,7 @@ def loop_over_snarls(stree, snarls, pg, output_snarl_not_analyse, threshold=50) 
             follow_edges(stree, finished_paths, path, paths, pg)
 
         # prepare path list to output and write each path directly to the file
-        pretty_paths = []
-        pretty_paths = fill_pretty_paths(stree, finished_paths, pretty_paths)
+        pretty_paths = fill_pretty_paths(stree, pg, finished_paths)
         snarl_paths[snarl_id].extend(pretty_paths)
         snarl_number_analysis += len(pretty_paths)
 
@@ -291,14 +309,14 @@ if __name__ == "__main__" :
 
     stree, pg, root = parse_graph_tree(args.p, args.d)
     snarls = save_snarls(stree, root)
+    print(f"Total of snarls found : {len(snarls)}")
+    print("Saving snarl path decomposition...")
 
     output_snarl_not_analyse = "snarl_not_analyse.tsv"
 
-    if args.t :
-        loop_over_snarls_write(stree, snarls, pg, args.o, output_snarl_not_analyse, args.t)
-    else : 
-        loop_over_snarls_write(stree, snarls, pg, args.o, output_snarl_not_analyse)
+    threshold = args.t if args.t else 10
+    loop_over_snarls_write(stree, snarls, pg, args.o, output_snarl_not_analyse, threshold)
 
-    # python3 src/list_snarl_paths.py -p ../snarl_data/fly.pg -d ../snarl_data/fly.dist -o test_list_snarl.tsv
+    # python3 src/list_snarl_paths.py -p /home/mbagarre/Bureau/droso_data/fly/fly.pg -d /home/mbagarre/Bureau/droso_data/fly/fly.dist -o output/test/test_list_snarl.tsv
     # vg find -x ../snarl_data/fly.gbz -r 5176878:5176884 -c 10 | vg view -dp - | dot -Tsvg -o ../snarl_data/subgraph.svg
     

@@ -7,8 +7,8 @@ import statsmodels.api as sm
 from collections import defaultdict
 from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact
-from limix.stats import logisticMixedModel
-from limix.stats import scan
+# from limix.stats import logisticMixedModel
+# from limix.stats import scan
 import os
 import time
 
@@ -163,7 +163,7 @@ class SnarlProcessor:
                 
             for snarl, list_snarl in snarls.items():
                 # Create the binary table, considering covariates if provided
-                df = self.create_binary_table(binary_groups, list_snarl, covar)
+                df = self.create_binary_table(binary_groups, list_snarl)
 
                 # Perform statistical tests and compute descriptive statistics
                 fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average = self.binary_stat_test(df)
@@ -192,7 +192,6 @@ class SnarlProcessor:
         rows_to_check = np.array([], dtype=int)
 
         # Print the decomposed_snarl and row_headers_dict
-
         for snarl in decomposed_snarl:
             if "*" in snarl:
                 continue
@@ -213,7 +212,7 @@ class SnarlProcessor:
 
         return idx_srr_save
 
-    def create_binary_table(self, groups, list_path_snarl, covar=None) -> pd.DataFrame:
+    def create_binary_table(self, groups, list_path_snarl) -> pd.DataFrame:
         """Generates a binary table DataFrame indicating the presence of snarl paths in given groups based on matrix data"""
         
         row_headers_dict = self.matrix.get_row_header()
@@ -280,46 +279,32 @@ class SnarlProcessor:
         pval = round(self.sm_ols(x, y), 4)
         return pval
 
-    def compute_kinship_matrix(self, df):
-        """
-        Compute the kinship matrix for a given genotypic dataset.
-        """
-        # Compute allele frequencies for each SNP
-        allele_frequencies = df.mean() / 2  # Average genotype value, assuming 0, 1, 2 coding.
+    # # Linear Mixed Model
+    # def LMM_quantitatif(self, kinship_matrix, covar: dict, pheno: dict) -> tuple:
+    #     """
+    #     Perform Linear Mixed Model (LMM) for quantitative phenotype data.
+    #     """
 
-        # Center the genotypes by subtracting allele frequencies
-        centered_genotypes = df - allele_frequencies
-
-        # The kinship coefficient between individuals i and j is the sum of the product of centered genotypes across SNPs, divided by 2
-        kinship_matrix = centered_genotypes.T.dot(centered_genotypes) / (2 * df.shape[1])
-        return kinship_matrix
-
-    # Linear Mixed Model
-    def LMM_quantitatif(self, kinship_matrix, covar: dict, pheno: dict) -> tuple:
-        """
-        Perform Linear Mixed Model (LMM) for quantitative phenotype data.
-        """
-
-        # Ensure the covariate matrix is in a DataFrame and map the covariates and phenotype correctly
-        covar_df = pd.DataFrame(covar)
-        covar_df['Target'] = covar_df.index.map(pheno)  # Map phenotype values
+    #     # Ensure the covariate matrix is in a DataFrame and map the covariates and phenotype correctly
+    #     covar_df = pd.DataFrame(covar)
+    #     covar_df['Target'] = covar_df.index.map(pheno)  # Map phenotype values
         
-        # Extract dependent (y) and independent variables (x)
-        y = covar_df['Target']
-        x = covar_df.drop('Target', axis=1)  # Remove target from covariates
-        x = sm.add_constant(x)               # Add constant for intercept term
+    #     # Extract dependent (y) and independent variables (x)
+    #     y = covar_df['Target']
+    #     x = covar_df.drop('Target', axis=1)  # Remove target from covariates
+    #     x = sm.add_constant(x)               # Add constant for intercept term
         
-        # Perform Linear Mixed Model scan (assuming a function like scan)
-        results = scan(y=y, K=kinship_matrix, covariates=x)
+    #     # Perform Linear Mixed Model scan (assuming a function like scan)
+    #     results = scan(y=y, K=kinship_matrix, covariates=x)
         
-        # Extract metrics from the results object (p-value, beta, beta_se, log-likelihood, heritability)
-        p_value = round(results.stats["pv"], 4)  # P-values for each covariate
-        beta = results.stats["beta"]            # Effect sizes (coefficients for covariates)
-        beta_se = results.stats["beta_se"]      # Standard errors for effect sizes
-        ll = results.stats["ll"]                # Log-likelihood of the model
-        heritability = results.stats["h2"]      # Heritability estimate (proportion of variance explained by GRM)
+    #     # Extract metrics from the results object (p-value, beta, beta_se, log-likelihood, heritability)
+    #     p_value = round(results.stats["pv"], 4)  # P-values for each covariate
+    #     beta = results.stats["beta"]            # Effect sizes (coefficients for covariates)
+    #     beta_se = results.stats["beta_se"]      # Standard errors for effect sizes
+    #     ll = results.stats["ll"]                # Log-likelihood of the model
+    #     heritability = results.stats["h2"]      # Heritability estimate (proportion of variance explained by GRM)
 
-        return p_value, beta, beta_se, ll, heritability
+    #     return p_value, beta, beta_se, ll, heritability
 
     def chi2_test(self, df) -> float:
         """Calculate p_value from list of dataframe using chi-2 test"""
@@ -347,29 +332,29 @@ class SnarlProcessor:
         
         return p_value
 
-    # Logistic Mixed Model
-    def LMM_binary(df, pheno, covar):
-        """
-        Perform Logistic Mixed Model on a binary phenotype.
-        """
-        # Ensure phenotype mapping
-        if not all(ind in df.index for ind in pheno.keys()):
-            raise ValueError("Some individuals in the phenotype file do not match the genotype file.")
+    # # Logistic Mixed Model
+    # def LMM_binary(df, pheno, covar):
+    #     """
+    #     Perform Logistic Mixed Model on a binary phenotype.
+    #     """
+    #     # Ensure phenotype mapping
+    #     if not all(ind in df.index for ind in pheno.keys()):
+    #         raise ValueError("Some individuals in the phenotype file do not match the genotype file.")
 
-        # Map phenotype to df
-        df['Target'] = df.index.map(pheno)
-        y = df['Target'].values
-        X = covar[df.index].values  # Covariates should match the index of genotype data
-        K = np.corrcoef(df.T)       # This is a placeholder for the kinship matrix (should be computed properly in practice)
-        lmm = logisticMixedModel(y=y, K=K)
+    #     # Map phenotype to df
+    #     df['Target'] = df.index.map(pheno)
+    #     y = df['Target'].values
+    #     X = covar[df.index].values  # Covariates should match the index of genotype data
+    #     K = np.corrcoef(df.T)       # This is a placeholder for the kinship matrix (should be computed properly in practice)
+    #     lmm = logisticMixedModel(y=y, K=K)
         
-        # Fit the model with covariates
-        lmm.fit(X)
-        beta = lmm.beta                 # Effect sizes (log-odds for covariates)
-        p_value = round(lmm.pv, 4)      # P-values for fixed effects
-        vcomp = lmm.vcomp               # Variance components (relatedness)
+    #     # Fit the model with covariates
+    #     lmm.fit(X)
+    #     beta = lmm.beta                 # Effect sizes (log-odds for covariates)
+    #     p_value = round(lmm.pv, 4)      # P-values for fixed effects
+    #     vcomp = lmm.vcomp               # Variance components (relatedness)
 
-        return p_value, beta, vcomp
+    #     return p_value, beta, vcomp
     
     def binary_stat_test(self, df) :
         """ Perform statistical tests and calculate descriptive statistics on a binary data frame. """
