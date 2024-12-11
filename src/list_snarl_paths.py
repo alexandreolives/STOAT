@@ -72,26 +72,26 @@ def split_paths(path) :
 def length_node(pg, node_id) :
     return pg.get_length(node_id)
 
-def calcul_type_variant(stree, pretty_paths) :
-    """ 
-    Calcul the type variant of a tested snarl
-    If snarl are only node of length 1 => SNP 
-    Else => COMPLEX (unknow variant type)
-    """
-    list_type_variant = []
-    for path in pretty_paths :
-        list_node = split_paths(path)
-        if len(list_node) == 3 : # Case simple path len 3
-            length_middle_node = length_node(stree, list_node[1])
-            list_type_variant.append(str(length_middle_node))
+# def calcul_type_variant(stree, type_variants) :
+#     """ 
+#     Calcul the type variant of a tested snarl
+#     If snarl are only node of length 1 => SNP 
+#     Else => COMPLEX (unknow variant type)
+#     """
+#     list_type_variant = []
+#     for length in type_variants :
+#         list_node = split_paths(path)
+#         if len(list_node) == 3 : # Case simple path len 3
+#             length_middle_node = length_node(stree, list_node[1])
+#             list_type_variant.append(str(length_middle_node))
 
-        if len(list_node) > 3 : # Case snarl in snarl / Indel
-            list_type_variant.append("COMPLEX")
+#         if len(list_node) > 3 : # Case snarl in snarl / Indel
+#             list_type_variant.append("COMPLEX")
 
-        else : # Deletion
-            list_type_variant.append("0")
+#         else : # Deletion
+#             list_type_variant.append("0")
 
-    return list_type_variant
+#     return list_type_variant
 
 def check_threshold(proportion) :
     proportion = float(proportion)
@@ -249,7 +249,7 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
         pretty_paths, type_variants = fill_pretty_paths(stree, pg, finished_paths)
         print("pretty_paths : ", pretty_paths)
         print("type_variants : ", type_variants)
-        # type_variants_2 = calcul_type_variant(pg, pretty_paths)
+        # type_variants_2 = calcul_type_variant(pg, type_variants)
         # print("type_variants_2 : ", type_variants_2)
         exit()
         write_output(output_file, snarl_id, pretty_paths, type_variants)
