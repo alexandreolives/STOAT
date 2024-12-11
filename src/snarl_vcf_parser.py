@@ -160,19 +160,16 @@ class SnarlProcessor:
 
         with open(output, 'wb') as outf:
             outf.write(headers.encode('utf-8'))
-
+                
             for snarl, list_snarl in snarls.items():
                 # Create the binary table, considering covariates if provided
-                if covar:
-                    df = self.create_binary_table(binary_groups, list_snarl, covar)
-                else:
-                    df = self.create_binary_table(binary_groups, list_snarl)
+                df = self.create_binary_table(binary_groups, list_snarl, covar)
 
                 # Perform statistical tests and compute descriptive statistics
-                fisher_p_value, chi2_p_value, total_sum, min_row_index, inter_group, average = self.binary_stat_test(df)
+                fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average = self.binary_stat_test(df)
                 chrom = pos = type_var = ref = alt = "NA"
                 data = (f'{chrom}\t{pos}\t{snarl}\t{type_var}\t{ref}\t{alt}\t{fisher_p_value}\t'
-                        f'{chi2_p_value}\t{total_sum}\t{min_row_index}\t{inter_group}\t{average}\n')
+                        f'{chi2_p_value}\t{total_sum}\t{min_sample}\t{numb_colum}\t{inter_group}\t{average}\n')
                 outf.write(data.encode('utf-8'))
 
     def quantitative_table(self, snarls, quantitative, covar=None, output="output/quantitative_output.tsv") :
@@ -378,22 +375,22 @@ class SnarlProcessor:
         """ Perform statistical tests and calculate descriptive statistics on a binary data frame. """
         fisher_p_value = self.fisher_test(df)
         chi2_p_value = self.chi2_test(df)
-        
-        total_sum = int(df.values.sum()) # Calculate the total sum of all elements in the DataFrame
-        inter_group = int(df.min().sum()) # Calculate the inter-group value: the sum of the minimum values in each column
-        numb_colum = df.shape[1] # Number of columns in the DataFrame
-        average = float(total_sum / numb_colum) # Calculate the average value across all elements divided by the number of columns
-        row_sums = df.sum(axis=1) # Calculate the sum of each row
-        min_row_index = row_sums.min() # Find the minimum row sum across all rows
-    
-        return fisher_p_value, chi2_p_value, total_sum, min_row_index, inter_group, average
+
+        total_sum = int(df.values.sum()) # Calculate the total sum of all values in the DataFrame
+        inter_group = int(df.min().sum()) # Calculate the sum of the minimum values from each column
+        numb_colum = df.shape[1] # Get the total number of columns in the DataFrame
+        average = float(total_sum / numb_colum) # Calculate the average of the total sum divided by the number of columns
+        row_sums = df.sum(axis=1) # Calculate the sum of values for each row in the DataFrame
+        min_row_index = row_sums.min() # Find the minimum sum among the row sums
+
+        return fisher_p_value, chi2_p_value, total_sum, min_row_index, numb_colum, inter_group, average
 
 def parse_covariate_file(filepath):
-    
+
     covariates = pd.read_csv(filepath)
     return covariates.set_index("ID").to_dict(orient="index")
 
-def parse_pheno_binary_file(group_file : str) -> tuple:
+def parse_pheno_binary_file(group_file : str):
 
     df = pd.read_csv(group_file, sep='\t')
     
