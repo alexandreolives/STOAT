@@ -155,9 +155,7 @@ class SnarlProcessor:
         """
         Generate a binary table with statistical results and write to a file.
         """
-        headers = ('CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\t'
-                'MIN_ROW_INDEX\tINTER_GROUP\tAVERAGE\n')
-
+        headers = ('CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\n')
         with open(output, 'wb') as outf:
             outf.write(headers.encode('utf-8'))
                 
@@ -262,22 +260,18 @@ class SnarlProcessor:
 
         df = pd.DataFrame(genotypes, index=self.list_samples, columns=column_headers)
         return df
-
-    def sm_ols(self, x, y) :
-
-        # Fit the regression model
-        x_with_const = sm.add_constant(x)
-        result = sm.OLS(y, x_with_const).fit()
-        return result.f_pvalue
     
     def linear_regression(self, df, pheno : dict, covar=None) -> float :
-        
+
         df = df.astype(int)
         df['Target'] = df.index.map(pheno)
         x = df.drop('Target', axis=1)
         y = df['Target']
-        pval = round(self.sm_ols(x, y), 4)
-        return pval
+
+        x_with_const = sm.add_constant(x)
+        result = sm.OLS(y, x_with_const).fit()
+        formatted_p_value = f"{result.f_pvalue:.4e}"
+        return formatted_p_value
 
     # # Linear Mixed Model
     # def LMM_quantitatif(self, kinship_matrix, covar: dict, pheno: dict) -> tuple:
@@ -313,24 +307,27 @@ class SnarlProcessor:
         if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
             try:
                 # Perform Chi-Square test
-                p_value = round(chi2_contingency(df)[1], 4) # from scipy.stats import chi2_contingency
+                p_value = chi2_contingency(df)[1] # from scipy.stats import chi2_contingency
+                formatted_p_value = f"{p_value:.4e}"
+
             except ValueError as e:
                 p_value = "Error"
         else:
             p_value = "N/A"
 
-        return p_value
+        return formatted_p_value
 
     def fisher_test(self, df) -> float : 
         """Calcul p_value using fisher exact test"""
 
         try:
-            p_value = round(fisher_exact(df)[1], 4) # from scipy.stats import fisher_exact
+            p_value = fisher_exact(df)[1] # from scipy.stats import fisher_exact
+            formatted_p_value = f"{p_value:.4e}"
 
         except ValueError as e: 
             p_value = 'N/A'
         
-        return p_value
+        return formatted_p_value
 
     # # Logistic Mixed Model
     # def LMM_binary(df, pheno, covar):

@@ -1,41 +1,41 @@
-# snarl_project
-### Project Overview
-Snarl_project is a specialized tool developed for conducting Genome-Wide Association Studies (GWAS) with a unique focus on snarl structures within pangenome graphs. Unlike traditional GWAS tools that analyze linear genome variants, Snarl_project processes VCF files to extract and analyze snarl regions—complex structural variations that capture nested and overlapping variant patterns within a pangenome. This approach allows for a more nuanced understanding of genetic variations in diverse populations and complex traits.
+# STOAT
+## Project Overview
+STOAT is a specialized tool developed for conducting Genome-Wide Association Studies (GWAS) with a unique focus on snarl structures within pangenome graphs. Unlike traditional GWAS tools that analyze linear genome variants, STOAT processes VCF files to extract and analyze snarl regions—complex structural variations that capture nested and overlapping variant patterns within a pangenome. This approach allows for a more nuanced understanding of genetic variations in diverse populations and complex traits.
 
-Snarl_project supports both binary and quantitative phenotypes:
+STOAT supports both binary and quantitative phenotypes:
 
 - For binary phenotypes (e.g., case vs. control studies), it utilizes chi-squared tests and Fisher’s exact test to evaluate associations between phenotype groups and snarl variants, providing robust statistical validation even in cases of sparse data.
 
 - For quantitative phenotypes (e.g., traits measured on a continuous scale), the tool employs linear regression models to assess the association between snarl structures and phenotype values, allowing for continuous trait mapping with greater precision.
 
-Conventional GWAS tools typically rely on a single-reference genome, often overlooking structural variants and variations present in underrepresented populations. By using a pangenome graph, Snarl_project enables analysis across multiple genomes simultaneously, capturing a broader spectrum of structural variations, including insertions, deletions, and nested variants. The focus on snarls—graph features that encapsulate complex variant structures—provides a powerful means to map associations that would be difficult to detect in linear-based analyses.
+Conventional GWAS tools typically rely on a single-reference genome, often overlooking structural variants and variations present in underrepresented populations. By using a pangenome graph, STOAT enables analysis across multiple genomes simultaneously, capturing a broader spectrum of structural variations, including insertions, deletions, and nested variants. The focus on snarls—graph features that encapsulate complex variant structures—provides a powerful means to map associations that would be difficult to detect in linear-based analyses.
 
-### Installation
+## Installation
 
 ````bash
-git clone https://github.com/Plogeur/snarl_project.git
-cd snarl_project
+git clone https://github.com/Plogeur/STOAT.git
+cd STOAT
 pip install -r requirements.txt
 ````
-### snarl_project
 
-### Dependencies
+## Dependencies
 - Python version 3.10
 - cyvcf2
 - numpy
 - pandas
 - ...
-more information available on the [README](https://github.com/Plogeur/snarl_project/blob/main/README.md)
 
-### Usage
+## Usage
 
-Use `snarl_project.py` if you want to launch the full tool at once, starting from snarl path identification (identifying the multiple paths that can be taken by a sample based on the pangenome graph) and ending with the results plots (Manhattan plot and QQ plot).
+Use `STOAT.py` if you want to launch the full tool at once, starting from snarl path identification (identifying the multiple paths that can be taken by a sample based on the pangenome graph) and ending with the results plots (Manhattan plot and QQ plot).
 
 - Run full tool :
 ```bash
 # binary trait
-python3 snarl_project.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.tsv
-python3 snarl_project.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.tsv
+python3 STOAT.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.tsv
+
+# quantative trait
+python3 STOAT.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.tsv
 ```
 
 Alternatively, you can specify the script you want to launch, depending on your desired task:
@@ -75,7 +75,7 @@ python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> <
 python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.txt
 ```
 
-### Input format file
+## Input format file
 
 Required files :
 - pg_file : Pangenome graph file, formats accepted: .pg or .xg.
@@ -90,25 +90,61 @@ Required files :
 Optional file : 
 - snarl : Two-column file containing snarl names and the list of paths through the snarl's netgraph, separated by tabs. Format: .txt or .tsv.
 
-### Output
-Example of binary phenotype analysis (-b option) :
+## Output
+
+
+## Output
+
+| Column Name       | Description                                                                                   |
+|-------------------|-----------------------------------------------------------------------------------------------|
+| **CHR**           | Chromosome number where the variation occurs.                                                 |
+| **POS**           | Position of the variation within the chromosome.                                              |
+| **SNARL**         | Identifier for the variant region, specifying start and end positions.                        |
+| **TYPE**          | Type of genetic variation (e.g., SNP, INS, DEL).                                              |
+| **REF**           | Reference allele.                                                                             |
+| **ALT**           | Alternate allele.                                                                             |
+| **P_FISHER**      | P-value calculated using Fisher's exact test. (binary analysis)                               |
+| **P_CHI2**        | P-value calculated using the Chi-squared test. (binary analysis)                              |
+| **P_value**       | P-value calculated using the linear regression. (quantitatif analysis)                        |
+| **TOTAL_SUM**     | Total sum of all values in the DataFrame.                                                     |
+| **MIN_ROW_INDEX** | Minimum sum among the row-wise sums of the DataFrame.                                         |
+| **NUM_COLUM**     | Number of columns in the DataFrame.                                                           |
+| **INTER_GROUP**   | Sum of the minimum values for each column.                                                    |
+| **AVERAGE**       | Average of the total sum divided by the number of columns.                                    |
+
+### Example of Output:
+
+Below is an example of the output for a binary phenotype analysis:
 
 ```bash
-CHR POS Snarl   TYPE    REF ALT P_value_Fisher  P_value_Chi2	Table_sum	Inter_group	Average
-1   12  5262721_5262719	SNP A   T   0.46359729745943223	0.518292726549784	286	2	137	143.0
-1   15  5262719_5262717	INS A   ATT 0.8062220214636773	0.8747410243373839	286	2	141	143.0
-1   18  5262717_5262714	DEL AA  T   0.2120778233741457	0.2363840346684607	286	2	134	143.0
+CHR POS SNARL           TYPE  REF ALT   P_FISHER  P_CHI2  TOTAL_SUM  MIN_ROW_INDEX NUM_COLUM INTER_GROUP AVERAGE
+1   12  5262721_5262719 SNP   A   T     0.4635    0.5182  286        2             137       46          143.0
+1   15  5262719_5262717 INS   A   ATT   0.8062    0.8747  286        2             141       34          143.0
+1   18  5262717_5262714 DEL   AA  T     0.2120    0.2363  286        2             134       32          143.0
 ```
 
-Example of quantitative phenotype analysis (-q option) :
+Below is an example of the output for a quantitative phenotype analysis (-q option) :
 
 ```bash
-CHR POS Snarl   TYPE    REF ALT	P_value
-1   12  5262721_5262719	SNP A   T   0.9099354411737626
-1   15  5262719_5262717	INS A   ATT 0.9099354411737626
-1   18  5262717_5262714	DEL AA  T   0.9008729687523177
+CHR POS Snarl           TYPE    REF ALT	P_value
+1   12  5262721_5262719	SNP     A   T   0.9099
+1   15  5262719_5262717	INS     A   ATT 0.9093
+1   18  5262717_5262714	DEL     AA  T   0.9008
 ```
 
-*Plots and sequenceTube output*
-coming soon
+### Visualization
+
+### Manhattan and QQ plots 
+
+STOAT will generated a manhattan and a QQ plot for binary and quantitatif analysis.
+
+### SequenceTube
+
+Use `src/gaf_creator.py` to geneate a GAF file and [SequenceTube](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
+
+```bash 
+python3 src/gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths.tsv> -p <pg_file_path>
+```
+
+*Output Plots and sequenceTube*
 

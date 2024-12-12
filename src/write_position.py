@@ -1,6 +1,5 @@
 import os
 import re
-from cyvcf2 import VCF
 
 def get_first_snarl(s):
 

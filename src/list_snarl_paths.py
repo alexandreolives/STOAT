@@ -72,26 +72,22 @@ def split_paths(path) :
 def length_node(pg, node_id) :
     return pg.get_length(node_id)
 
-# def calcul_type_variant(stree, type_variants) :
-#     """ 
-#     Calcul the type variant of a tested snarl
-#     If snarl are only node of length 1 => SNP 
-#     Else => COMPLEX (unknow variant type)
-#     """
-#     list_type_variant = []
-#     for length in type_variants :
-#         list_node = split_paths(path)
-#         if len(list_node) == 3 : # Case simple path len 3
-#             length_middle_node = length_node(stree, list_node[1])
-#             list_type_variant.append(str(length_middle_node))
+def calcul_type_variant(list_list_length_paths) :
+    """ 
+    Calcul type variant of a tested snarl
+    """
+    list_type_variant = []
+    for list_length in list_list_length_paths :
+        if len(list_length) == 3 : # Case simple path len 3
+            list_type_variant.append(list_length[1])
 
-#         if len(list_node) > 3 : # Case snarl in snarl / Indel
-#             list_type_variant.append("COMPLEX")
+        if len(list_length) > 3 : # Case snarl in snarl / Indel
+            list_type_variant.append("COMPLEX")
 
-#         else : # Deletion
-#             list_type_variant.append("0")
+        else : # Deletion
+            list_type_variant.append("0")
 
-#     return list_type_variant
+    return list_type_variant
 
 def check_threshold(proportion) :
     proportion = float(proportion)
@@ -168,27 +164,33 @@ def parse_graph_tree(pg_file, dist_file) :
 def fill_pretty_paths(stree, pg, finished_paths) :
     pretty_paths = []
     length_net_paths = []
+    position_chr = []
 
     for path in finished_paths:
         ppath = Path()
         length_net = []
+        in_trivial_chain = False
         for net in path:
-            if stree.is_sentinel(net):
+            if stree.is_sentinel(net) :
                 net = stree.get_node_from_sentinel(net)
 
-            if stree.is_node(net) or stree.is_trivial_chain(net):
+            if stree.is_node(net) or stree.is_trivial_chain(net) :
                 # if it's a node, add it to the path
                 ppath.addNodeHandle(net, stree)
                 if stree.is_node(net) :
                     length_net.append(str(stree.node_length(net)))
+                    position_chr.append() # determine position 
 
                 else :
+                    # return the first length node from a trivial_chain
+                    if in_trivial_chain :
+                        length_net.append("-2")
                     stn_start = stree.get_bound(net, False, True)
-                    stree.node_id(stn_start)
-                    net_trivial_chain = stree.get_handle(stn_start, pg)
+                    net_trivial_chain = pg.get_handle(stn_start)
                     length_net.append(str(stree.node_length(net_trivial_chain)))
+                    in_trivial_chain = True
 
-            elif stree.is_chain(net):
+            elif stree.is_chain(net) :
                 # if it's a chain, we need to write someting like ">Nl>*>Nr"
                 nodl = stree.get_bound(net, False, True)
                 nodr = stree.get_bound(net, True, False)
@@ -198,11 +200,13 @@ def fill_pretty_paths(stree, pg, finished_paths) :
                 length_net.append("-1")
 
         # check if path is mostly traversing nodes in reverse orientation
-        if ppath.nreversed() > ppath.size() / 2:
+        if ppath.nreversed() > ppath.size() / 2 :
             ppath.flip()
-        pretty_paths.append(ppath.print())
-        length_net_paths.extend(length_net)
+        pretty_paths.append(ppath.print()) 
+        length_net_paths.append(length_net)
 
+    length_net_paths = calcul_type_variant(length_net_paths)
+    assert len(length_net_paths) == len(pretty_paths)
     return pretty_paths, length_net_paths
 
 def write_header_output(output_file) :

@@ -20,7 +20,7 @@ def significative_snarl_quantitatif(file_path, output_snarl):
     process_file(file_path, ['CHR', 'POS', 'P'], 'P', output_snarl, write_significative_snarl_quantitatif)
 
 def write_significative_snarl_binary(tupple_snarl, output_snarl):
-    headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tINTER_GROUP\tAVERAGE\n'
+    headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\n'
     with open(output_snarl, "wb") as f:
         f.write(headers.encode('utf-8'))
         for row in tupple_snarl:
