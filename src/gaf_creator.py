@@ -72,7 +72,7 @@ def parse_input_file(input_file, snarl_dic, output_file):
 
             #CHR POS SNARL TYPE	REF	ALT	P_Fisher P_Chi2 G1_P1 G1_P2 G2_P1 G2_P2
             _, _, snarl, _, _, _, pfisher, pchi, g1p1, g1p2, g2p1, g2p2 = columns
-
+ 
             g1p1 = int(g1p1)
             g1p2 = int(g1p2)
             g2p1 = int(g2p1)
