@@ -39,7 +39,7 @@ def classify_variant(ref, list_alt) :
     
     return list_type_var
     
-def write_pos_snarl(vcf_file, output_file):
+def write_pos_snarl(vcf_file, output_file, type):
     #vcf_dict = parse_vcf_to_dict(vcf_file)
     vcf_dict = parse_vcf_to_dict(vcf_file)
     save_info = vcf_dict.get(1, ("NA", "NA", "NA", "NA", "NA"))
@@ -48,7 +48,10 @@ def write_pos_snarl(vcf_file, output_file):
     temp_output_file = output_file + ".tmp"
 
     with open(output_file, 'r', encoding='utf-8') as in_f, open(temp_output_file, 'w', encoding='utf-8') as out_f:
-        out_f.write("CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n")
+        if type == "quantitatif" :
+            out_f.write("CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n")
+        elif type == "binary" :
+            out_f.write("CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\tGROUP_PATHS\n")
         next(in_f)
         for line in in_f:
             columns = line.strip().split('\t')
