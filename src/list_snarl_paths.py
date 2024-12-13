@@ -173,7 +173,7 @@ def fill_pretty_paths(stree, pg, finished_paths) :
         for net in path:
             if stree.is_sentinel(net) :
                 net = stree.get_node_from_sentinel(net)
-
+ 
             if stree.is_node(net) or stree.is_trivial_chain(net) :
                 # if it's a node, add it to the path
                 ppath.addNodeHandle(net, stree)
