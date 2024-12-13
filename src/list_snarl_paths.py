@@ -78,14 +78,15 @@ def calcul_type_variant(list_list_length_paths) :
     """
     list_type_variant = []
     for list_length in list_list_length_paths :
-        if len(list_length) == 3 : # Case simple path len 3
-            list_type_variant.append(list_length[1])
-
-        if len(list_length) > 3 : # Case snarl in snarl / Indel
+        
+        if len(list_length) > 3 or list_length[1] == '-1' : # Case snarl in snarl / Indel
             list_type_variant.append("COMPLEX")
 
+        elif len(list_length) == 3 : # Case simple path len 3
+            list_type_variant.append(list_length[1])
+
         else : # Deletion
-            list_type_variant.append("0")
+            list_type_variant.append("DELETION")
 
     return list_type_variant
 
@@ -164,12 +165,11 @@ def parse_graph_tree(pg_file, dist_file) :
 def fill_pretty_paths(stree, pg, finished_paths) :
     pretty_paths = []
     length_net_paths = []
-    position_chr = []
+    #position_chr = []
 
     for path in finished_paths:
         ppath = Path()
         length_net = []
-        in_trivial_chain = False
         for net in path:
             if stree.is_sentinel(net) :
                 net = stree.get_node_from_sentinel(net)
@@ -179,16 +179,14 @@ def fill_pretty_paths(stree, pg, finished_paths) :
                 ppath.addNodeHandle(net, stree)
                 if stree.is_node(net) :
                     length_net.append(str(stree.node_length(net)))
-                    position_chr.append() # determine position 
+                    #position_chr.append() # determine position 
 
                 else :
                     # return the first length node from a trivial_chain
-                    if in_trivial_chain :
-                        length_net.append("-2")
                     stn_start = stree.get_bound(net, False, True)
-                    net_trivial_chain = pg.get_handle(stn_start)
-                    length_net.append(str(stree.node_length(net_trivial_chain)))
-                    in_trivial_chain = True
+                    node_start_id = stree.node_id(stn_start)
+                    net_trivial_chain = pg.get_handle(node_start_id)
+                    length_net.append(str(pg.get_length(net_trivial_chain)))
 
             elif stree.is_chain(net) :
                 # if it's a chain, we need to write someting like ">Nl>*>Nr"
@@ -230,6 +228,9 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
     write_header_output(output_file)
     write_header_output_not_analyse(output_snarl_not_analyse)
 
+    snarl_paths = defaultdict(list)
+    snarl_number_analysis = 0
+
     # for each snarl, lists paths through the netgraph and write to output TSV
     for snarl in snarls:
 
@@ -251,12 +252,12 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
 
         # prepare path list to output and write each path directly to the file
         pretty_paths, type_variants = fill_pretty_paths(stree, pg, finished_paths)
-        print("pretty_paths : ", pretty_paths)
-        print("type_variants : ", type_variants)
-        # type_variants_2 = calcul_type_variant(pg, type_variants)
-        # print("type_variants_2 : ", type_variants_2)
-        exit()
+
         write_output(output_file, snarl_id, pretty_paths, type_variants)
+        snarl_paths[snarl_id].extend(pretty_paths)
+        snarl_number_analysis += len(pretty_paths)
+
+    return snarl_paths, snarl_number_analysis
 
 def loop_over_snarls(stree, snarls, pg, output_snarl_not_analyse, threshold=50) :
 

@@ -42,13 +42,6 @@ class Matrix :
     def add_data(self, idx_snarl, idx_geno):
         self.matrix[idx_snarl, idx_geno] = 1
 
-    def __str__(self) :
-        return f"{self.matrix[0]} \n" \
-               f"{self.matrix[1]} \n" \
-               f"{self.matrix[2]} \n" \
-               f"{self.matrix[3]} \n" \
-               f"{self.matrix[4]} \n"
-
 class SnarlProcessor:
     def __init__(self, vcf_path: str, list_samples):
         self.list_samples = list_samples
@@ -151,11 +144,11 @@ class SnarlProcessor:
 
         self.matrix.set_row_header(row_header_dict)
 
-    def binary_table(self, snarls, binary_groups, covar=None, output="output/binary_output.tsv"):
+    def binary_table(self, snarls, binary_groups, covar=None, gaf=False, output="output/binary_output.tsv"):
         """
         Generate a binary table with statistical results and write to a file.
         """
-        headers = ('CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\n')
+        headers = ('CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\tGROUP_PATHS\n')
         with open(output, 'wb') as outf:
             outf.write(headers.encode('utf-8'))
                 
@@ -164,10 +157,10 @@ class SnarlProcessor:
                 df = self.create_binary_table(binary_groups, list_snarl)
 
                 # Perform statistical tests and compute descriptive statistics
-                fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average = self.binary_stat_test(df)
+                fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average, group_paths = self.binary_stat_test(df, gaf)
                 chrom = pos = type_var = ref = alt = "NA"
                 data = (f'{chrom}\t{pos}\t{snarl}\t{type_var}\t{ref}\t{alt}\t{fisher_p_value}\t'
-                        f'{chi2_p_value}\t{total_sum}\t{min_sample}\t{numb_colum}\t{inter_group}\t{average}\n')
+                        f'{chi2_p_value}\t{total_sum}\t{min_sample}\t{numb_colum}\t{inter_group}\t{average}\t{group_paths}\n')
                 outf.write(data.encode('utf-8'))
 
     def quantitative_table(self, snarls, quantitative, covar=None, output="output/quantitative_output.tsv") :
@@ -308,26 +301,26 @@ class SnarlProcessor:
             try:
                 # Perform Chi-Square test
                 p_value = chi2_contingency(df)[1] # from scipy.stats import chi2_contingency
-                formatted_p_value = f"{p_value:.4e}"
+                p_value = f"{p_value:.4e}"
 
             except ValueError as e:
                 p_value = "Error"
         else:
             p_value = "N/A"
 
-        return formatted_p_value
+        return p_value
 
     def fisher_test(self, df) -> float : 
         """Calcul p_value using fisher exact test"""
 
         try:
             p_value = fisher_exact(df)[1] # from scipy.stats import fisher_exact
-            formatted_p_value = f"{p_value:.4e}"
+            p_value = f"{p_value:.4e}"
 
         except ValueError as e: 
             p_value = 'N/A'
         
-        return formatted_p_value
+        return p_value
 
     # # Logistic Mixed Model
     # def LMM_binary(df, pheno, covar):
@@ -353,7 +346,17 @@ class SnarlProcessor:
 
     #     return p_value, beta, vcomp
     
-    def binary_stat_test(self, df) :
+    def format_group_paths(self, df) : 
+        result = []
+        for column in df.columns:
+            column_values = [f"{df.loc[group, column]}" for group in df.index]
+            result.append(":".join(column_values))
+
+        # Join all results with ", "
+        final_str = ",".join(result)
+        return final_str
+    
+    def binary_stat_test(self, df, gaf) :
         """ Perform statistical tests and calculate descriptive statistics on a binary data frame. """
         fisher_p_value = self.fisher_test(df)
         chi2_p_value = self.chi2_test(df)
@@ -364,8 +367,9 @@ class SnarlProcessor:
         average = float(total_sum / numb_colum) # Calculate the average of the total sum divided by the number of columns
         row_sums = df.sum(axis=1) # Calculate the sum of values for each row in the DataFrame
         min_row_index = row_sums.min() # Find the minimum sum among the row sums
+        group_paths = self.format_group_paths(df) if gaf else ""
 
-        return fisher_p_value, chi2_p_value, total_sum, min_row_index, numb_colum, inter_group, average
+        return fisher_p_value, chi2_p_value, total_sum, min_row_index, numb_colum, inter_group, average, group_paths
 
 def parse_covariate_file(filepath):
 
@@ -377,12 +381,12 @@ def parse_pheno_binary_file(group_file : str):
     df = pd.read_csv(group_file, sep='\t')
     
     # Ensure binary phenotype is valid
-    if not set(df['GROUP'].dropna()).issubset({0, 1}):
-        raise ValueError("The 'GROUP' column must contain only binary values (0 or 1).")
+    if not set(df['PHENO'].dropna()).issubset({0, 1}):
+        raise ValueError("The 'PHENO' column must contain only binary values (0 or 1).")
 
     # Create dictionaries for group 0 and group 1
-    group_0 = {sample: 0 for sample in df[df['GROUP'] == 0]['SAMPLE']}
-    group_1 = {sample: 1 for sample in df[df['GROUP'] == 1]['SAMPLE']}
+    group_0 = {sample: 0 for sample in df[df['PHENO'] == 0]['IID']}
+    group_1 = {sample: 1 for sample in df[df['PHENO'] == 1]['IID']}
     return group_0, group_1
  
 def parse_pheno_quantitatif_file(file_path : str) -> dict:
@@ -451,7 +455,7 @@ def check_format_group_snarl(file_path : str) -> str :
         raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid group/snarl file. It must have a .txt extension or .tsv.")
     return file_path
     
-def check_format_pheno_q(file_path : str) -> str :
+def check_format_pheno(file_path : str) -> str :
 
     check_file(file_path)
     
@@ -463,20 +467,6 @@ def check_format_pheno_q(file_path : str) -> str :
     if header != expected_header:
         raise argparse.ArgumentTypeError(f"The file must contain the following headers: {expected_header} and be split by tabulation")
     
-    return file_path
-
-def check_format_pheno_b(file_path : str) -> str :
-
-    check_file(file_path)
-
-    with open(file_path, 'r') as file:
-        first_line = file.readline().strip()
-
-    header = first_line.split('\t')
-    expected_header = ['SAMPLE', 'GROUP']
-    if header != expected_header:
-        raise argparse.ArgumentTypeError(f"The file must contain the following headers: {expected_header} and be split by tabulation")
-
     return file_path
 
 def check_covariate_file(file_path):
@@ -522,8 +512,8 @@ if __name__ == "__main__" :
     parser.add_argument("snarl", type=check_format_group_snarl, help="Path to the snarl file that containt snarl and aT (.txt or .tsv)")
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-b", "--binary", type=check_format_pheno_b, help="Path to the binary group file (.txt or .tsv)")
-    group.add_argument("-q", "--quantitative", type=check_format_pheno_q, help="Path to the quantitative phenotype file (.txt or .tsv)")
+    group.add_argument("-b", "--binary", type=check_format_pheno, help="Path to the binary phenotype file (.txt or .tsv)")
+    group.add_argument("-q", "--quantitative", type=check_format_pheno, help="Path to the quantitative phenotype file (.txt or .tsv)")
     parser.add_argument("-c", "--covariate", type=check_covariate_file, required=False, help="Path to the covariate file (.txt or .tsv)")
     parser.add_argument("-o", "--output", type=str, required=False, help="Path to the output file")
     args = parser.parse_args()
