@@ -1,9 +1,6 @@
 # STOAT
 
 <p align="center">
-    <a href="https://github.com/STOAT" title="STOAT GitHub">
-        <img src="https://img.shields.io/badge/STOAT-GWAS-blue.svg" />
-    </a>
     <a href="https://www.python.org/downloads/release/python-310/" title="Python 3.10">
         <img src="https://img.shields.io/badge/Python-3.10-blue.svg" />
     </a>
