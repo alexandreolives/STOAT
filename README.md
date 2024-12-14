@@ -2,10 +2,10 @@
 
 <p align="center">
     <a href="https://www.python.org/downloads/release/python-3100/"><img src="https://img.shields.io/badge/Python-3.10-blue.svg"></a>
-    <a href="https://github.com/brentp/cyvcf2/releases/tag/v0.31.1"><img src="https://img.shields.io/badge/cyvcf2-0.31.1-blue.svg"></a>
-    <a href="https://github.com/vgteam/libbdsg/releases/tag/v0.3"><img src="https://img.shields.io/badge/bdsg-0.3-blue.svg"></a>
-    <a href="https://github.com/statsmodels/statsmodels/releases/tag/v0.14.4"><img src="https://img.shields.io/badge/statsmodels-0.14.4-blue.svg"></a>
-    <a href="https://github.com/ShujiaHuang/qmplot/releases/tag/v0.3.1"><img src="https://img.shields.io/badge/qmplot-0.3.3-blue.svg"></a>
+    <a href="https://github.com/brentp/cyvcf2/releases/tag/v0.31.1"><img src="https://img.shields.io/badge/cyvcf2-0.31.1-green.svg"></a>
+    <a href="https://github.com/vgteam/libbdsg/releases/tag/v0.3"><img src="https://img.shields.io/badge/bdsg-0.3-green.svg"></a>
+    <a href="https://github.com/statsmodels/statsmodels/releases/tag/v0.14.4"><img src="https://img.shields.io/badge/statsmodels-0.14.4-green.svg"></a>
+    <a href="https://github.com/ShujiaHuang/qmplot/releases/tag/v0.3.1"><img src="https://img.shields.io/badge/qmplot-0.3.3-green.svg"></a>
 </p>
 
 ## Project Overview
