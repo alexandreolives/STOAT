@@ -1,11 +1,11 @@
 # STOAT
 
 <p align="center">
-    <img src="https://img.shields.io/badge/Python-3.10-blue.svg" />
-    <img src="https://img.shields.io/badge/cyvcf2-0.31.1-green.svg" />
-    <img src="https://img.shields.io/badge/bdsg-0.3-purple.svg" />
-    <img src="https://img.shields.io/badge/statsmodels-0.14.4-yellow.svg" />
-    <img src="https://img.shields.io/badge/qmplot-0.3.3-red.svg" />
+    <img src="https://img.shields.io/badge/Python-3.10-blue.svg" alt="Python 3.10" />
+    <img src="https://img.shields.io/badge/cyvcf2-0.31.1-green.svg" alt="cyvcf2 0.31.1" />
+    <img src="https://img.shields.io/badge/bdsg-0.3-purple.svg" alt="bdsg 0.3" />
+    <img src="https://img.shields.io/badge/statsmodels-0.14.4-yellow.svg" alt="statsmodels 0.14.4" />
+    <img src="https://img.shields.io/badge/qmplot-0.3.3-red.svg" alt="qmplot 0.3.3" />
 </p>
 
 ## Project Overview
