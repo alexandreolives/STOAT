@@ -51,11 +51,16 @@ def qq_plot_quantitatif(file_path, output_qqplot="output/qq_plot.png") :
 def plot_manhattan_quantitatif(file_path, output_manhattan="output_manhattan_plot.png") :
     
     data = pd.read_csv(file_path, sep="\t")
-    data = data.dropna(how="any", axis=0)  # clean data
+
+    # Clean data
+    cleaned_data = data.dropna(subset=['CHR', 'P', 'POS'])
+    cleaned_data['POS'] = cleaned_data['POS'].astype(str).str.extract(r'(\d+)').astype(int)
+    cleaned_data.to_csv("cleaned_data.tsv", sep="\t", index=False)
 
     _, ax = plt.subplots(figsize=(12, 4), facecolor='w', edgecolor='k')
     qmplot.manhattanplot(data=data,
                 chrom="CHR",
+                pv="P",
                 sign_marker_p=1e-6,  # Genome wide significant p-value
                 sign_marker_color="r",
                 snp="POS",
@@ -82,16 +87,17 @@ def qq_plot_binary(file_path, output_qqplot="output/qq_plot.png") :
 
     plt.savefig(output_qqplot)
 
-import numpy as np
-
 def plot_manhattan_binary(file_path, output_manhattan="output_manhattan_plot.png") :
-    
-    data = pd.read_csv(file_path, sep="\t", na_values=['NA'])
-    data.replace('NA', np.nan, inplace=True)
-    data = data.dropna(how="any", axis=0)  # clean data
+
+    data = pd.read_csv(file_path, sep="\t")
+
+    # Clean data
+    cleaned_data = data.dropna(subset=['CHR', 'P_FISHER', 'POS'])
+    cleaned_data['POS'] = cleaned_data['POS'].astype(str).str.extract(r'(\d+)').astype(int)
+    cleaned_data.to_csv("cleaned_data.tsv", sep="\t", index=False)
 
     _, ax = plt.subplots(figsize=(12, 4), facecolor='w', edgecolor='k')
-    qmplot.manhattanplot(data=data,
+    qmplot.manhattanplot(data=cleaned_data,
                 chrom="CHR",
                 pv = "P_FISHER",
                 sign_marker_p=1e-6,  # Genome wide significant p-value

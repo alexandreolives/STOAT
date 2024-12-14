@@ -1,6 +1,6 @@
 import argparse
 import bdsg
-from snarl_vcf_parser import parse_snarl_path_file
+from snarl_analyser import parse_snarl_path_file
 import re 
 import math
 
@@ -26,35 +26,36 @@ def add_suffix_to_filename(filename: str, suffix: str) -> str:
     new_filename = f"{base}{suffix}.{ext}"
     return new_filename
 
-def calcul_proportion_signi(number_ind_group1: int, total_ind: int, p_value: float) -> tuple:
+def calcul_proportion_signi(number_ind_group0: int, number_ind_group1: int, p_value: float) -> tuple:
     # Step 1: Calculate initial proportions based on a total of 60
-    proportion_group1 = (number_ind_group1 / total_ind) * 60
-    proportion_group2 = 60 - proportion_group1
+    total_ind = number_ind_group0 + number_ind_group1
+    proportion_group0 = (number_ind_group1 / total_ind) * 60
+    proportion_group1 = 60 - proportion_group0
     
     # Step 2: Calculate the adjustment factor based on a logarithmic scale of p_value
     # Adding 1e-10 to avoid log(0); adjust multiplier (e.g., 10) based on desired impact
     adjustment_factor = -math.log(max(p_value, 1e-10))  # Multiplier can be tuned for desired effect
 
     # Step 3: Apply the adjustment to the group with the higher initial proportion
-    if proportion_group1 > proportion_group2:
-        adjusted_group1 = proportion_group1 + adjustment_factor
-        adjusted_group2 = proportion_group2 - adjustment_factor
-    else:
+    if proportion_group0 > proportion_group1:
+        adjusted_group0 = proportion_group0 + adjustment_factor
         adjusted_group1 = proportion_group1 - adjustment_factor
-        adjusted_group2 = proportion_group2 + adjustment_factor
+    else:
+        adjusted_group0 = proportion_group0 - adjustment_factor
+        adjusted_group1 = proportion_group1 + adjustment_factor
     
     # Step 4: Ensure values remain within bounds [0, 60] and maintain a sum of 60
+    adjusted_group0 = max(0, min(60, adjusted_group0))
     adjusted_group1 = max(0, min(60, adjusted_group1))
-    adjusted_group2 = max(0, min(60, adjusted_group2))
     
     # Rescale if needed to ensure the total sum is exactly 60
-    total = adjusted_group1 + adjusted_group2
+    total = adjusted_group0 + adjusted_group1
     if total != 60:
         scale_factor = 60 / total
+        adjusted_group0 *= scale_factor
         adjusted_group1 *= scale_factor
-        adjusted_group2 *= scale_factor
     
-    return int(adjusted_group1), int(adjusted_group2)
+    return int(adjusted_group0), int(adjusted_group1)
 
 def write_gaf_lines(sequence_name : str, path : str, length : int, proportion : int, outfile : str):
     gaf_line = f"{sequence_name}\t{length}\t0\t{length}\t+\t{path}\t{length}\t0\t{length}\t{length}\t{length}\t{proportion}\tcs:Z::{length}\n"
@@ -93,8 +94,6 @@ def parse_input_file(input_file, snarl_dic, pg, output_file):
                 sequence_name_g0.append(f"{snarl}_G0_{path_g0}_F{pfisher}_C{pchi}")
                 sequence_name_g1.append(f"{snarl}_G1_{path_g1}_F{pfisher}_C{pchi}")
 
-            total_paths = sum(group_0) + sum(group_1)
-
             for idx, path in enumerate(list_path) :
                 
                 # Case where "*" is in path
@@ -103,7 +102,7 @@ def parse_input_file(input_file, snarl_dic, pg, output_file):
                     star_path_1 = star_path_1[:-1]  # Remove last character from star_path_1
                     length_star_path_1 = calcul_path_length(pg, star_path_1)
                     length_star_path_2 = calcul_path_length(pg, star_path_2)
-                    prop_g0, prop_g1 = calcul_proportion_signi(group_0[idx], group_1[idx], total_paths, pfisher)
+                    prop_g0, prop_g1 = calcul_proportion_signi(group_0[idx], group_1[idx], pfisher)
 
                     # Write lines for start_path_1
                     write_gaf_lines(sequence_name_g0[idx], path, length_star_path_1, prop_g0, outfile1)
@@ -115,8 +114,8 @@ def parse_input_file(input_file, snarl_dic, pg, output_file):
 
                 # Case where "*" is NOT in path
                 else:
-                    length_path = calcul_path_length(path)
-                    prop_g0, prop_g1 = calcul_proportion_signi(group_0[idx], group_1[idx], total_paths, pfisher)
+                    length_path = calcul_path_length(pg, path)
+                    prop_g0, prop_g1 = calcul_proportion_signi(group_0[idx], group_1[idx], pfisher)
 
                     # Write lines for path1 for both g1p1 and g2p1
                     write_gaf_lines(sequence_name_g0[idx], path, length_path, prop_g0, outfile1)
