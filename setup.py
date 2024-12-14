@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="stoat",
+    name="STOAT",
     version="0.1.0",
     author="Matis Alias-Bagarre",
     author_email="matis84700@gmail.com",

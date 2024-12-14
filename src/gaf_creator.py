@@ -98,19 +98,20 @@ def parse_input_file(input_file, snarl_dic, pg, output_file):
                 
                 # Case where "*" is in path
                 if "*" in path:
+                    # Decompose the * snarl in half genereting 2 paths 
                     star_path_1, star_path_2 = path.split("*")
-                    star_path_1 = star_path_1[:-1]  # Remove last character from star_path_1
+                    star_path_1 = star_path_1[:-1]
                     length_star_path_1 = calcul_path_length(pg, star_path_1)
                     length_star_path_2 = calcul_path_length(pg, star_path_2)
                     prop_g0, prop_g1 = calcul_proportion_signi(group_0[idx], group_1[idx], pfisher)
 
                     # Write lines for start_path_1
-                    write_gaf_lines(sequence_name_g0[idx], path, length_star_path_1, prop_g0, outfile1)
-                    write_gaf_lines(sequence_name_g1[idx], path, length_star_path_1, prop_g1, outfile2)
+                    write_gaf_lines(sequence_name_g0[idx], star_path_1, length_star_path_1, prop_g0, outfile1)
+                    write_gaf_lines(sequence_name_g1[idx], star_path_1, length_star_path_1, prop_g1, outfile2)
 
                     # Write lines for start_path_2
-                    write_gaf_lines(sequence_name_g0[idx], path, length_star_path_2, prop_g0, outfile1)
-                    write_gaf_lines(sequence_name_g1[idx], path, length_star_path_2, prop_g1, outfile2)
+                    write_gaf_lines(sequence_name_g0[idx], star_path_2, length_star_path_2, prop_g0, outfile1)
+                    write_gaf_lines(sequence_name_g1[idx], star_path_2, length_star_path_2, prop_g1, outfile2)
 
                 # Case where "*" is NOT in path
                 else:

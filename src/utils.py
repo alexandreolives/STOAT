@@ -10,7 +10,6 @@ def parsing_samples_vcf(vcf_path) :
     except :
         raise f"Error : VCF parsing error, verify {vcf_path} format"
 
-
 def parse_covariate_file(filepath):
 
     covariates = pd.read_csv(filepath)
@@ -94,7 +93,7 @@ def check_format_group_snarl(file_path : str) -> str :
     if not file_path.lower().endswith('.txt') and not file_path.lower().endswith('.tsv'):
         raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid group/snarl file. It must have a .txt extension or .tsv.")
     return file_path
-    
+
 def check_format_pheno(file_path : str) -> str :
 
     check_file(file_path)

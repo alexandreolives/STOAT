@@ -32,19 +32,20 @@ pip install -r requirements.txt
 - cyvcf2
 - numpy
 - pandas
+- bdsg
 - ...
 
 ## Usage
 
-Use `STOAT.py` if you want to launch the full tool at once, starting from snarl path identification (identifying the multiple paths that can be taken by a sample based on the pangenome graph) and ending with the results plots (Manhattan plot and QQ plot).
+Use `stoat.py` if you want to launch the full tool at once, starting from snarl path identification (identifying the multiple paths that can be taken by a sample based on the pangenome graph) and ending with the results plots (Manhattan plot and QQ plot).
 
 - Run full tool :
 ```bash
 # binary trait
-python3 STOAT.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.tsv
+python3 stoat.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.tsv
 
 # quantative trait
-python3 STOAT.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.tsv
+python3 stoat.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.tsv
 ```
 
 Alternatively, you can specify the script you want to launch, depending on your desired task:
@@ -149,10 +150,10 @@ STOAT will generated a manhattan and a QQ plot for binary and quantitatif analys
 
 ### SequenceTube
 
-Use `src/gaf_creator.py` to geneate a GAF file and [SequenceTube](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
+Use `gaf_creator.py` to geneate a GAF file and [SequenceTube](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
 
 ```bash 
-python3 src/gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths.tsv> -p <pg_file_path>
+python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths.tsv> -p <pg_file_path>
 ```
 
 *Output Plots and sequenceTube*

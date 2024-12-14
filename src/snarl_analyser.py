@@ -36,7 +36,7 @@ class Matrix :
         self.matrix[idx_snarl, idx_geno] = 1
 
 class SnarlProcessor:
-    def __init__(self, vcf_path: str, list_samples):
+    def __init__(self, vcf_path: str, list_samples: list):
         self.list_samples = list_samples
         self.matrix = Matrix(1_000_000, len(self.list_samples)*2)
         self.vcf_path = vcf_path
@@ -51,7 +51,7 @@ class SnarlProcessor:
         expanded_matrix = np.zeros((new_rows, current_cols), dtype=data_matrix.dtype)
         expanded_matrix[:current_rows, :] = data_matrix
         self.matrix.set_matrix(expanded_matrix)
-            
+
     def determine_str(self, s: str, length_s : int, i: int) -> tuple[int, int]:
         """Extract an integer from a string starting at index i."""
         start_idx = i

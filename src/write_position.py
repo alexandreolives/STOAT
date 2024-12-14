@@ -71,29 +71,25 @@ def write_pos_snarl(vcf_file, output_file, type):
     # Replace the original file with the updated temp file
     os.replace(temp_output_file, output_file)
 
-def write_dic(vcf_dict, fields) :
+def write_dic(vcf_dict, fields):
+    """Updates a dictionary with VCF data."""
+    chr, pos, snarl_raw, ref, alt = fields[0], fields[1], fields[2], fields[3], fields[4]
 
-    chr = fields[0]          # Chromosome
-    pos = fields[1]          # Position
-    snarl = modify_snarl(fields[2])  # Use pre-defined function
-    ref = fields[3] if fields[3] is not None and fields[3] != "" else "NA"
-    alt = fields[4] if fields[4] is not None and fields[4] != "" else "NA"
-    if alt != 'NA' and len(alt) > 1 :
-        alt = alt.split(",")
-    else :
-        alt = [alt]
+    # Process snarl, ref, and alt
+    snarl = modify_snarl(snarl_raw)  # Pre-defined function
+    ref = ref or "NA"
+    alt = alt.split(",") if alt and alt != "NA" and "," in alt else [alt or "NA"]
 
-    if ref != 'NA' and alt != 'NA' :
-        variant_type = classify_variant(ref, alt)  # Use pre-defined function
-    else :
-        variant_type = ["NA"]
+    # Determine variant type
+    variant_type = classify_variant(ref, alt) if ref != "NA" and alt != ["NA"] else ["NA"]
 
+    # Update dictionary
     if snarl not in vcf_dict:
         vcf_dict[snarl] = [chr, [pos], variant_type, ref, alt]
-    else :
+    else:
         vcf_dict[snarl][1].append(pos)
         vcf_dict[snarl][2].extend(variant_type)
-        vcf_dict[snarl][4] = "NA" # alt will be unknow
+        vcf_dict[snarl][4] = ["NA"]  # alt becomes unknown if multiple entries exist
 
     return vcf_dict
 

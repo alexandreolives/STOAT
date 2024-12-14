@@ -148,3 +148,5 @@ def main() :
         python3 src/stoat.py -p test/simulation/pg.full.pg -d test/simulation/pg.dist -v test/simulation/merged_output.vcf.gz \
         -b test/simulation/phenotype.tsv -o test/simulation
     """
+
+main()
