@@ -102,7 +102,6 @@ Optional file :
 
 ## Output
 
-
 ## Output
 
 | Column Name       | Description                                                                                   |
@@ -142,7 +141,7 @@ CHR POS Snarl           TYPE    REF ALT	P_value
 1   18  5262717_5262714	DEL     AA  T   0.9008
 ```
 
-### Visualization
+## Visualization
 
 ### Manhattan and QQ plots 
 
