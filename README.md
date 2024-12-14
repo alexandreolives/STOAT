@@ -1,21 +1,11 @@
 # STOAT
 
 <p align="center">
-    <a href="https://www.python.org/downloads/release/python-310/" title="Python 3.10">
-        <img src="https://img.shields.io/badge/Python-3.10-blue.svg" />
-    </a>
-    <a href="https://pypi.org/project/cyvcf2/0.31.1/" title="cyvcf2 version 0.31.1">
-        <img src="https://img.shields.io/badge/cyvcf2-0.31.1-blue.svg" />
-    </a>
-    <a href="https://pypi.org/project/bdsg/0.3/" title="bdsg version 0.3">
-        <img src="https://img.shields.io/badge/bdsg-0.3-purple.svg" />
-    </a>
-    <a href="https://pypi.org/project/statsmodels/0.14.4/" title="statsmodels version 0.14.4">
-        <img src="https://img.shields.io/badge/statsmodels-0.14.4-yellow.svg" />
-    </a>
-    <a href="https://pypi.org/project/qmplot/0.3.3/" title="qmplot version 0.3.3">
-        <img src="https://img.shields.io/badge/qmplot-0.3.3-red.svg" />
-    </a>
+    <img src="https://img.shields.io/badge/Python-3.10-blue.svg" />
+    <img src="https://img.shields.io/badge/cyvcf2-0.31.1-green.svg" />
+    <img src="https://img.shields.io/badge/bdsg-0.3-purple.svg" />
+    <img src="https://img.shields.io/badge/statsmodels-0.14.4-yellow.svg" />
+    <img src="https://img.shields.io/badge/qmplot-0.3.3-red.svg" />
 </p>
 
 ## Project Overview
