@@ -4,9 +4,9 @@ import qmplot
 
 SIGNIFICANCE_THRESHOLD = 0.00001
 
-def process_file(file_path, cols, p_col, output_snarl, writer_function):
+def process_file(file_path, p_col, output_snarl, writer_function):
     # Read and filter the dataframe based on significance threshold
-    df = pd.read_csv(file_path, sep='\t', usecols=cols)
+    df = pd.read_csv(file_path, sep='\t')
     df[p_col] = pd.to_numeric(df[p_col], errors='coerce')
     filtered_df = df[df[p_col] < SIGNIFICANCE_THRESHOLD].dropna(subset=[p_col])
 
@@ -14,10 +14,10 @@ def process_file(file_path, cols, p_col, output_snarl, writer_function):
     writer_function(filtered_df.itertuples(index=False, name=None), output_snarl)
 
 def significative_snarl_binary(file_path, output_snarl):
-    process_file(file_path, ['CHR', 'POS', 'P_FISHER', 'P_CHI2'], 'P_FISHER', output_snarl, write_significative_snarl_binary)
+    process_file(file_path, 'P_FISHER', output_snarl, write_significative_snarl_binary)
 
 def significative_snarl_quantitatif(file_path, output_snarl):
-    process_file(file_path, ['CHR', 'POS', 'P'], 'P', output_snarl, write_significative_snarl_quantitatif)
+    process_file(file_path, 'P', output_snarl, write_significative_snarl_quantitatif)
 
 def write_significative_snarl_binary(tupple_snarl, output_snarl):
     headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\n'

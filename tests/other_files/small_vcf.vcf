@@ -1,0 +1,52 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##contig=<ID=dm6#0#chrX,length=23542271>
+##contig=<ID=dm6#0#chrM,length=19524>
+##contig=<ID=dm6#0#chr2R,length=25286936>
+##contig=<ID=dm6#0#chr3R,length=32079331>
+##contig=<ID=dm6#0#chr4,length=1348131>
+##contig=<ID=dm6#0#chr2L,length=23513712>
+##contig=<ID=dm6#0#chrY,length=3667352>
+##contig=<ID=dm6#0#chr3L,length=28110227>
+##INFO=<ID=LV,Number=1,Type=Integer,Description="Level in the snarl tree (0=top level)">
+##INFO=<ID=PS,Number=1,Type=String,Description="ID of variant corresponding to parent snarl">
+##INFO=<ID=AT,Number=R,Type=String,Description="Allele Traversal as path in graph">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
+##FORMAT=<ID=MAD,Number=1,Type=Integer,Description="Minimum site allele depth">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype Likelihood, log10-scaled likelihoods of the data given the called genotype for each possible genotype generated from the reference and alternate alleles given the sample ploidy">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality, the Phred-scaled probability estimate of the called genotype">
+##FORMAT=<ID=GP,Number=1,Type=Float,Description="Genotype Probability, the log-scaled posterior probability of the called genotype">
+##FORMAT=<ID=XD,Number=1,Type=Float,Description="eXpected Depth, background coverage as used for the Poisson model">
+##FILTER=<ID=lowad,Description="Variant does not meet minimum allele read support threshold of 1">
+##FILTER=<ID=lowdepth,Description="Variant has read depth less than 4">
+##SAMPLE=<ID=SRR018517>
+##contig=<ID=chr2L>
+##contig=<ID=chr2R>
+##contig=<ID=chr3L>
+##contig=<ID=chr3R>
+##contig=<ID=chr4>
+##contig=<ID=chrM>
+##contig=<ID=chrX>
+##contig=<ID=chrY>
+##bcftools_normVersion=1.13+htslib-1.13+ds
+##bcftools_normCommand=norm --threads 2 -m -any calls_consistent/SRR018517.vcf.gz; Date=Fri Jul 26 15:05:23 2024
+##bcftools_viewVersion=1.13+htslib-1.13+ds
+##bcftools_viewCommand=view -e ALT=="." -Oz -o calls_biallelic/SRR018517.vcf.gz; Date=Fri Jul 26 15:05:23 2024
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of variant">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Length of variant">
+##INFO=<ID=SS,Number=1,Type=String,Description="ID of source snarl">
+##bcftools_viewCommand=view -e REF=ALT -Oz -o calls_decomposed_nonref/SRR018517.vcf.gz calls_decomposed/SRR018517.vcf.gz; Date=Tue Jul 30 15:39:03 2024
+##SAMPLE=<ID=SRR018521>
+##SAMPLE=<ID=SRR018574>
+##SAMPLE=<ID=SRR018580>
+##bcftools_mergeVersion=1.13+htslib-1.13+ds
+##bcftools_mergeCommand=merge -Oz -o merged_test.vcf g0_SRR018517.decomposed.formerge.vcf.gz g0_SRR018521.decomposed.formerge.vcf.gz g1_SRR018574.decomposed.formerge.vcf.gz g1_SRR018580.decomposed.formerge.vcf.gz; Date=Tue Aug 20 09:42:16 2024
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SRR018517	SRR018521	SRR018574	SRR018580
+chr2L	2139	>1>3	AA	A	10	lowad	SVTYPE=DEL;END=2140;SVLEN=-1;LV=0;SS=>1>2;AT=>1>2>3,>1>2<2,>1>2>1	GT	0/1	0/2	1/2	2/1
+chr2L	2139	>0>2	AA	A	10	lowad	SVTYPE=DEL;END=2140;SVLEN=-1;LV=0;SS=>1272>1274;AT=>0>1>2,>0>1>6	GT	0/1	0/1	1/1	./.
+chr2L	2139	>2>5	AA	A	10	lowad	SVTYPE=DEL;END=2140;SVLEN=-1;LV=0;SS=>1272>1274;AT=<2>3>5,>2>4>5	GT	0/1	0/1	1/1	0/1
+chr2L	2139	>1>7	AA	A	10	lowad	SVTYPE=DEL;END=2140;SVLEN=-1;LV=0;SS=>1272>1274;AT=>5>6>7,>1>6>7,>1>6>8	GT	0/1	2/1	2/1	0/1

@@ -63,7 +63,7 @@ def write_pos_snarl(vcf_file, output_file, type):
             columns[0], columns[4] = chrom, ref
             columns[1] = ",".join(map(str, list_pos)) if list_pos else "NA"
             columns[3] = ",".join(map(str, list_type_var)) if list_type_var != "NA" else "NA"
-            columns[5] = ",".join(map(str, list_alt)) if list_alt != "UNK" else "UNK" # NA could be a valid alt ?
+            columns[5] = ",".join(map(str, list_alt)) if list_alt not in ["UNK", "NA"] else list_alt
 
             # Write the modified line to the temp file
             out_f.write('\t'.join(columns) + '\n')

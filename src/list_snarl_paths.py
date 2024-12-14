@@ -77,16 +77,16 @@ def calcul_type_variant(list_list_length_paths) :
     Calcul type variant of a tested snarl
     """
     list_type_variant = []
-    for list_length in list_list_length_paths :
+    for path_lengths in list_list_length_paths :
         
-        if len(list_length) > 3 or list_length[1] == '-1' : # Case snarl in snarl / Indel
+        if len(path_lengths) > 3 or path_lengths[1] == '-1' : # Case snarl in snarl / Indel
             list_type_variant.append("COMPLEX")
 
-        elif len(list_length) == 3 : # Case simple path len 3
-            list_type_variant.append(list_length[1])
+        elif len(path_lengths) == 3 : # Case simple path len 3
+            list_type_variant.append("SNP" if path_lengths[1] == 1 else "INS")
 
         else : # Deletion
-            list_type_variant.append("DELETION")
+            list_type_variant.append("DEL")
 
     return list_type_variant
 

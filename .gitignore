@@ -1,13 +1,5 @@
 src/__pycache__
-output/*.tsv
-log_simulated_quantitative.txt
-log_test.txt
-output/compare.txt
-test/list_snarl_short.txt
-output/compare.txt
-test/list_snarl_short.txt
 output/*
-src/test.py
 stoat.egg-info/*
-test/simulation/*
+tests/simulation/*
 build/*
