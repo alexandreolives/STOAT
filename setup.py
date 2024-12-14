@@ -28,6 +28,7 @@ setup(
         "matplotlib==3.9.4",
         "seaborn==0.13.2",
         "plotly==5.24.1",
+        "pytest==8.3.4"
     ],
     entry_points={
         "console_scripts": [
