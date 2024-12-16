@@ -1,5 +1,4 @@
 src/__pycache__
 output/*
 stoat.egg-info/*
-tests/simulation/*
 build/*

@@ -7,13 +7,12 @@ from pathlib import Path
 # Add the parent directory to the Python path to enable imports from src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-@pytest.fixture
 def test_snarl_analyser():
-    pg_file = "../test/simulation/pg.full.pg"
-    dist_file = "../test/simulation/pg.dist"
-    vcf_file = "../test/simulation/merged_output.vcf"
-    phenotype_file = "../test/simulation/phenotype.tsv"
-    output_dir = Path("../test/simulation/simulation_output")  # Use Path for easier path handling
+    pg_file = "tests/simulation/pg.full.pg"
+    dist_file = "tests/simulation/pg.dist"
+    vcf_file = "tests/simulation/merged_output.vcf"
+    phenotype_file = "tests/simulation/phenotype.tsv"
+    output_dir = Path("tests/simulation/simulation_output")  # Use Path for easier path handling
 
     # Command-line arguments to simulate
     args = [
