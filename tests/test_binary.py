@@ -2,11 +2,20 @@ import sys
 import os
 import pytest
 from unittest.mock import patch
+from datetime import datetime
 
 # Add the ../src directory to sys.path to import snarl_analyser
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-import src.stoat
+import stoat
+import list_snarl_paths
+import snarl_analyser
+import utils
+import p_value_analysis
+import write_position
+import gaf_creator
+import time
+import logging
 
 @pytest.fixture
 def mock_input_files(tmpdir):
