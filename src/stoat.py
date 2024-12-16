@@ -114,7 +114,7 @@ if args.binary:
     p_value_analysis.qq_plot_binary(output_snarl, output_qq)
     p_value_analysis.plot_manhattan_binary(output_snarl, output_manh)
     if gaf :
-        snarl_path_dic = gaf_creator.parse_snarl_path_file(output_snarl_path)
+        snarl_path_dic = utils.parse_snarl_path_file(output_snarl_path)
         output_gaf = os.path.join(output_dir, "group_paths.gaf")
         gaf_creator.parse_input_file(output_snarl, snarl_path_dic, pg, output_gaf)
 

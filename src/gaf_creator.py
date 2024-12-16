@@ -1,6 +1,6 @@
 import argparse
 import bdsg
-from snarl_analyser import parse_snarl_path_file
+from utils import parse_snarl_path_file
 import re 
 import math
 
