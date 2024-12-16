@@ -1,4 +1,3 @@
-import pytest
 import sys
 import os
 from unittest.mock import patch
@@ -26,7 +25,7 @@ def test_snarl_analyser():
 
     # Mock sys.argv to simulate the command-line arguments
     with patch.object(sys, 'argv', args):
-        from src.stoat import main
+        from stoat import main
         main()
 
     # Verify that the output directory exists after execution
