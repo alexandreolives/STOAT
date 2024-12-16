@@ -2,7 +2,6 @@ import sys
 import os
 import pytest
 from unittest.mock import patch
-from datetime import datetime
 
 # Add the ../src directory to sys.path to import snarl_analyser
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
@@ -53,6 +52,12 @@ def test_snarl_analyser(mock_input_files):
 
     # Mocking sys.argv to simulate the command-line arguments
     with patch.object(sys, 'argv', args):
-        pass
+        from stoat import main  # Import the entry point of your script
+        main()
+
+    # Verify that the output directory exists
+    assert mock_input_files['output_dir'].exists()
+
+    # python3 src/stoat.py -p test/simulation/pg.full.pg -d test/simulation/pg.dist -v test/simulation/merged_output.vcf.gz -b test/simulation/phenotype.tsv -o test/simulation
 
     assert mock_input_files['output_dir'].exists()
