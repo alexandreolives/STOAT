@@ -11,7 +11,7 @@ def mock_input_files(tmpdir):
     dist_file = tmpdir.join("test/simulation/pg.dist")
     vcf_file = tmpdir.join("test/simulation/merged_output.vcf")
     phenotype_file = tmpdir.join("test/simulation/phenotype.tsv")
-    output_dir = tmpdir.mkdir("test/simulation/simulation_output")
+    output_dir = tmpdir.join("test/simulation/simulation_output")
     
     return {
         'pg_file': pg_file,
