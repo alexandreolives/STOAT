@@ -33,7 +33,7 @@ def write_significative_snarl_quantitatif(tupple_snarl, output_snarl):
         for row in tupple_snarl:
             f.write(('\t'.join(map(str, row)) + '\n').encode('utf-8'))
 
-def qq_plot_quantitatif(file_path, output_qqplot="output/qq_plot.png") :
+def qq_plot_quantitatif(file_path, output_qqplot="qq_plot.png") :
     
     data = pd.read_csv(file_path, sep="\t")
     data = data.dropna(subset=['P'])
@@ -54,8 +54,7 @@ def plot_manhattan_quantitatif(file_path, output_manhattan="output_manhattan_plo
 
     # Clean data
     cleaned_data = data.dropna(subset=['CHR', 'P', 'POS'])
-    cleaned_data['POS'] = cleaned_data['POS'].astype(str).str.extract(r'(\d+)').astype(int)
-    cleaned_data.to_csv("cleaned_data.tsv", sep="\t", index=False)
+    cleaned_data['POS'] = cleaned_data['POS'].apply(lambda x: str(x).split(',')[0])
 
     _, ax = plt.subplots(figsize=(12, 4), facecolor='w', edgecolor='k')
     qmplot.manhattanplot(data=data,
@@ -72,7 +71,7 @@ def plot_manhattan_quantitatif(file_path, output_manhattan="output_manhattan_plo
 
     plt.savefig(output_manhattan)
 
-def qq_plot_binary(file_path, output_qqplot="output/qq_plot.png") :
+def qq_plot_binary(file_path, output_qqplot="qq_plot.png") :
     
     data = pd.read_csv(file_path, sep="\t")
     data = data.dropna(subset=['P_FISHER'])
@@ -93,30 +92,33 @@ def plot_manhattan_binary(file_path, output_manhattan="output_manhattan_plot.png
 
     # Clean data
     cleaned_data = data.dropna(subset=['CHR', 'P_FISHER', 'POS'])
-    cleaned_data['POS'] = cleaned_data['POS'].astype(str).str.extract(r'(\d+)').astype(int)
-    cleaned_data.to_csv("cleaned_data.tsv", sep="\t", index=False)
+    cleaned_data['POS'] = cleaned_data['POS'].apply(lambda x: int(str(x).split(',')[0]) if ',' in str(x) else int(x))
+    cleaned_data['P_FISHER'] = cleaned_data['P_FISHER'].apply(lambda x: max(x, 1e-300))  # Avoid log10(0)
+    plot_data = cleaned_data[['CHR', 'POS', 'P_FISHER']].sort_values(by=['CHR', 'POS'])
+
+    print(cleaned_data.head())
+    print(cleaned_data.dtypes)
 
     _, ax = plt.subplots(figsize=(12, 4), facecolor='w', edgecolor='k')
-    qmplot.manhattanplot(data=cleaned_data,
+    qmplot.manhattanplot(data=plot_data,
                 chrom="CHR",
                 pv = "P_FISHER",
-                sign_marker_p=1e-6,  # Genome wide significant p-value
-                sign_marker_color="r",
                 snp="POS",
                 xlabel="Chromosome",
                 ylabel=r"$-log_{10}{(P_FISHER)}$",
-                text_kws={"fontsize": 12,  # The fontsize of annotate text
+                text_kws={"fontsize": 12,
                             "arrowprops": dict(arrowstyle="-", color="k", alpha=0.6)},
                 ax=ax)
 
+    plt.tight_layout()
     plt.savefig(output_manhattan)
 
 if __name__ == "__main__" :
 
-    file_path = 'output/snarl_pan.tsv'
-    output_snarl = "output/droso_top_significative_snarl.tsv"
-    significative_snarl_quantitatif(file_path, output_snarl)
-    qq_plot_quantitatif(file_path)
-    plot_manhattan_quantitatif(file_path)
+    file_path = 'tests/simulation/run_binary/binary_analysis.tsv'
+    output_snarl = "tests/simulation/run_binary/binary_analysis_top_significativity.tsv"
+    #significative_snarl_binary(file_path, output_snarl)
+    #qq_plot_binary(file_path)
+    plot_manhattan_binary(file_path)
 
     #python3 src/p_value_analysis.py 
