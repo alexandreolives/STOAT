@@ -110,7 +110,6 @@ def parse_vcf_to_dict(vcf_file):
             else :
                 vcf_dict = write_dic(vcf_dict, fields)
 
-    print("number of variant not parsed : ", number_pass)
     return vcf_dict
 
 if __name__ == "__main__" :
