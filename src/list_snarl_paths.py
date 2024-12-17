@@ -80,13 +80,13 @@ def calcul_type_variant(list_list_length_paths) :
     list_type_variant = []
     for path_lengths in list_list_length_paths :
         
-        if len(path_lengths) > 3 or path_lengths[1] == '-1' : # Case snarl in snarl / Indel
+        if len(path_lengths) > 3 or path_lengths[1] == '-1' : # Case snarl in snarl
             list_type_variant.append("COMPLEX")
 
         elif len(path_lengths) == 3 : # Case simple path len 3
             list_type_variant.append("SNP" if path_lengths[1] == 1 else "INS")
 
-        else : # Deletion
+        else : # length < 3 / Deletion
             list_type_variant.append("DEL")
 
     return list_type_variant

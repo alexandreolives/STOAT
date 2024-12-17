@@ -26,9 +26,16 @@ git clone https://github.com/Plogeur/STOAT.git
 cd STOAT
 pip install -r requirements.txt
 
-# install bdsg version > 3.0.0
+# install bdsg version > 3.0.0 
+# DO NOT use pip install bdsg cause version 3.0.0
 git clone --recursive https://github.com/vgteam/libbdsg.git
 cd libbdsg
+mkdir build
+cd build
+cmake ..
+make -j 8
+
+# add path to python
 # see more installation information on bdsg github
 ````
 
