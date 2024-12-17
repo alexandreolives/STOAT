@@ -110,7 +110,7 @@ def check_format_vcf_file(file_path : str) -> str:
     """
     check_file(file_path)
 
-    if not file_path.lower().endswith('.') and not file_path.lower().endswith('.vcf.gz'):
+    if not file_path.lower().endswith('.vcf') and not file_path.lower().endswith('.vcf.gz'):
         raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid VCF file. It must have a .vcf extension or .vcf.gz.")
     return file_path
 

@@ -79,7 +79,12 @@ Alternatively, you can specify the script you want to launch, depending on your 
   **Output**: 2 PNG file plots.
 
 - Example of specific script of tool : 
+
 ```bash
+
+# binary trait with list_path already computed (can also do with quantitative trait)
+python3 stoat.py -l <list_paths_snarl.txt> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.tsv
+
 # decompose pangenome
 python3 list_snarl_paths.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -o <output.tsv>
 
