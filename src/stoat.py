@@ -20,6 +20,7 @@ def main() :
     parser.add_argument("-t", type=list_snarl_paths.check_threshold, help='Children threshold', required=False)
     parser.add_argument("-v", type=utils.check_format_vcf_file, help="Path to the merged VCF file (.vcf or .vcf.gz)", required=True)
     parser.add_argument("-r", type=utils.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (.vcf or .vcf.gz)", required=False)
+    parser.add_argument("--listpath", type=utils.check_format_list_path, help="Path to the list paths", required=False)
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-b", "--binary", type=utils.check_format_pheno, help="Path to the binary group file (.txt or .tsv)")
@@ -74,21 +75,28 @@ def main() :
         pheno = utils.parse_pheno_quantitatif_file(args.quantitative)
         utils.check_mathing(pheno, list_samples, "phenotype")
 
-    # Step 1: Parse the Pangenome Graph and Create Snarl Paths to Test
-    start_time = time.time()
-    logger.info("Starting snarl path decomposition...")
-    stree, pg, root = list_snarl_paths.parse_graph_tree(args.p, args.d)
-    snarls = list_snarl_paths.save_snarls(stree, root)
-    logger.info(f"Total of snarls found : {len(snarls)}")
-    logger.info("Saving snarl path decomposition...")
+    if not parser.listpath : 
+        # Step 1: Parse the Pangenome Graph and Create Snarl Paths to Test
+        start_time = time.time()
+        logger.info("Starting snarl path decomposition...")
+        stree, pg, root = list_snarl_paths.parse_graph_tree(args.p, args.d)
+        snarls = list_snarl_paths.save_snarls(stree, root)
+        logger.info(f"Total of snarls found : {len(snarls)}")
+        logger.info("Saving snarl path decomposition...")
 
-    output_snarl_path_not_analyse = os.path.join(output_dir, "snarl_not_analyse.tsv")
-    output_snarl_path = os.path.join(output_dir, "snarl_paths.tsv")
+        output_snarl_path_not_analyse = os.path.join(output_dir, "snarl_not_analyse.tsv")
+        output_snarl_path = os.path.join(output_dir, "snarl_paths.tsv")
 
-    threshold = int(args.t) if args.t else 10 
-    snarl_paths, snarl_number_analysis = list_snarl_paths.loop_over_snarls_write(stree, snarls, pg, output_snarl_path, output_snarl_path_not_analyse, threshold)
+        threshold = int(args.t) if args.t else 10 
+        snarl_paths, paths_number_analysis = list_snarl_paths.loop_over_snarls_write(stree, snarls, pg, output_snarl_path, output_snarl_path_not_analyse, threshold)
+        logger.info(f"Total of paths analyse : {paths_number_analysis}")
 
-    logger.info(f"Total of paths analyse : {snarl_number_analysis}")
+    else :
+        if parser.p or parser.d : 
+            logger.info("list snarls path are provided, .pg and .dist will be not analyse")
+        input_snarl_path = parser.listpath
+        snarl_paths, paths_number_analysis = utils.parse_snarl_path_file(input_snarl_path)
+        logger.info(f"Total of snarls found : {paths_number_analysis}")
 
     # Step 2: Parse VCF Files and Fill the Matrix
     vcf_object = snarl_analyser.SnarlProcessor(args.v, list_samples)
@@ -116,9 +124,8 @@ def main() :
         p_value_analysis.qq_plot_binary(output_snarl, output_qq)
         p_value_analysis.plot_manhattan_binary(output_snarl, output_manh)
         if gaf :
-            snarl_path_dic = utils.parse_snarl_path_file(output_snarl_path)
             output_gaf = os.path.join(output_dir, "group_paths.gaf")
-            gaf_creator.parse_input_file(output_snarl, snarl_path_dic, pg, output_gaf)
+            gaf_creator.parse_input_file(output_snarl, snarl_paths, pg, output_gaf)
 
     # Handle Quantitative Analysis
     elif args.quantitative:

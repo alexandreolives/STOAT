@@ -40,17 +40,18 @@ def parse_snarl_path_file(path_file: str) -> dict:
     
     # Initialize an empty dictionary for the snarl paths
     snarl_paths = defaultdict(list)
+    snarl_number_analysis = 0
 
     # Read the file into a pandas DataFrame
     df = pd.read_csv(path_file, sep='\t', dtype=str)
-    df = df[df['paths'].notna()]
     df['paths'] = df['paths'].str.split(',')
 
     # Create the dictionary with snarl as key and paths as values
     for snarl, paths in zip(df['snarl'], df['paths']):
         snarl_paths[snarl].extend(paths)
+        snarl_number_analysis += 1
 
-    return snarl_paths
+    return snarl_paths, snarl_number_analysis
 
 def parse_covariate_file(covar_path : str) -> dict :
 
@@ -74,38 +75,72 @@ def check_mathing(elements, list_samples, file_name) :
     if missing_elements :
         raise ValueError(f"The following sample name from vcf are not present in {file_name} file : {missing_elements}")
 
+def check_format_list_path(file_path : str) -> str:
+    """
+    Function to check if the provided file path is a valid list path file.
+    """
+    check_file(file_path)
+
+    with open(file_path, 'r') as file:
+        # Read and validate the header
+        first_line = file.readline().strip()
+        expected_header = 'snarl\tpaths\ttype'
+        if first_line != expected_header:
+            raise argparse.ArgumentTypeError(
+                f"The file must start with the following header: '{expected_header}' and be split by tabulation"
+            )
+        
+        # Validate all other lines
+        for line_number, line in enumerate(file, start=2):  # Start at 2 for line number after header
+            columns = line.strip().split('\t')
+            if len(columns) != 3:
+                raise argparse.ArgumentTypeError(
+                    f"Line {line_number} must contain exactly 3 columns, but {len(columns)} columns were found."
+                )
+            if not all(isinstance(col, str) and col.strip() for col in columns):
+                raise argparse.ArgumentTypeError(
+                    f"Line {line_number} contains empty or non-string values: {columns}"
+                )
+
+    return file_path
+
 def check_format_vcf_file(file_path : str) -> str:
     """
     Function to check if the provided file path is a valid VCF file.
     """
     check_file(file_path)
 
-    if not file_path.lower().endswith('.vcf') and not file_path.lower().endswith('.vcf.gz'):
+    if not file_path.lower().endswith('.') and not file_path.lower().endswith('.vcf.gz'):
         raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid VCF file. It must have a .vcf extension or .vcf.gz.")
     return file_path
 
-def check_format_group_snarl(file_path : str) -> str :
-    """
-    Function to check if the provided file path is a valid group file.
-    """
-    check_file(file_path)
+def check_format_pheno(file_path: str) -> str:
     
-    if not file_path.lower().endswith('.txt') and not file_path.lower().endswith('.tsv'):
-        raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid group/snarl file. It must have a .txt extension or .tsv.")
-    return file_path
-
-def check_format_pheno(file_path : str) -> str :
-
     check_file(file_path)
     
     with open(file_path, 'r') as file:
         first_line = file.readline().strip()
-    
-    header = first_line.split('\t')
-    expected_header = ['FID', 'IID', 'PHENO']
-    if header != expected_header:
-        raise argparse.ArgumentTypeError(f"The file must contain the following headers: {expected_header} and be split by tabulation")
-    
+        header = first_line.split('\t')
+        expected_header = ['FID', 'IID', 'PHENO']
+        if header != expected_header:
+            raise argparse.ArgumentTypeError(
+                f"The file must contain the following headers: {expected_header} and be split by tabulation"
+            )
+        
+        # Validate all other lines
+        for line_number, line in enumerate(file, start=2):  # Start at 2 for line number after header
+            columns = line.strip().split('\t')
+            if len(columns) != 3:
+                raise argparse.ArgumentTypeError(
+                    f"Line {line_number} must contain exactly 3 columns, but {len(columns)} columns were found."
+                )
+            try:
+                float(columns[2])  # Check if the third column is a float or can be converted to one
+            except ValueError:
+                raise argparse.ArgumentTypeError(
+                    f"Line {line_number} contains a non-numeric value in the last column: {columns[2]}"
+                )
+
     return file_path
 
 def check_covariate_file(file_path):

@@ -25,6 +25,11 @@ Conventional GWAS tools typically rely on a single-reference genome, often overl
 git clone https://github.com/Plogeur/STOAT.git
 cd STOAT
 pip install -r requirements.txt
+
+# install bdsg version > 3.0.0
+git clone --recursive https://github.com/vgteam/libbdsg.git
+cd libbdsg
+# see more installation information on bdsg github
 ````
 
 ## Dependencies
