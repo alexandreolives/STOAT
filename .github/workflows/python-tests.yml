@@ -35,7 +35,8 @@ jobs:
       run: |
         git clone --recursive https://github.com/vgteam/libbdsg.git
         cd libbdsg
-        pip install .
+        python -m build
+        pip install dist/*.whl
         cd ..
 
     - name: Install dependencies
