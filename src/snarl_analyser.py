@@ -388,9 +388,9 @@ if __name__ == "__main__" :
         else :
             vcf_object.binary_table(snarl, binary_group, covar)
 
-    # python3 src/snarl_vcf_parser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
-    # python3 src/snarl_vcf_parser.py ../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../snarl_data/group.txt
-    # python3 src/snarl_vcf_parser.py ../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
+    # python3 src/snarl_analyser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
+    # python3 src/snarl_analyser.py ../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../snarl_data/group.txt
+    # python3 src/snarl_analyser.py ../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
 
     if args.quantitative:
         quantitative = utils.parse_pheno_quantitatif_file(args.quantitative)

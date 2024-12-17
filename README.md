@@ -13,11 +13,9 @@ STOAT is a specialized tool developed for conducting Genome-Wide Association Stu
 
 STOAT supports both binary and quantitative phenotypes:
 
-- For binary phenotypes (e.g., case vs. control studies), it utilizes chi-squared tests and Fisher’s exact test to evaluate associations between phenotype groups and snarl variants, providing robust statistical validation even in cases of sparse data.
+- For binary phenotypes (e.g., case vs control studies), it utilizes chi-squared tests and Fisher’s exact test to evaluate associations between phenotype groups and snarl variants, providing robust statistical validation even in cases of sparse data.
 
 - For quantitative phenotypes (e.g., traits measured on a continuous scale), the tool employs linear regression models to assess the association between snarl structures and phenotype values, allowing for continuous trait mapping with greater precision.
-
-Conventional GWAS tools typically rely on a single-reference genome, often overlooking structural variants and variations present in underrepresented populations. By using a pangenome graph, STOAT enables analysis across multiple genomes simultaneously, capturing a broader spectrum of structural variations, including insertions, deletions, and nested variants. The focus on snarls—graph features that encapsulate complex variant structures—provides a powerful means to map associations that would be difficult to detect in linear-based analyses.
 
 ## Installation
 
@@ -27,15 +25,11 @@ cd STOAT
 pip install -r requirements.txt
 
 # install bdsg version > 3.0.0 
-# DO NOT use pip install bdsg cause version 3.0.0
+# DO NOT use pip install bdsg cause version 3.0.0 instead do :
 git clone --recursive https://github.com/vgteam/libbdsg.git
 cd libbdsg
-mkdir build
-cd build
-cmake ..
-make -j 8
+pip install .
 
-# add path to python
 # see more installation information on bdsg github
 ````
 
@@ -60,13 +54,13 @@ python3 stoat.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to
 python3 stoat.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.tsv
 ```
 
-All options explaination :
+Explanation of all options:
 ```bash 
--p           Path to the input pangenome `.pg` file (required).
--d           Path to the input distance index `.dist` file (required).
+-p           Path to the input pangenome `.pg` file (mutually exclusive, required if `-l` not provided).
+-d           Path to the input distance index `.dist` file (mutually exclusive, required if `-l` not provided).
 -t           Specifies the children threshold (optional).
 -v           Path to the merged VCF file (`.vcf` or `.vcf.gz`) (required).
--r           Path to the VCF file referencing all snarl positions (`.vcf` or `.vcf.gz`) (optional).
+-r           Path to the VCF file referencing all snarl positions (`.vcf` or `.vcf.gz`) (mutually exclusive, required if `-p and -d` not provided).
 -l, --listpath  
              Path to the list of paths file (optional).
 -b, --binary  
@@ -83,7 +77,7 @@ All options explaination :
 
 Alternatively, you can specify the script you want to launch, depending on your desired task:
 
-- **`list_snarl_paths.py`**: Identifies snarl paths. (By default, it excludes snarls with more than 50 children or 10,000 nodes.)  
+- **`list_snarl_paths.py`**: Identifies snarl paths. (By default, it excludes snarls with more than 50 children or 2 second computation by snarl)  
   **Input**: Graph information files (`.dist` and `.pg`)  
   **Output**: A two-column string file (`.tsv`) containing the snarl reference and the corresponding list of paths.
 
@@ -91,35 +85,35 @@ Alternatively, you can specify the script you want to launch, depending on your 
   **Input**: Graph information files (`.dist` and `.pg`)  
   **Output**: None
 
-- **`snarl_vcf_parser.py`**: The main script. It parses and analyzes all input files to return p-value associations.  
+- **`snarl_analyser.py`**: The main script. It parses and analyzes all input files to return p-value associations.  
   **Input**:  
   - Snarl list paths (`.tsv` or `.txt`)  
   - Binary or quantitative phenotype (`.tsv` or `.txt`)  
   - Merged VCF (`.vcf.gz` or `.vcf`)  
   **Output**: P-value associations.
 
-- **`gaf_creator.py`**: Creates a GAF file from a list of binary p-value associations (output of `snarl_vcf_parser.py`).  
+- **`gaf_creator.py`**: Creates a GAF file from a list of binary p-value associations (output of `snarl_analyser.py`).  
   **Input**: Binary p-value association file.  
   **Output**: GAF file.
 
-- **`p_value_analysis.py`**: Creates a Manhattan plot and QQ plot (output of `snarl_vcf_parser.py`).  
+- **`p_value_analysis.py`**: Creates a Manhattan plot and QQ plot (output of `snarl_analyser.py`).  
   **Input**: Binary or Quantitative p-value association file.  
   **Output**: 2 PNG file plots.
 
 - Example of specific script of tool : 
 
 ```bash
-# binary trait with list_path already computed (can also do with quantitative trait)
-python3 stoat.py -l <list_paths_snarl.txt> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.tsv
-
 # decompose pangenome
 python3 list_snarl_paths.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -o <output.tsv>
 
+# binary trait with list_path already computed (can also do with quantitative trait) and gaf creation 
+python3 stoat.py -l <list_paths_snarl.txt> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> --gaf -o output.tsv
+
 # binary trait
-python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.txt
+python3 snarl_analyser.py <path_to_vcf_file.vcf.gz> <list_paths_snarl.txt> <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.txt
 
 # quantitative trait 
-python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.txt
+python3 snarl_analyser.py <path_to_vcf_file.vcf.gz> <list_paths_snarl.txt> <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.txt
 ```
 
 ## Input format file
@@ -127,17 +121,12 @@ python3 snarl_vcf_parser.py <path_to_vcf_file.vcf.gz> <path_to_snarl_file.txt> <
 Required files :
 - pg_file : Pangenome graph file, formats accepted: .pg or .xg.
 - dist_file : Distance file generated with vg dist, format: .dist.
-- vcf_ref : Reference node positions in the pangenome graph generated with vg deconstruct, formats: .vcf or .vcf.gz.
+- vcf_ref : Reference node positions in the pangenome graph generated with vg deconstruct, formats: .vcf.
 - vcf : Merged VCF file, created using bcftools merge, formats: .vcf or .vcf.gz.
-- group/pheno : 
-    - Binary phenotype: Two-column file with SAMPLE and GROUP labels. Format: .txt or .tsv (tab-separated).
-
-    - Quantitative phenotype: Three-column file with FID (family/sample name), IID (sample name), and PHENO (integer/float). Format: .txt or .tsv (tab-separated).
+- pheno : Three-column file with FID (family/sample name), IID (sample name), and PHENO (integer/float). Format: .txt or .tsv (tab-separated).
 
 Optional file : 
-- snarl : Two-column file containing snarl names and the list of paths through the snarl's netgraph, separated by tabs. Format: .txt or .tsv.
-
-## Output
+- list_paths : Two-column file containing snarl names and the list of paths through the snarl's netgraph, separated by tabs. Format: .txt or .tsv.
 
 ## Output
 
@@ -145,18 +134,18 @@ Optional file :
 |-------------------|-----------------------------------------------------------------------------------------------|
 | **CHR**           | Chromosome name where the variation occurs.                                                   |
 | **POS**           | Position of the snarl within the chromosome.                                                  |
-| **SNARL**         | Identifier for the variant region, specifying start and end positions.                        |
+| **SNARL**         | Identifier for the variant, snarl name/id                    |
 | **TYPE**          | Type of genetic variation (e.g., SNP, INS, DEL).                                              |
 | **REF**           | Sequence of the reference allele.                                                             |
 | **ALT**           | Sequence of the alternate allele.                                                             |
-| **P_FISHER**      | P-value calculated using Fisher's exact test. (binary analysis)                               |
-| **P_CHI2**        | P-value calculated using the Chi-squared test. (binary analysis)                              |
-| **P_value**       | P-value calculated using the linear regression. (quantitatif analysis)                        |
-| **TOTAL_SUM**     | Total of samples that pass to this snarl.                                                     |
-| **MIN_ROW_INDEX** | Minimum group samples that pass to one path of the snarl.                                     |
+| **P_FISHER**      | P-value calculated using Fisher's exact test (binary analysis).                               |
+| **P_CHI2**        | P-value calculated using the Chi-squared test (binary analysis).                              |
+| **P_value**       | P-value calculated using linear regression (quantitative analysis).                           |
+| **TOTAL_SUM**     | Total number of samples that pass for this snarl.                                             |
+| **MIN_ROW_INDEX** | Minimum group of samples that pass through one path of the snarl.                             |
 | **NUM_COLUM**     | Number of paths in the snarl.                                                                 |
-| **INTER_GROUP**   | Sum of the minimum sample that pass on each paths.                                            |
-| **AVERAGE**       | Average of the total samples paasing on this snarl divided by the number of paths.            |
+| **INTER_GROUP**   | Sum of the minimum samples that pass through each path.                                       |
+| **AVERAGE**       | Average number of total samples passing through this snarl, divided by the number of paths.   |
 
 ### Example of Output:
 
@@ -193,4 +182,3 @@ python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths
 ```
 
 *Output Plots and sequenceTube*
-

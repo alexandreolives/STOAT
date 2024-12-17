@@ -15,8 +15,8 @@ def main() :
 
     # Argument Parsing
     parser = argparse.ArgumentParser(description='Parse and analyze snarl from VCF file')
-    parser.add_argument('-p', type=utils.check_file, help='The input pangenome .pg file', required=True)
-    parser.add_argument('-d', type=utils.check_file, help='The input distance index .dist file', required=True)
+    parser.add_argument('-p', type=utils.check_file, help='The input pangenome .pg file', required=False)
+    parser.add_argument('-d', type=utils.check_file, help='The input distance index .dist file', required=False)
     parser.add_argument("-t", type=list_snarl_paths.check_threshold, help='Children threshold', required=False)
     parser.add_argument("-v", type=utils.check_format_vcf_file, help="Path to the merged VCF file (.vcf or .vcf.gz)", required=True)
     parser.add_argument("-r", type=utils.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (.vcf or .vcf.gz)", required=False)
@@ -32,6 +32,9 @@ def main() :
 
     if args.quantitative and args.gaf:
         parser.error("The '--gaf' argument cannot be used with the '--quantitative' ('-q') argument.")
+
+    if not args.listpath and (not args.p or not args.d) :
+        parser.error("When --listpath (-l) is not provided, both -p and -d must be specified to compute it.")
 
     # Generate unique output directory based on timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

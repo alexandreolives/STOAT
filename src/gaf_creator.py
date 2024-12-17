@@ -152,7 +152,7 @@ def parse_graph_tree(pg_file) :
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Parse a file and create a GAF file.")
-    parser.add_argument('-s', '--snarl', type=str, help="Path to the variant snarl file. (output file of snarl_vcf_parser.py)", required=True)
+    parser.add_argument('-s', '--snarl', type=str, help="Path to the variant snarl file. (output file of snarl_analyser.py)", required=True)
     parser.add_argument('-l', '--pathlist', type=str, help="Path to the list tested snarl file. (output file of list_snarl_paths.py)", required=True)
     parser.add_argument('-p', '--pg', type=str, help='the input pangenome .pg file', required=True)
     parser.add_argument('-o', '--output', type=str, help="Path to the output GAF file.", required=False)
