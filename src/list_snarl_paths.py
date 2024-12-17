@@ -127,8 +127,8 @@ def follow_edges(stree, finished_paths, path, paths, pg) :
                 
             paths.append([])
             for net in path:
-                paths[-1].append(net) #paths[-1].append(net)
-            paths[-1].append(next_child) #paths[-1].append(next_child)
+                paths[-1].append(net)
+            paths[-1].append(next_child)
         return True
 
     # from the last thing in the path
@@ -155,18 +155,20 @@ def parse_graph_tree(pg_file, dist_file) :
     # load graph and snarl tree
     pg = bdsg.bdsg.PackedGraph()
     pg.deserialize(pg_file)
+    hash = bdsg.bdsg.HashGraph()
+    hash.deserialize(pg_file)
     stree = bdsg.bdsg.SnarlDistanceIndex()
     stree.deserialize(dist_file)
 
     # list all snarls in pangenome
     # init with the child (only one ideally) of the root
     root = stree.get_root()
-    return stree, pg, root
+    return stree, pg, hash, root
 
-def fill_pretty_paths(stree, pg, finished_paths) :
+def fill_pretty_paths(stree, pg, hash, finished_paths) :
     pretty_paths = []
     length_net_paths = []
-    #position_chr = []
+    chr_positions = []
 
     for path in finished_paths:
         ppath = Path()
@@ -180,7 +182,13 @@ def fill_pretty_paths(stree, pg, finished_paths) :
                 ppath.addNodeHandle(net, stree)
                 if stree.is_node(net) :
                     length_net.append(str(stree.node_length(net)))
-                    #position_chr.append() # determine position 
+
+                    # Determine chromosome and position
+                    handle = pg.get_handle(stree.node_id(net))
+                    path_name = hash.get_path_name(net) # Chromosome name
+                    #path_position = pg.get_position(handle) # Position in the path
+                    #chr_positions.append((path_name, path_position))
+                    chr_positions.append(path_name)
 
                 else :
                     # return the first length node from a trivial_chain
@@ -224,7 +232,7 @@ def write_output_not_analyse(output_file, snarl_id, reason) :
     with open(output_file, 'a') as outf:
         outf.write('{}\t{}\n'.format(snarl_id, reason))
 
-def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_analyse, time_threshold=10, bool_return=True) :
+def loop_over_snarls_write(stree, snarls, pg, hash, output_file, output_snarl_not_analyse, time_threshold=10, bool_return=True) :
 
     write_header_output(output_file)
     write_header_output_not_analyse(output_snarl_not_analyse)
@@ -252,7 +260,7 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
             follow_edges(stree, finished_paths, path, paths, pg)
 
         # prepare path list to output and write each path directly to the file
-        pretty_paths, type_variants = fill_pretty_paths(stree, pg, finished_paths)
+        pretty_paths, type_variants = fill_pretty_paths(stree, pg, hash, finished_paths)
 
         write_output(output_file, snarl_id, pretty_paths, type_variants)
 
@@ -271,14 +279,14 @@ if __name__ == "__main__" :
     parser.add_argument('-o', help='the output TSV file', type=str, required=True)
     args = parser.parse_args()
 
-    stree, pg, root = parse_graph_tree(args.p, args.d)
+    stree, pg, hash, root = parse_graph_tree(args.p, args.d)
     snarls = save_snarls(stree, root)
     print(f"Total of snarls found : {len(snarls)}")
     print("Saving snarl path decomposition...")
     output_snarl_not_analyse = "snarl_not_analyse.tsv"
 
     threshold = args.t if args.t else 10
-    _, paths_number_analysis = loop_over_snarls_write(stree, snarls, pg, args.o, output_snarl_not_analyse, threshold, False)
+    _, paths_number_analysis = loop_over_snarls_write(stree, snarls, pg, hash, args.o, output_snarl_not_analyse, threshold, False)
     print(f"Total of paths analyse : {paths_number_analysis}")
 
     # python3 src/list_snarl_paths.py -p /home/mbagarre/Bureau/droso_data/fly/fly.pg -d /home/mbagarre/Bureau/droso_data/fly/fly.dist -o output/test/test_list_snarl.tsv
