@@ -155,20 +155,17 @@ def parse_graph_tree(pg_file, dist_file) :
     # load graph and snarl tree
     pg = bdsg.bdsg.PackedGraph()
     pg.deserialize(pg_file)
-    hash = bdsg.bdsg.HashGraph()
-    hash.deserialize(pg_file)
     stree = bdsg.bdsg.SnarlDistanceIndex()
     stree.deserialize(dist_file)
 
     # list all snarls in pangenome
     # init with the child (only one ideally) of the root
     root = stree.get_root()
-    return stree, pg, hash, root
+    return stree, pg, root
 
-def fill_pretty_paths(stree, pg, hash, finished_paths) :
+def fill_pretty_paths(stree, pg, finished_paths) :
     pretty_paths = []
     length_net_paths = []
-    chr_positions = []
 
     for path in finished_paths:
         ppath = Path()
@@ -182,13 +179,6 @@ def fill_pretty_paths(stree, pg, hash, finished_paths) :
                 ppath.addNodeHandle(net, stree)
                 if stree.is_node(net) :
                     length_net.append(str(stree.node_length(net)))
-
-                    # Determine chromosome and position
-                    handle = pg.get_handle(stree.node_id(net))
-                    path_name = hash.get_path_name(net) # Chromosome name
-                    #path_position = pg.get_position(handle) # Position in the path
-                    #chr_positions.append((path_name, path_position))
-                    chr_positions.append(path_name)
 
                 else :
                     # return the first length node from a trivial_chain
@@ -232,20 +222,32 @@ def write_output_not_analyse(output_file, snarl_id, reason) :
     with open(output_file, 'a') as outf:
         outf.write('{}\t{}\n'.format(snarl_id, reason))
 
-def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_analyse, time_threshold=2, bool_return=True) :
+def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_analyse, children_treshold=50, bool_return=True) :
 
     write_header_output(output_file)
     write_header_output_not_analyse(output_snarl_not_analyse)
 
     snarl_paths = defaultdict(list)
     paths_number_analysis = 0
+    time_threshold = 2 # 2s max per snarl analysis
+
+    children = [0]
+    def count_children(net):
+        children[0] += 1
+        return (True)
 
     # for each snarl, lists paths through the netgraph and write to output TSV
-    for snarl in snarls :
-        
+    for snarl in snarls:
+    
         snarl_time = time.time()
         snarl_id = find_snarl_id(stree, snarl)
-        out_break = False
+        not_break = True
+        children = [0]
+
+        stree.for_each_child(snarl, count_children)
+        if children[0] > children_treshold :
+            write_output_not_analyse(output_snarl_not_analyse, snarl_id, "too_many_children")
+            continue
 
         # we'll traverse the netgraph starting at the left boundary
         # init unfinished paths to the first boundary node
@@ -253,23 +255,23 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
         finished_paths = []
         while len(paths) > 0 :
             path = paths.pop()
-
+    
             if time.time() - snarl_time > time_threshold :
                 write_output_not_analyse(output_snarl_not_analyse, snarl_id, "time_calculation_out")
-                out_break = True
+                not_break = False
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
 
-        if not out_break :
+        if not_break :
             # prepare path list to output and write each path directly to the file
             pretty_paths, type_variants = fill_pretty_paths(stree, pg, finished_paths)
-
             write_output(output_file, snarl_id, pretty_paths, type_variants)
 
             if bool_return :
                 snarl_paths[snarl_id].extend(pretty_paths)
-                paths_number_analysis += len(pretty_paths)
+            
+            paths_number_analysis += len(pretty_paths)
 
     return snarl_paths, paths_number_analysis
 
@@ -282,14 +284,14 @@ if __name__ == "__main__" :
     parser.add_argument('-o', help='the output TSV file', type=str, required=True)
     args = parser.parse_args()
 
-    stree, pg, hash, root = parse_graph_tree(args.p, args.d)
+    stree, pg, root = parse_graph_tree(args.p, args.d)
     snarls = save_snarls(stree, root)
     print(f"Total of snarls found : {len(snarls)}")
     print("Saving snarl path decomposition...")
     output_snarl_not_analyse = "snarl_not_analyse.tsv"
 
     threshold = args.t if args.t else 10
-    _, paths_number_analysis = loop_over_snarls_write(stree, snarls, pg, hash, args.o, output_snarl_not_analyse, threshold, False)
+    _, paths_number_analysis = loop_over_snarls_write(stree, snarls, pg, args.o, output_snarl_not_analyse, threshold, False)
     print(f"Total of paths analyse : {paths_number_analysis}")
 
     # python3 src/list_snarl_paths.py -p /home/mbagarre/Bureau/droso_data/fly/fly.pg -d /home/mbagarre/Bureau/droso_data/fly/fly.dist -o output/test/test_list_snarl.tsv

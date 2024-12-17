@@ -200,7 +200,6 @@ class SnarlProcessor:
     def create_binary_table(self, groups, list_path_snarl) -> pd.DataFrame:
         """Generates a binary table DataFrame indicating the presence of snarl paths in given groups based on matrix data"""
         
-        list_samples = self.list_samples
         length_column_headers = len(list_path_snarl)
 
         # Initialize g0 and g1 with zeros, corresponding to the length of column_headers
@@ -209,13 +208,13 @@ class SnarlProcessor:
 
         # Iterate over each path_snarl in column_headers
         for idx_g, path_snarl in enumerate(list_path_snarl):
-            idx_srr_save = list(range(len(list_samples)))
+            idx_srr_save = list(range(len(self.list_samples)))
             decomposed_snarl = self.decompose_string(path_snarl)
             idx_srr_save = self.identify_correct_path(decomposed_snarl, idx_srr_save)
 
             # Count occurrences in g0 and g1 based on the updated idx_srr_save
             for idx in idx_srr_save:
-                srr = list_samples[idx // 2]
+                srr = self.list_samples[idx // 2]
 
                 if srr in groups[0]:
                     g0[idx_g] += 1
