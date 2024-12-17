@@ -50,7 +50,14 @@ jobs:
         echo "local_scheme = 'node-and-date'" >> pyproject.toml
         cd ..
 
-    # Step 6: Build and install libbdsg
+    # Step 6: Clean up the libbdsg directory to avoid git clone errors
+    - name: Clean up libbdsg directory if it exists
+      run: |
+        if [ -d "libbdsg" ]; then
+          rm -rf libbdsg
+        fi
+
+    # Step 7: Build and install libbdsg
     - name: Build and install libbdsg
       run: |
         git clone --recursive https://github.com/vgteam/libbdsg.git
@@ -59,10 +66,10 @@ jobs:
         pip install dist/*.whl  # Install the built wheel
         cd ..
 
-    # Step 7: Install other dependencies
+    # Step 8: Install other dependencies
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-    # Step 8: Run tests
+    # Step 9: Run tests
     - name: Run tests
       run: pytest
