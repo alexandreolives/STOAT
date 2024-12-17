@@ -172,18 +172,21 @@ class SnarlProcessor:
         """
         Return a list of column indices where all specific elements of this column in the matrix are 1.
         """
-        matrix = self.matrix.get_matrix()  # Assuming this returns the matrix as a numpy array
-        rows_to_check = np.array([], dtype=int)
 
-        # Print the decomposed_snarl and row_headers_dict
-        for snarl in decomposed_snarl:
-            if "*" in snarl:
-                continue
-            if snarl in row_headers_dict:
-                row_index = row_headers_dict[snarl]
-                rows_to_check = np.append(rows_to_check, row_index)
-            else:
-                return []
+        matrix = self.matrix.get_matrix()
+
+        # Build rows_to_check using a list comprehension
+        rows_to_check = [
+            row_headers_dict[snarl]
+            for snarl in decomposed_snarl
+            if "*" not in snarl and snarl in row_headers_dict
+        ]
+        
+        # Return early if no valid rows are found
+        if not rows_to_check:
+            return []
+
+        rows_to_check = np.array(rows_to_check, dtype=int)
 
         # Extract the rows from the matrix using rows_to_check
         extracted_rows = matrix[rows_to_check, :]
