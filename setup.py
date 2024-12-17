@@ -19,7 +19,6 @@ setup(
         "cyvcf2==0.31.1",
         "numpy==2.0.1",
         "pandas==2.2.2",
-        "bdsg==0.3",
         "statsmodels==0.14.4",
         "qmplot==0.3.3",
         "scipy==1.14.1",

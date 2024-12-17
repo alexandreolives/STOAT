@@ -10,7 +10,7 @@ from scipy.stats import fisher_exact
 # from limix.stats import logisticMixedModel
 # from limix.stats import scan
 import time
-
+ 
 class Matrix :
     def __init__(self, default_row_number=1_000_000, column_number=2):
         self.default_row_number = default_row_number 
@@ -168,25 +168,26 @@ class SnarlProcessor:
                 data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, pvalue)
                 outf.write(data.encode('utf-8'))
 
-    def identify_correct_path(self, decomposed_snarl: list, row_headers_dict: dict, idx_srr_save: list) -> list:
+    def identify_correct_path(self, decomposed_snarl: list, idx_srr_save: list) -> list:
         """
         Return a list of column indices where all specific elements of this column in the matrix are 1.
         """
-        matrix = self.matrix.get_matrix()  # Assuming this returns the matrix as a numpy array
-        rows_to_check = np.array([], dtype=int)
 
-        # Print the decomposed_snarl and row_headers_dict
-        for snarl in decomposed_snarl:
-            if "*" in snarl:
-                continue
-            if snarl in row_headers_dict:
-                row_index = row_headers_dict[snarl]
-                rows_to_check = np.append(rows_to_check, row_index)
-            else:
-                return []
+        # Build rows_to_check using a list comprehension
+        rows_to_check = [
+            self.matrix.row_headers_dict[snarl]
+            for snarl in decomposed_snarl
+            if "*" not in snarl and snarl in self.matrix.row_headers_dict
+        ]
+        
+        # Return early if no valid rows are found
+        if not rows_to_check:
+            return []
+
+        rows_to_check = np.array(rows_to_check, dtype=int)
 
         # Extract the rows from the matrix using rows_to_check
-        extracted_rows = matrix[rows_to_check, :]
+        extracted_rows = self.matrix.get_matrix()[rows_to_check, :]
 
         # Check if all elements in the columns are 1 for the specified rows
         columns_all_ones = np.all(extracted_rows == 1, axis=0)
@@ -199,9 +200,7 @@ class SnarlProcessor:
     def create_binary_table(self, groups, list_path_snarl) -> pd.DataFrame:
         """Generates a binary table DataFrame indicating the presence of snarl paths in given groups based on matrix data"""
         
-        row_headers_dict = self.matrix.get_row_header()
         list_samples = self.list_samples
-
         length_column_headers = len(list_path_snarl)
 
         # Initialize g0 and g1 with zeros, corresponding to the length of column_headers
@@ -212,7 +211,7 @@ class SnarlProcessor:
         for idx_g, path_snarl in enumerate(list_path_snarl):
             idx_srr_save = list(range(len(list_samples)))
             decomposed_snarl = self.decompose_string(path_snarl)
-            idx_srr_save = self.identify_correct_path(decomposed_snarl, row_headers_dict, idx_srr_save)
+            idx_srr_save = self.identify_correct_path(decomposed_snarl, idx_srr_save)
 
             # Count occurrences in g0 and g1 based on the updated idx_srr_save
             for idx in idx_srr_save:
@@ -229,7 +228,6 @@ class SnarlProcessor:
         return df
 
     def create_quantitative_table(self, column_headers: list) -> pd.DataFrame:
-        row_headers_dict = self.matrix.get_row_header()
         length_sample = len(self.list_samples)
 
         # Initialize a zero matrix for genotypes with shape (length_sample, len(column_headers))
@@ -238,7 +236,7 @@ class SnarlProcessor:
         # Iterate over each path_snarl and fill in the matrix
         for col_idx, path_snarl in enumerate(column_headers):
             decomposed_snarl = self.decompose_string(path_snarl)
-            idx_srr_save = self.identify_correct_path(decomposed_snarl, row_headers_dict, list(range(length_sample)))
+            idx_srr_save = self.identify_correct_path(decomposed_snarl, list(range(length_sample)))
 
             for idx in idx_srr_save:
                 srr_idx = idx // 2  # Convert index to the appropriate sample index

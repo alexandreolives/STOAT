@@ -20,7 +20,7 @@ def main() :
     parser.add_argument("-t", type=list_snarl_paths.check_threshold, help='Children threshold', required=False)
     parser.add_argument("-v", type=utils.check_format_vcf_file, help="Path to the merged VCF file (.vcf or .vcf.gz)", required=True)
     parser.add_argument("-r", type=utils.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (.vcf or .vcf.gz)", required=False)
-    parser.add_argument("--listpath", type=utils.check_format_list_path, help="Path to the list paths", required=False)
+    parser.add_argument("-l", "--listpath", type=utils.check_format_list_path, help="Path to the list paths", required=False)
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-b", "--binary", type=utils.check_format_pheno, help="Path to the binary group file (.txt or .tsv)")
@@ -66,16 +66,18 @@ def main() :
         covar = None
 
     if args.binary:
+        logger.info("Parsing binary phenotype...")
         pheno = utils.parse_pheno_binary_file(args.binary)
         merged_dict = pheno[0].copy()  # Make a copy to avoid modifying dict1
         merged_dict.update(pheno[1]) 
         utils.check_mathing(merged_dict, list_samples, "phenotype")
 
     elif args.quantitative:
+        logger.info("Parsing quantitative phenotype...")
         pheno = utils.parse_pheno_quantitatif_file(args.quantitative)
         utils.check_mathing(pheno, list_samples, "phenotype")
 
-    if not parser.listpath : 
+    if not args.listpath : 
         # Step 1: Parse the Pangenome Graph and Create Snarl Paths to Test
         start_time = time.time()
         logger.info("Starting snarl path decomposition...")
@@ -92,9 +94,9 @@ def main() :
         logger.info(f"Total of paths analyse : {paths_number_analysis}")
 
     else :
-        if parser.p or parser.d : 
+        if args.p or args.d : 
             logger.info("list snarls path are provided, .pg and .dist will be not analyse")
-        input_snarl_path = parser.listpath
+        input_snarl_path = args.listpath
         snarl_paths, paths_number_analysis = utils.parse_snarl_path_file(input_snarl_path)
         logger.info(f"Total of snarls found : {paths_number_analysis}")
 
@@ -109,7 +111,6 @@ def main() :
     # Handle Binary Analysis
     if args.binary:
         gaf = True if args.gaf else False
-        logger.info("Parsing binary phenotype...")
         output_snarl = os.path.join(output_dir, "binary_analysis.tsv")
         logger.info("Binary table creation...")
         vcf_object.binary_table(snarl_paths, pheno, covar, gaf, output_snarl)
@@ -129,7 +130,6 @@ def main() :
 
     # Handle Quantitative Analysis
     elif args.quantitative:
-        logger.info("Parsing quantitative phenotype...")
         output_file = os.path.join(output_dir, "quantitative_analysis.tsv")
         logger.info("Quantitative table creation...")
         vcf_object.quantitative_table(snarl_paths, pheno, covar, output_file)
@@ -150,8 +150,8 @@ main()
 
 """
 Usage example:
-    python3 src/stoat.py -p ../snarl_data/fly.pg -d ../snarl_data/fly.dist -v ../droso_data/pangenome.dm6.vcf \
-    -r ../droso_data/fly.normalized.vg_deconstruct.vcf -q ../droso_data/pangenome_phenotype.tsv -o output
+    python3 src/stoat.py -p ../droso_data/fly/fly.pg -d ../droso_data/fly/fly.dist -v ../droso_data/pangenome.dm6.vcf \
+    -r ../droso_data/fly/fly.deconstruct.vcf -q ../droso_data/pangenome_phenotype.tsv -o output
 
 Usage test:
     python3 src/stoat.py -p test/simulation/pg.full.pg -d test/simulation/pg.dist -v test/simulation/merged_output.vcf.gz \

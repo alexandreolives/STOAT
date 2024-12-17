@@ -80,13 +80,13 @@ def calcul_type_variant(list_list_length_paths) :
     list_type_variant = []
     for path_lengths in list_list_length_paths :
         
-        if len(path_lengths) > 3 or path_lengths[1] == '-1' : # Case snarl in snarl / Indel
+        if len(path_lengths) > 3 or path_lengths[1] == '-1' : # Case snarl in snarl
             list_type_variant.append("COMPLEX")
 
         elif len(path_lengths) == 3 : # Case simple path len 3
             list_type_variant.append("SNP" if path_lengths[1] == 1 else "INS")
 
-        else : # Deletion
+        else : # length < 3 / Deletion
             list_type_variant.append("DEL")
 
     return list_type_variant
@@ -232,7 +232,7 @@ def write_output_not_analyse(output_file, snarl_id, reason) :
     with open(output_file, 'a') as outf:
         outf.write('{}\t{}\n'.format(snarl_id, reason))
 
-def loop_over_snarls_write(stree, snarls, pg, hash, output_file, output_snarl_not_analyse, time_threshold=10, bool_return=True) :
+def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_analyse, time_threshold=2, bool_return=True) :
 
     write_header_output(output_file)
     write_header_output_not_analyse(output_snarl_not_analyse)
@@ -241,10 +241,11 @@ def loop_over_snarls_write(stree, snarls, pg, hash, output_file, output_snarl_no
     paths_number_analysis = 0
 
     # for each snarl, lists paths through the netgraph and write to output TSV
-    for snarl in snarls:
-
+    for snarl in snarls :
+        
         snarl_time = time.time()
         snarl_id = find_snarl_id(stree, snarl)
+        out_break = False
 
         # we'll traverse the netgraph starting at the left boundary
         # init unfinished paths to the first boundary node
@@ -253,20 +254,22 @@ def loop_over_snarls_write(stree, snarls, pg, hash, output_file, output_snarl_no
         while len(paths) > 0 :
             path = paths.pop()
 
-            if snarl_time - time.time() > time_threshold :
+            if time.time() - snarl_time > time_threshold :
                 write_output_not_analyse(output_snarl_not_analyse, snarl_id, "time_calculation_out")
+                out_break = True
                 break
 
             follow_edges(stree, finished_paths, path, paths, pg)
 
-        # prepare path list to output and write each path directly to the file
-        pretty_paths, type_variants = fill_pretty_paths(stree, pg, hash, finished_paths)
+        if not out_break :
+            # prepare path list to output and write each path directly to the file
+            pretty_paths, type_variants = fill_pretty_paths(stree, pg, finished_paths)
 
-        write_output(output_file, snarl_id, pretty_paths, type_variants)
+            write_output(output_file, snarl_id, pretty_paths, type_variants)
 
-        if bool_return :
-            snarl_paths[snarl_id].extend(pretty_paths)
-            paths_number_analysis += len(pretty_paths)
+            if bool_return :
+                snarl_paths[snarl_id].extend(pretty_paths)
+                paths_number_analysis += len(pretty_paths)
 
     return snarl_paths, paths_number_analysis
 

@@ -26,9 +26,16 @@ git clone https://github.com/Plogeur/STOAT.git
 cd STOAT
 pip install -r requirements.txt
 
-# install bdsg version > 3.0.0
+# install bdsg version > 3.0.0 
+# DO NOT use pip install bdsg cause version 3.0.0
 git clone --recursive https://github.com/vgteam/libbdsg.git
 cd libbdsg
+mkdir build
+cd build
+cmake ..
+make -j 8
+
+# add path to python
 # see more installation information on bdsg github
 ````
 
@@ -51,6 +58,27 @@ python3 stoat.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to
 
 # quantative trait
 python3 stoat.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.tsv
+```
+
+All options explaination :
+```bash 
+-p           Path to the input pangenome `.pg` file (required).
+-d           Path to the input distance index `.dist` file (required).
+-t           Specifies the children threshold (optional).
+-v           Path to the merged VCF file (`.vcf` or `.vcf.gz`) (required).
+-r           Path to the VCF file referencing all snarl positions (`.vcf` or `.vcf.gz`) (optional).
+-l, --listpath  
+             Path to the list of paths file (optional).
+-b, --binary  
+             Path to the binary group file (`.txt` or `.tsv`) (mutually exclusive, required if `-q` not provided).
+-q, --quantitative  
+             Path to the quantitative phenotype file (`.txt` or `.tsv`) (mutually exclusive, required if `-b` not provided).
+-c, --covariate  (working progress)
+             Path to the covariate file (`.txt` or `.tsv`), LMM analysis (optional).
+-g, --gaf    
+             Prepare binary GWAS output for a GAF file and create a GAF file with the top 10 significant paths (optional).
+-o, --output  
+             Specifies the base path for the output directory (optional).
 ```
 
 Alternatively, you can specify the script you want to launch, depending on your desired task:
@@ -79,7 +107,11 @@ Alternatively, you can specify the script you want to launch, depending on your 
   **Output**: 2 PNG file plots.
 
 - Example of specific script of tool : 
+
 ```bash
+# binary trait with list_path already computed (can also do with quantitative trait)
+python3 stoat.py -l <list_paths_snarl.txt> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.tsv
+
 # decompose pangenome
 python3 list_snarl_paths.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -o <output.tsv>
 
