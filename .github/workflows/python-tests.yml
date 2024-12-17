@@ -31,11 +31,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install setuptools wheel setuptools_scm build
 
-    # Step 4: Install system dependencies (e.g., jansson)
-    - name: Install system dependencies
+    # Step 4: Install pybind11 and system dependencies (e.g., jansson)
+    - name: Install pybind11 and system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y libjansson-dev
+        pip install pybind11
 
     # Step 5: Patch pyproject.toml for libbdsg
     - name: Patch pyproject.toml for libbdsg
