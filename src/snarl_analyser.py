@@ -10,7 +10,7 @@ from scipy.stats import fisher_exact
 # from limix.stats import logisticMixedModel
 # from limix.stats import scan
 import time
-
+ 
 class Matrix :
     def __init__(self, default_row_number=1_000_000, column_number=2):
         self.default_row_number = default_row_number 

@@ -143,8 +143,8 @@ main()
 
 """
 Usage example:
-    python3 src/stoat.py -p ../snarl_data/fly.pg -d ../snarl_data/fly.dist -v ../droso_data/pangenome.dm6.vcf \
-    -r ../droso_data/fly.normalized.vg_deconstruct.vcf -q ../droso_data/pangenome_phenotype.tsv -o output
+    python3 src/stoat.py -p ../droso_data/fly/fly.pg -d ../droso_data/fly/fly.dist -v ../droso_data/pangenome.dm6.vcf \
+    -r ../droso_data/fly/fly.deconstruct.vcf -q ../droso_data/pangenome_phenotype.tsv -o output
 
 Usage test:
     python3 src/stoat.py -p test/simulation/pg.full.pg -d test/simulation/pg.dist -v test/simulation/merged_output.vcf.gz \
