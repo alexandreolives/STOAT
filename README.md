@@ -143,20 +143,20 @@ Optional file :
 
 | Column Name       | Description                                                                                   |
 |-------------------|-----------------------------------------------------------------------------------------------|
-| **CHR**           | Chromosome number where the variation occurs.                                                 |
-| **POS**           | Position of the variation within the chromosome.                                              |
+| **CHR**           | Chromosome name where the variation occurs.                                                   |
+| **POS**           | Position of the snarl within the chromosome.                                                  |
 | **SNARL**         | Identifier for the variant region, specifying start and end positions.                        |
 | **TYPE**          | Type of genetic variation (e.g., SNP, INS, DEL).                                              |
-| **REF**           | Reference allele.                                                                             |
-| **ALT**           | Alternate allele.                                                                             |
+| **REF**           | Sequence of the reference allele.                                                             |
+| **ALT**           | Sequence of the alternate allele.                                                             |
 | **P_FISHER**      | P-value calculated using Fisher's exact test. (binary analysis)                               |
 | **P_CHI2**        | P-value calculated using the Chi-squared test. (binary analysis)                              |
 | **P_value**       | P-value calculated using the linear regression. (quantitatif analysis)                        |
-| **TOTAL_SUM**     | Total sum of all values in the DataFrame.                                                     |
-| **MIN_ROW_INDEX** | Minimum sum among the row-wise sums of the DataFrame.                                         |
-| **NUM_COLUM**     | Number of columns in the DataFrame.                                                           |
-| **INTER_GROUP**   | Sum of the minimum values for each column.                                                    |
-| **AVERAGE**       | Average of the total sum divided by the number of columns.                                    |
+| **TOTAL_SUM**     | Total of samples that pass to this snarl.                                                     |
+| **MIN_ROW_INDEX** | Minimum group samples that pass to one path of the snarl.                                     |
+| **NUM_COLUM**     | Number of paths in the snarl.                                                                 |
+| **INTER_GROUP**   | Sum of the minimum sample that pass on each paths.                                            |
+| **AVERAGE**       | Average of the total samples paasing on this snarl divided by the number of paths.            |
 
 ### Example of Output:
 
