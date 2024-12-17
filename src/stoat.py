@@ -66,12 +66,14 @@ def main() :
         covar = None
 
     if args.binary:
+        logger.info("Parsing binary phenotype...")
         pheno = utils.parse_pheno_binary_file(args.binary)
         merged_dict = pheno[0].copy()  # Make a copy to avoid modifying dict1
         merged_dict.update(pheno[1]) 
         utils.check_mathing(merged_dict, list_samples, "phenotype")
 
     elif args.quantitative:
+        logger.info("Parsing quantitative phenotype...")
         pheno = utils.parse_pheno_quantitatif_file(args.quantitative)
         utils.check_mathing(pheno, list_samples, "phenotype")
 
@@ -109,7 +111,6 @@ def main() :
     # Handle Binary Analysis
     if args.binary:
         gaf = True if args.gaf else False
-        logger.info("Parsing binary phenotype...")
         output_snarl = os.path.join(output_dir, "binary_analysis.tsv")
         logger.info("Binary table creation...")
         vcf_object.binary_table(snarl_paths, pheno, covar, gaf, output_snarl)
@@ -129,7 +130,6 @@ def main() :
 
     # Handle Quantitative Analysis
     elif args.quantitative:
-        logger.info("Parsing quantitative phenotype...")
         output_file = os.path.join(output_dir, "quantitative_analysis.tsv")
         logger.info("Quantitative table creation...")
         vcf_object.quantitative_table(snarl_paths, pheno, covar, output_file)
