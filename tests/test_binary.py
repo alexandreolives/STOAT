@@ -31,4 +31,4 @@ def test_snarl_analyser():
     # Verify that the output directory exists after execution
     assert output_dir.exists(), f"Output directory {output_dir} does not exist."
 
-    # python3 src/stoat.py -p test/simulation/pg.full.pg -d test/simulation/pg.dist -v test/simulation/merged_output.vcf.gz -b test/simulation/phenotype.tsv -o test/simulation
+    # python3 tests/test_binary.py

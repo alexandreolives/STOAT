@@ -15,8 +15,8 @@ def main() :
 
     # Argument Parsing
     parser = argparse.ArgumentParser(description='Parse and analyze snarl from VCF file')
-    parser.add_argument('-p', type=utils.check_file, help='The input pangenome .pg file', required=True)
-    parser.add_argument('-d', type=utils.check_file, help='The input distance index .dist file', required=True)
+    parser.add_argument('-p', type=utils.check_file, help='The input pangenome .pg file', required=False)
+    parser.add_argument('-d', type=utils.check_file, help='The input distance index .dist file', required=False)
     parser.add_argument("-t", type=list_snarl_paths.check_threshold, help='Children threshold', required=False)
     parser.add_argument("-v", type=utils.check_format_vcf_file, help="Path to the merged VCF file (.vcf or .vcf.gz)", required=True)
     parser.add_argument("-r", type=utils.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (.vcf or .vcf.gz)", required=False)
@@ -26,12 +26,15 @@ def main() :
     group.add_argument("-b", "--binary", type=utils.check_format_pheno, help="Path to the binary group file (.txt or .tsv)")
     group.add_argument("-q", "--quantitative", type=utils.check_format_pheno, help="Path to the quantitative phenotype file (.txt or .tsv)")
     parser.add_argument("-c", "--covariate", type=utils.check_covariate_file, required=False, help="Path to the covariate file (.txt or .tsv)")
-    parser.add_argument("-g", "--gaf", required=False, help="Prepare binary gwas output to do gaf file + make gaf on 10th significatif paths")
+    parser.add_argument("-g", "--gaf", action="store_true", required=False, help="Prepare binary gwas output to do gaf file + make gaf on 10th significatif paths")
     parser.add_argument("-o", "--output", type=str, required=False, help="Base path for the output directory")
     args = parser.parse_args()
 
     if args.quantitative and args.gaf:
         parser.error("The '--gaf' argument cannot be used with the '--quantitative' ('-q') argument.")
+
+    if not args.listpath and (not args.p or not args.d) :
+        parser.error("When --listpath (-l) is not provided, both -p and -d must be specified to compute it.")
 
     # Generate unique output directory based on timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -154,6 +157,6 @@ Usage example:
     -r ../droso_data/fly/fly.deconstruct.vcf -q ../droso_data/pangenome_phenotype.tsv -o output
 
 Usage test:
-    python3 src/stoat.py -p test/simulation/pg.full.pg -d test/simulation/pg.dist -v test/simulation/merged_output.vcf.gz \
-    -b test/simulation/phenotype.tsv -o test/simulation
+    python3 src/stoat.py -p tests/simulation/pg.full.pg -d tests/simulation/pg.dist -v tests/simulation/merged_output.vcf \
+    -b tests/simulation/phenotype.tsv -o tests/simulation
 """

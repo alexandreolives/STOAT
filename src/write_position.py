@@ -95,7 +95,6 @@ def write_dic(vcf_dict, fields):
 
 def parse_vcf_to_dict(vcf_file):
     vcf_dict = {}
-    number_pass = 0
     with open(vcf_file, 'r') as file:
         for line in file:
             if line.startswith("#"):
@@ -110,7 +109,6 @@ def parse_vcf_to_dict(vcf_file):
             else :
                 vcf_dict = write_dic(vcf_dict, fields)
 
-    print("number of variant not parsed : ", number_pass)
     return vcf_dict
 
 if __name__ == "__main__" :

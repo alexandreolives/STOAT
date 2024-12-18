@@ -3,6 +3,7 @@ import bdsg
 from utils import parse_snarl_path_file
 import re 
 import math
+import os 
 
 # GAF FORMAT :
 # 1     string      Query sequence name
@@ -29,6 +30,10 @@ def add_suffix_to_filename(filename: str, suffix: str) -> str:
 def calcul_proportion_signi(number_ind_group0: int, number_ind_group1: int, p_value: float) -> tuple:
     # Step 1: Calculate initial proportions based on a total of 60
     total_ind = number_ind_group0 + number_ind_group1
+    
+    if total_ind == 0 : 
+        return 0,0
+    
     proportion_group0 = (number_ind_group1 / total_ind) * 60
     proportion_group1 = 60 - proportion_group0
     
@@ -75,7 +80,7 @@ def parse_input_file(input_file, snarl_dic, pg, output_file):
             snarl = columns[2]
             pfisher, pchi = columns[6:8]
             group_paths = columns[13]
-            decomposed_group_paths = [group_paths.split(',')]
+            decomposed_group_paths = group_paths.split(',')
 
             try :
                 list_path = snarl_dic[snarl]
@@ -87,8 +92,8 @@ def parse_input_file(input_file, snarl_dic, pg, output_file):
             sequence_name_g0 = []
             sequence_name_g1 = []
 
-            for group_paths in decomposed_group_paths :
-                path_g0, path_g1 = group_paths.split(':')
+            for number_group_path in decomposed_group_paths :
+                path_g0, path_g1 = number_group_path.split(':')
                 group_0.append(path_g0)
                 group_1.append(path_g1)
                 sequence_name_g0.append(f"{snarl}_G0_{path_g0}_F{pfisher}_C{pchi}")
@@ -103,7 +108,7 @@ def parse_input_file(input_file, snarl_dic, pg, output_file):
                     star_path_1 = star_path_1[:-1]
                     length_star_path_1 = calcul_path_length(pg, star_path_1)
                     length_star_path_2 = calcul_path_length(pg, star_path_2)
-                    prop_g0, prop_g1 = calcul_proportion_signi(group_0[idx], group_1[idx], pfisher)
+                    prop_g0, prop_g1 = calcul_proportion_signi(int(group_0[idx]), int(group_1[idx]), float(pfisher))
 
                     # Write lines for start_path_1
                     write_gaf_lines(sequence_name_g0[idx], star_path_1, length_star_path_1, prop_g0, outfile1)
@@ -116,51 +121,50 @@ def parse_input_file(input_file, snarl_dic, pg, output_file):
                 # Case where "*" is NOT in path
                 else:
                     length_path = calcul_path_length(pg, path)
-                    prop_g0, prop_g1 = calcul_proportion_signi(group_0[idx], group_1[idx], pfisher)
+                    prop_g0, prop_g1 = calcul_proportion_signi(int(group_0[idx]), int(group_1[idx]), float(pfisher))
 
                     # Write lines for path1 for both g1p1 and g2p1
                     write_gaf_lines(sequence_name_g0[idx], path, length_path, prop_g0, outfile1)
                     write_gaf_lines(sequence_name_g1[idx], path, length_path, prop_g1, outfile2)
 
 def decompose_snarl(snarl) :
-    node_list = list(map(int, re.findall(r'\d+', snarl)))
-    return node_list
+    snarl_node = list(map(int, re.findall(r'\d+', snarl)))
+    return snarl_node
 
 def calcul_path_length(pg, snarl):
 
-    node1_id, node2_id = decompose_snarl(snarl)
-    # Get the handles for the two nodes
-    handle1 = pg.get_handle(node1_id)
-    handle2 = pg.get_handle(node2_id)
-    
-    # Calculate the lengths of the nodes
-    length1 = pg.get_length(handle1)
-    length2 = pg.get_length(handle2)
-    
-    # Return the total length
-    return length1 + length2
+    snarl_node = decompose_snarl(snarl)
+    length_node = 0
+
+    for node in snarl_node : 
+        handle = pg.get_handle(node)
+        length = pg.get_length(handle)
+        length_node += length
+
+    return length_node
 
 def parse_graph_tree(pg_file) :
 
     # load graph
     pg = bdsg.bdsg.PackedGraph()
     pg.deserialize(pg_file)
-
     return pg
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Parse a file and create a GAF file.")
-    parser.add_argument('-s', '--snarl', type=str, help="Path to the variant snarl file. (output file of snarl_vcf_parser.py)", required=True)
+    parser.add_argument('-s', '--snarl', type=str, help="Path to the variant snarl file. (output file of snarl_analyser.py)", required=True)
     parser.add_argument('-l', '--pathlist', type=str, help="Path to the list tested snarl file. (output file of list_snarl_paths.py)", required=True)
     parser.add_argument('-p', '--pg', type=str, help='the input pangenome .pg file', required=True)
     parser.add_argument('-o', '--output', type=str, help="Path to the output GAF file.", required=False)
     args = parser.parse_args()
 
+    output_dir = args.output or "output"    
+    os.makedirs(output_dir, exist_ok=True)
+    output = os.path.join(output_dir, "output.gaf")
+
     pg = parse_graph_tree(args.pg)
     snarl_dic = parse_snarl_path_file(args.pathlist)
-
-    output = args.output if args.output else 'output/output.gaf'
     parse_input_file(args.snarl, snarl_dic, pg, output)
 
 # python3 src/gaf_creator.py -s output/simulation_1000_binary.tsv -l ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -p ../snarl_data/simulation_1000vars_100samps/pg.pg
