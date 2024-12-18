@@ -54,7 +54,7 @@ def plot_manhattan_quantitatif(file_path, output_manhattan="output_manhattan_plo
 
     # Clean data
     cleaned_data = data.dropna(subset=['CHR', 'P', 'POS'])
-    cleaned_data['POS'] = cleaned_data['POS'].apply(lambda x: str(x).split(',')[0])
+    cleaned_data['POS'] = cleaned_data['POS'].apply(lambda x: int(str(x).split(',')[0]) if ',' in str(x) else int(x))
     cleaned_data['P'] = cleaned_data['P'].apply(lambda x: max(x, 1e-300))  # Avoid log10(0)
     plot_data = cleaned_data[['CHR', 'POS', 'P']].sort_values(by=['CHR', 'POS'])
 
