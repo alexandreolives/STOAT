@@ -4,6 +4,7 @@ import utils
 import re
 from collections import defaultdict
 import time 
+import os 
 
 # class to help make paths from BDSG objects
 # and deal with orientation, flipping, etc
@@ -281,8 +282,11 @@ if __name__ == "__main__" :
     parser.add_argument('-p', type=utils.check_file, help='The input pangenome .pg file', required=True)
     parser.add_argument('-d', type=utils.check_file, help='The input distance index .dist file', required=True)
     parser.add_argument("-t", type=check_threshold, help='Children threshold', required=False)
-    parser.add_argument('-o', help='the output TSV file', type=str, required=True)
+    parser.add_argument('-o', help='the output TSV file', type=str, required=False)
     args = parser.parse_args()
+
+    output_dir = args.o or "output"    
+    os.makedirs(output_dir, exist_ok=True)
 
     stree, pg, root = parse_graph_tree(args.p, args.d)
     snarls = save_snarls(stree, root)
@@ -291,9 +295,8 @@ if __name__ == "__main__" :
     output_snarl_not_analyse = "snarl_not_analyse.tsv"
 
     threshold = args.t if args.t else 10
-    _, paths_number_analysis = loop_over_snarls_write(stree, snarls, pg, args.o, output_snarl_not_analyse, threshold, False)
+    _, paths_number_analysis = loop_over_snarls_write(stree, snarls, pg, output_dir, output_snarl_not_analyse, threshold, False)
     print(f"Total of paths analyse : {paths_number_analysis}")
 
     # python3 src/list_snarl_paths.py -p /home/mbagarre/Bureau/droso_data/fly/fly.pg -d /home/mbagarre/Bureau/droso_data/fly/fly.dist -o output/test/test_list_snarl.tsv
     # vg find -x ../snarl_data/fly.gbz -r 5176878:5176884 -c 10 | vg view -dp - | dot -Tsvg -o ../snarl_data/subgraph.svg
-    
