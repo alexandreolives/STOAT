@@ -127,7 +127,7 @@ def main() :
         if gaf :
             output_gaf = os.path.join(output_dir, "group_paths.gaf")
             gaf_creator.parse_input_file(output_snarl, snarl_paths, pg, output_gaf)
-
+ 
     # Handle Quantitative Analysis
     elif args.quantitative:
         output_file = os.path.join(output_dir, "quantitative_analysis.tsv")
