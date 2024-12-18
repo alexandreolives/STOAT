@@ -282,20 +282,21 @@ if __name__ == "__main__" :
     parser.add_argument('-p', type=utils.check_file, help='The input pangenome .pg file', required=True)
     parser.add_argument('-d', type=utils.check_file, help='The input distance index .dist file', required=True)
     parser.add_argument("-t", type=check_threshold, help='Children threshold', required=False)
-    parser.add_argument('-o', help='the output TSV file', type=str, required=False)
+    parser.add_argument('-o', help='output file', type=str, required=False)
     args = parser.parse_args()
 
     output_dir = args.o or "output"    
     os.makedirs(output_dir, exist_ok=True)
+    output = os.path.join(output_dir, "list_snarl_paths.tsv")
+    output_snarl_not_analyse = os.path.join(output_dir, "snarl_not_analyse.tsv")
 
     stree, pg, root = parse_graph_tree(args.p, args.d)
     snarls = save_snarls(stree, root)
     print(f"Total of snarls found : {len(snarls)}")
     print("Saving snarl path decomposition...")
-    output_snarl_not_analyse = "snarl_not_analyse.tsv"
 
     threshold = args.t if args.t else 10
-    _, paths_number_analysis = loop_over_snarls_write(stree, snarls, pg, output_dir, output_snarl_not_analyse, threshold, False)
+    _, paths_number_analysis = loop_over_snarls_write(stree, snarls, pg, output, output_snarl_not_analyse, threshold, False)
     print(f"Total of paths analyse : {paths_number_analysis}")
 
     # python3 src/list_snarl_paths.py -p /home/mbagarre/Bureau/droso_data/fly/fly.pg -d /home/mbagarre/Bureau/droso_data/fly/fly.dist -o output/test/test_list_snarl.tsv

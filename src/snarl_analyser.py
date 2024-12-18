@@ -10,6 +10,7 @@ from scipy.stats import fisher_exact
 # from limix.stats import logisticMixedModel
 # from limix.stats import scan
 import time
+import os
  
 class Matrix :
     def __init__(self, default_row_number=1_000_000, column_number=2):
@@ -381,12 +382,13 @@ if __name__ == "__main__" :
     snarl = utils.parse_snarl_path_file(args.snarl)
     covar = utils.parse_covariate_file(args.covariate) if args.covariate else ""
 
+    output_dir = args.output or "output"    
+    os.makedirs(output_dir, exist_ok=True)
+    output = os.path.join(output_dir, "stoat.assoc.tsv")
+
     if args.binary:
         binary_group = utils.parse_pheno_binary_file(args.binary)
-        if args.output :
-            vcf_object.binary_table(snarl, binary_group, covar, args.output)
-        else :
-            vcf_object.binary_table(snarl, binary_group, covar)
+        vcf_object.binary_table(snarl, binary_group, covar, output)
 
     # python3 src/snarl_analyser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
     # python3 src/snarl_analyser.py ../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../snarl_data/group.txt
@@ -394,10 +396,7 @@ if __name__ == "__main__" :
 
     if args.quantitative:
         quantitative = utils.parse_pheno_quantitatif_file(args.quantitative)
-        if args.output :
-            vcf_object.quantitative_table(snarl, quantitative, covar, args.output)
-        else :
-            vcf_object.quantitative_table(snarl, quantitative, covar)
+        vcf_object.quantitative_table(snarl, quantitative, covar, output)
 
     print(f"Time P-value: {time.time() - start} s")
 

@@ -3,6 +3,7 @@ import bdsg
 from utils import parse_snarl_path_file
 import re 
 import math
+import os 
 
 # GAF FORMAT :
 # 1     string      Query sequence name
@@ -158,10 +159,12 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', type=str, help="Path to the output GAF file.", required=False)
     args = parser.parse_args()
 
+    output_dir = args.output or "output"    
+    os.makedirs(output_dir, exist_ok=True)
+    output = os.path.join(output_dir, "output.gaf")
+
     pg = parse_graph_tree(args.pg)
     snarl_dic = parse_snarl_path_file(args.pathlist)
-
-    output = args.output if args.output else 'output/output.gaf'
     parse_input_file(args.snarl, snarl_dic, pg, output)
 
 # python3 src/gaf_creator.py -s output/simulation_1000_binary.tsv -l ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -p ../snarl_data/simulation_1000vars_100samps/pg.pg
