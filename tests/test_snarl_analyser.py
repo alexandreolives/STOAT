@@ -93,3 +93,5 @@ def test_binary_table(snarl_instance):
         lines = f.readlines()
         assert lines[0].strip() == 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\tGROUP_PATHS'
         assert len(lines) > 1  # Ensure there are results written
+
+# python3 tests/test_snarl_analyser.py

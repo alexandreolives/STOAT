@@ -195,4 +195,4 @@ python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths
 <img src="pictures/seqTube.png" width="600">
 </p>
 
-Description : Color represente the different paths group (red : group 1 & blue : group 0) and opacity the number of samples in that paths (number of samples passing trought each paths % 60).
+Description : Color represente the different paths group (red : group 1 & blue : group 0) and opacity represente the number of samples in that paths (number of samples passing trought each paths % 60).
