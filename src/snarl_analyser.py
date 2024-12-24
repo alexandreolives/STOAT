@@ -142,6 +142,10 @@ class SnarlProcessor:
         """
         Generate a binary table with statistical results and write to a file.
         """
+        
+        print("output : ", output)
+        print("test")
+
         headers = ('CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\tGROUP_PATHS\n')
         with open(output, 'wb') as outf:
             outf.write(headers.encode('utf-8'))
@@ -393,7 +397,7 @@ if __name__ == "__main__" :
 
     if args.binary:
         binary_group = utils.parse_pheno_binary_file(args.binary)
-        vcf_object.binary_table(snarl, binary_group, covar, output)
+        vcf_object.binary_table(snarl, binary_group, covar, False, output)
 
     # python3 src/snarl_analyser.py tests/other_files/small_vcf.vcf tests/other_files/list_snarl_short.txt -b tests/other_files/group.txt
     # python3 src/snarl_analyser.py ../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../snarl_data/group.txt
@@ -401,7 +405,7 @@ if __name__ == "__main__" :
 
     if args.quantitative:
         quantitative = utils.parse_pheno_quantitatif_file(args.quantitative)
-        vcf_object.quantitative_table(snarl, quantitative, covar, output)
+        vcf_object.quantitative_table(snarl, quantitative, covar, False, output)
 
     # python3 src/snarl_analyser.py tests/other_files/small_vcf.vcf tests/other_files/list_snarl_short.txt -q tests/other_files/pheno.txt
 

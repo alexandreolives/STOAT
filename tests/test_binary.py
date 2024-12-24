@@ -1,6 +1,5 @@
 import sys
 import os
-from unittest.mock import patch
 from pathlib import Path
 
 # Add the parent directory to the Python path to enable imports from src
@@ -10,24 +9,35 @@ def test_snarl_analyser():
     vcf_file = "tests/simulation/merged_output.vcf"
     phenotype_file = "tests/simulation/phenotype.tsv"
     snarl_file = "tests/simulation/snarl_paths.tsv"
-    output_dir = Path("tests/simulation/simulation_output")
+    output_dir = Path("tests/binary_tests_output")
 
-    # Command-line arguments to simulate
-    args = [
-        'snarl_analyser.py',
-        vcf_file,
-        snarl_file,
-        '-b', phenotype_file,
-        '-o', str(output_dir)
-    ]
+    # Import necessary modules
+    import snarl_analyser
+    import utils
 
-    # Mock sys.argv to simulate the command-line arguments
-    with patch.object(sys, 'argv', args):
-        import snarl_analyser
-        snarl_analyser.main()
+    # Perform test logic
+    list_samples = utils.parsing_samples_vcf(vcf_file)
+    vcf_object = snarl_analyser.SnarlProcessor(vcf_file, list_samples)
+    vcf_object.fill_matrix()
+    snarl = utils.parse_snarl_path_file(snarl_file)[0]
 
-    assert output_dir.exists(), f"Output directory {output_dir} does not exist."
+    os.makedirs(output_dir, exist_ok=True)
+    output = os.path.join(output_dir, "binary_test.assoc.tsv")
 
-# TODO : Compare output to expected output simulation 
+    binary_group = utils.parse_pheno_binary_file(phenotype_file)
+    vcf_object.binary_table(snarl, binary_group, None, True, output)
+
+    assert os.path.exists(output), f"Output file {output} was not created."
+
+    # Compare output to expected output simulation
+    expected_output = "tests/simulation/expected_binary/binary_analysis.tsv"
+
+    with open(expected_output, 'r') as expected_file:
+        expected_content = expected_file.read()
+
+    with open(output, 'r') as output_file:
+        output_content = output_file.read()
+
+    assert output_content == expected_content, "The output content does not match the expected content."
 
 # pytest tests/test_binary.py
