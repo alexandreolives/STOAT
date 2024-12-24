@@ -193,4 +193,7 @@ Color represente the different paths group (red : group 1 & blue : group 0) and 
 ```bash 
 python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths.tsv> -p <pg_file_path>
 ```
-![Exemple of paths reprensentation using gaf_creator.py and sequenceTubeMap tool](pictures/seqTube.png)
+<p align="center">
+<img src="pictures/seqTube.png" width="350">
+</p>
+
