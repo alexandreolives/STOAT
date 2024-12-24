@@ -188,8 +188,6 @@ STOAT will generated a manhattan and a QQ plot for binary and quantitatif analys
 
 Use `gaf_creator.py` to geneate a GAF file and [sequenceTubeMap](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
 
-Color represente the different paths group (red : group 1 & blue : group 0) and opacity the number of samples in that paths (number of samples per paths % 60).
-
 ```bash 
 python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths.tsv> -p <pg_file_path>
 ```
@@ -197,3 +195,4 @@ python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths
 <img src="pictures/seqTube.png" width="600">
 </p>
 
+Color represente the different paths group (red : group 1 & blue : group 0) and opacity the number of samples in that paths (number of samples per paths % 60).
