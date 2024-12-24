@@ -30,7 +30,7 @@ def test_snarl_analyser():
     assert os.path.exists(output), f"Output file {output} was not created."
 
     # Compare output to expected output simulation
-    expected_output = "tests/simulation/expected_binary/binary_analysis.tsv"
+    expected_output = "tests/simulation/expected_binary/binary_analysis.assoc.tsv"
 
     with open(expected_output, 'r') as expected_file:
         expected_content = expected_file.read()
