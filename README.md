@@ -2,13 +2,19 @@
 
 <p align="center">
     <a href="https://www.python.org/downloads/release/python-3100/"><img src="https://img.shields.io/badge/Python-3.10-blue.svg"></a>
-    <a href="https://github.com/brentp/cyvcf2/releases/tag/v0.31.1"><img src="https://img.shields.io/badge/cyvcf2-0.31.1-green.svg"></a>
     <a href="https://github.com/vgteam/libbdsg/releases/tag/v0.3"><img src="https://img.shields.io/badge/bdsg-0.3-green.svg"></a>
-    <a href="https://github.com/statsmodels/statsmodels/releases/tag/v0.14.4"><img src="https://img.shields.io/badge/statsmodels-0.14.4-green.svg"></a>
-    <a href="https://github.com/ShujiaHuang/qmplot/releases/tag/v0.3.1"><img src="https://img.shields.io/badge/qmplot-0.3.3-green.svg"></a>
 </p>
 
+<!-- 
+I will release one days, I will !!!
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/jmonlong/sveval)](https://github.com/jmonlong/sveval/releases/latest)
+[![Docker Repository on Quay](https://quay.io/repository/jmonlong/sveval/status "Docker Repository on Quay")](https://quay.io/repository/jmonlong/sveval) 
+-->
+
+<img src="pictures/logo.jpeg" width="150">
+
 ## Project Overview
+
 STOAT is a specialized tool developed for conducting Genome-Wide Association Studies (GWAS) with a unique focus on snarl structures within pangenome graphs. Unlike traditional GWAS tools that analyze linear genome variants, STOAT processes VCF files to extract and analyze snarl regions—complex structural variations that capture nested and overlapping variant patterns within a pangenome. This approach allows for a more nuanced understanding of genetic variations in diverse populations and complex traits.
 
 STOAT supports both binary and quantitative phenotypes:
@@ -145,13 +151,11 @@ python3 snarl_analyser.py <path_to_vcf_file.vcf.gz> <list_paths_snarl.txt> <path
 | **MIN_ROW_INDEX** | Minimum group of samples that pass through one path of the snarl. (binary analysis).          |
 | **NUM_COLUM**     | Number of paths in the snarl. (binary analysis).                                              |
 | **INTER_GROUP**   | Sum of the minimum samples that pass through each path. (binary analysis).                    |
-| **AVERAGE**       | Average number of total samples passing through this snarl, divided by the number of paths. 
-(binary analysis).  |
+| **AVERAGE**       | Average number of total samples passing through this snarl, divided by the number of paths. (binary analysis).  |
 | **P**             | P-value calculated using linear regression (quantitative analysis).                           |
-| **RSQUARED**      | R-squared value indicating the proportion of variance explained by the model (quantitative analysis).          |
-| **SE**            | Standard error of the estimated coefficients in the linear regression(quantitative analysis). |
-| **BETA**          | Beta coefficients representing the estimated effect sizes of the predictors(quantitative analysis).
-|
+| **RSQUARED**      | R-squared value, proportion of variance explained by the model (quantitative analysis).       |
+| **SE**            | Mean Standard error, estimatation coefficients of all paths in a snarl (quantitative analysis). |
+| **BETA**          | Mean Beta coefficients, estimatation effect sizes of the prediction of all paths in a snarl (quantitative analysis). |
 
 ### Example of Output:
 
@@ -167,11 +171,11 @@ CHR POS SNARL           TYPE  REF ALT   P_FISHER  P_CHI2  TOTAL_SUM  MIN_ROW_IND
 Below is an example of the output for a quantitative phenotype analysis (-q option) :
 
 ```bash
-CHR	POS	SNARL	          TYPE	  REF	ALT	RSQUARED	  BETA	      SE	        P
-1   12  5262721_5262719	SNP     A   T   8.3697e-01	1.3878e+01	6.5108e+00	4.0376e-01
-1   15  5262719_5262717	INS     A   ATT 4.4237e-01	1.3238e+01	6.5345e+00	4.6574e-01
-1   18  5262717_5262714	DEL     AA  T   6.3237e-01	1.6458e+01	6.6453e+00	4.7484e-01
-1   19  5262717_5262714	COMPLEX C   NA  4.2342e-01	2.3242e+01	5.3251e+00	1.3245e-01
+CHR	POS	SNARL	TYPE	REF	ALT	RSQUARED	BETA	SE	P
+1	12	5262721_5262719	SNP	A	T	8.3697e-01	1.3878e+01	6.5108e+00	4.0376e-01
+1	15	5262719_5262717	INS	A	ATT	4.4237e-01	1.3238e+01	6.5345e+00	4.6574e-01
+1	18	5262717_5262714	DEL	AA	T	6.3237e-01	1.6458e+01	6.6453e+00	4.7484e-01
+1	19	5262717_5262714	COMPLEX	C	NA	4.2342e-01	2.3242e+01	5.3251e+00	1.3245e-01
 ```
 
 ## Visualization
@@ -182,10 +186,11 @@ STOAT will generated a manhattan and a QQ plot for binary and quantitatif analys
 
 ### SequenceTube
 
-Use `gaf_creator.py` to geneate a GAF file and [SequenceTube](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
+Use `gaf_creator.py` to geneate a GAF file and [sequenceTubeMap](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
+
+Color represente the different paths group (red : group 1 & blue : group 0) and opacity the number of samples in that paths (number of samples per paths % 60).
 
 ```bash 
 python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths.tsv> -p <pg_file_path>
 ```
-
-*Output Plots and sequenceTube*
+![Exemple of paths reprensentation using gaf_creator.py and sequenceTubeMap tool](pictures/seqTube.png)

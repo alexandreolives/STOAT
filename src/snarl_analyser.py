@@ -300,7 +300,7 @@ class SnarlProcessor:
             except ValueError as e:
                 p_value = "Error"
         else:
-            p_value = "N/A"
+            p_value = "NA"
 
         return p_value
 
@@ -312,7 +312,7 @@ class SnarlProcessor:
             p_value = f"{p_value:.4e}"
 
         except ValueError as e: 
-            p_value = 'N/A'
+            p_value = 'NA'
         
         return p_value
 
