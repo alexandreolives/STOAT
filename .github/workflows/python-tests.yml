@@ -31,41 +31,34 @@ jobs:
         python -m pip install --upgrade pip
         pip install setuptools wheel setuptools_scm build
 
-    # Step 4: Install pybind11 and system dependencies (e.g., jansson)
-    - name: Install pybind11 and system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libjansson-dev
-        pip install pybind11
+    # # Step 5: Patch pyproject.toml for libbdsg
+    # - name: Patch pyproject.toml for libbdsg
+    #   run: |
+    #     git clone --recursive https://github.com/vgteam/libbdsg.git
+    #     cd libbdsg
+    #     echo "[build-system]" > pyproject.toml
+    #     echo "requires = ['setuptools', 'wheel', 'setuptools_scm']" >> pyproject.toml
+    #     echo "build-backend = 'setuptools.build_meta'" >> pyproject.toml
+    #     echo "[tool.setuptools_scm]" >> pyproject.toml
+    #     echo "version_scheme = 'guess-next-dev'" >> pyproject.toml
+    #     echo "local_scheme = 'node-and-date'" >> pyproject.toml
+    #     cd ..
 
-    # Step 5: Patch pyproject.toml for libbdsg
-    - name: Patch pyproject.toml for libbdsg
-      run: |
-        git clone --recursive https://github.com/vgteam/libbdsg.git
-        cd libbdsg
-        echo "[build-system]" > pyproject.toml
-        echo "requires = ['setuptools', 'wheel', 'setuptools_scm']" >> pyproject.toml
-        echo "build-backend = 'setuptools.build_meta'" >> pyproject.toml
-        echo "[tool.setuptools_scm]" >> pyproject.toml
-        echo "version_scheme = 'guess-next-dev'" >> pyproject.toml
-        echo "local_scheme = 'node-and-date'" >> pyproject.toml
-        cd ..
+    # # Step 6: Clean up the libbdsg directory to avoid git clone errors
+    # - name: Clean up libbdsg directory if it exists
+    #   run: |
+    #     if [ -d "libbdsg" ]; then
+    #       rm -rf libbdsg
+    #     fi
 
-    # Step 6: Clean up the libbdsg directory to avoid git clone errors
-    - name: Clean up libbdsg directory if it exists
-      run: |
-        if [ -d "libbdsg" ]; then
-          rm -rf libbdsg
-        fi
-
-    # Step 7: Build and install libbdsg
-    - name: Build and install libbdsg
-      run: |
-        git clone --recursive https://github.com/vgteam/libbdsg.git
-        cd libbdsg
-        python -m build  # Use modern build process
-        pip install dist/*.whl  # Install the built wheel
-        cd ..
+    # # Step 7: Build and install libbdsg
+    # - name: Build and install libbdsg
+    #   run: |
+    #     git clone --recursive https://github.com/vgteam/libbdsg.git
+    #     cd libbdsg
+    #     python -m build  # Use modern build process
+    #     pip install dist/*.whl  # Install the built wheel
+    #     cd ..
 
     # Step 8: Install other dependencies
     - name: Install dependencies
