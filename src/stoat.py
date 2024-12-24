@@ -19,7 +19,7 @@ def main() :
     parser.add_argument('-d', type=utils.check_file, help='The input distance index .dist file', required=False)
     parser.add_argument("-t", type=list_snarl_paths.check_threshold, help='Children threshold', required=False)
     parser.add_argument("-v", type=utils.check_format_vcf_file, help="Path to the merged VCF file (.vcf or .vcf.gz)", required=True)
-    parser.add_argument("-r", type=utils.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (.vcf or .vcf.gz)", required=False)
+    parser.add_argument("-r", type=utils.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (only .vcf)", required=False)
     parser.add_argument("-l", "--listpath", type=utils.check_format_list_path, help="Path to the list paths", required=False)
 
     group = parser.add_mutually_exclusive_group(required=True)
@@ -130,7 +130,7 @@ def main() :
         if gaf :
             output_gaf = os.path.join(output_dir, "group_paths.gaf")
             gaf_creator.parse_input_file(output_snarl, snarl_paths, pg, output_gaf)
-
+ 
     # Handle Quantitative Analysis
     elif args.quantitative:
         output_file = os.path.join(output_dir, "quantitative_analysis.tsv")

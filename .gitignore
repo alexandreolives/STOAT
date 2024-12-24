@@ -2,3 +2,5 @@ src/__pycache__
 output/*
 stoat.egg-info/*
 build/*
+tests/vcf_test.vcf
+vcf_test.normalized.vcf

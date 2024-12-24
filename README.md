@@ -41,6 +41,19 @@ pip install .
 - bdsg
 - ...
 
+
+## Input format file
+
+Required files :
+- pg_file : Pangenome graph file, formats accepted: .pg or .xg.
+- dist_file : Distance file generated with vg dist, format: .dist.
+- vcf_ref : Reference node positions in the pangenome graph generated with vg deconstruct, formats: .vcf.
+- vcf : Merged VCF file, created using bcftools merge, formats: .vcf or .vcf.gz.
+- pheno : Three-column file with FID (family/sample name), IID (sample name), and PHENO (integer/float). Format: .txt or .tsv (tab-separated).
+
+Optional file : 
+- list_paths : Two-column file containing snarl names and the list of paths through the snarl's netgraph, separated by tabs. Format: .txt or .tsv.
+
 ## Usage
 
 Use `stoat.py` if you want to launch the full tool at once, starting from snarl path identification (identifying the multiple paths that can be taken by a sample based on the pangenome graph) and ending with the results plots (Manhattan plot and QQ plot).
@@ -115,18 +128,6 @@ python3 snarl_analyser.py <path_to_vcf_file.vcf.gz> <list_paths_snarl.txt> <path
 # quantitative trait 
 python3 snarl_analyser.py <path_to_vcf_file.vcf.gz> <list_paths_snarl.txt> <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.txt
 ```
-
-## Input format file
-
-Required files :
-- pg_file : Pangenome graph file, formats accepted: .pg or .xg.
-- dist_file : Distance file generated with vg dist, format: .dist.
-- vcf_ref : Reference node positions in the pangenome graph generated with vg deconstruct, formats: .vcf.
-- vcf : Merged VCF file, created using bcftools merge, formats: .vcf or .vcf.gz.
-- pheno : Three-column file with FID (family/sample name), IID (sample name), and PHENO (integer/float). Format: .txt or .tsv (tab-separated).
-
-Optional file : 
-- list_paths : Two-column file containing snarl names and the list of paths through the snarl's netgraph, separated by tabs. Format: .txt or .tsv.
 
 ## Output
 

@@ -315,7 +315,7 @@ class SnarlProcessor:
         return p_value
 
     # # Logistic Mixed Model
-    # def LMM_binary(df, pheno, covar):
+    # def LMM_binary(df, pheno, kinship_matrix, covar):
     #     """
     #     Perform Logistic Mixed Model on a binary phenotype.
     #     """
