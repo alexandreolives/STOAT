@@ -160,13 +160,13 @@ class SnarlProcessor:
     def quantitative_table(self, snarls, quantitative, covar=None, output="output/quantitative_output.tsv") :
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n'
+            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tBETA\tSE\tP\n'
             outf.write(headers.encode('utf-8'))
             for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
-                pvalue = self.linear_regression(df, quantitative)
+                beta, se, pvalue = self.linear_regression(df, quantitative)
                 chrom = pos = type_var = ref = alt = "NA"
-                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, pvalue)
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, beta, se, pvalue)
                 outf.write(data.encode('utf-8'))
 
     def identify_correct_path(self, decomposed_snarl: list, idx_srr_save: list) -> list:
@@ -244,7 +244,7 @@ class SnarlProcessor:
         df = pd.DataFrame(genotypes, index=self.list_samples, columns=column_headers)
         return df
     
-    def linear_regression(self, df, pheno : dict, covar=None) -> float :
+    def linear_regression(self, df, pheno : dict, covar=None) -> tuple :
 
         df = df.astype(int)
         df['Target'] = df.index.map(pheno)
@@ -253,8 +253,11 @@ class SnarlProcessor:
 
         x_with_const = sm.add_constant(x)
         result = sm.OLS(y, x_with_const).fit()
+        beta = result.params  # Beta coefficients
+        standard_errors = result.bse  # Standard errors
         formatted_p_value = f"{result.f_pvalue:.4e}"
-        return formatted_p_value
+
+        return beta, standard_errors, formatted_p_value
 
     # # Linear Mixed Model
     # def LMM_quantitatif(self, kinship_matrix, covar: dict, pheno: dict) -> tuple:
@@ -280,7 +283,6 @@ class SnarlProcessor:
     #     beta_se = results.stats["beta_se"]      # Standard errors for effect sizes
     #     ll = results.stats["ll"]                # Log-likelihood of the model
     #     heritability = results.stats["h2"]      # Heritability estimate (proportion of variance explained by GRM)
-
     #     return p_value, beta, beta_se, ll, heritability
 
     def chi2_test(self, df) -> float:
@@ -364,7 +366,7 @@ class SnarlProcessor:
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
     parser.add_argument("vcf_path", type=utils.check_format_vcf_file, help="Path to the vcf file (.vcf or .vcf.gz)")
-    parser.add_argument("snarl", type=utils.check_format_group_snarl, help="Path to the snarl file that containt snarl and aT (.txt or .tsv)")
+    parser.add_argument("snarl", type=utils.check_format_list_path, help="Path to the snarl file that containt snarl and aT (.txt or .tsv)")
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-b", "--binary", type=utils.check_format_pheno, help="Path to the binary phenotype file (.txt or .tsv)")
@@ -372,14 +374,15 @@ if __name__ == "__main__" :
     parser.add_argument("-c", "--covariate", type=utils.check_covariate_file, required=False, help="Path to the covariate file (.txt or .tsv)")
     parser.add_argument("-o", "--output", type=str, required=False, help="Path to the output file")
     args = parser.parse_args()
-    
+
     start = time.time()
-    vcf_object = SnarlProcessor(args.vcf_path)
+    list_samples = utils.parsing_samples_vcf(args.vcf_path)
+    vcf_object = SnarlProcessor(args.vcf_path, list_samples)
     vcf_object.fill_matrix()
     print(f"Time Matrix : {time.time() - start} s")
 
     start = time.time()
-    snarl = utils.parse_snarl_path_file(args.snarl)
+    snarl = utils.parse_snarl_path_file(args.snarl)[0]
     covar = utils.parse_covariate_file(args.covariate) if args.covariate else ""
 
     output_dir = args.output or "output"    
@@ -390,13 +393,15 @@ if __name__ == "__main__" :
         binary_group = utils.parse_pheno_binary_file(args.binary)
         vcf_object.binary_table(snarl, binary_group, covar, output)
 
-    # python3 src/snarl_analyser.py test/small_vcf.vcf test/list_snarl_short.txt -b test/group.txt
+    # python3 src/snarl_analyser.py tests/other_files/small_vcf.vcf tests/other_files/list_snarl_short.txt -b tests/other_files/group.txt
     # python3 src/snarl_analyser.py ../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../snarl_data/group.txt
     # python3 src/snarl_analyser.py ../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
 
     if args.quantitative:
         quantitative = utils.parse_pheno_quantitatif_file(args.quantitative)
         vcf_object.quantitative_table(snarl, quantitative, covar, output)
+
+    # python3 src/snarl_analyser.py tests/other_files/small_vcf.vcf tests/other_files/list_snarl_short.txt -q tests/other_files/pheno.txt
 
     print(f"Time P-value: {time.time() - start} s")
 
