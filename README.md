@@ -135,18 +135,23 @@ python3 snarl_analyser.py <path_to_vcf_file.vcf.gz> <list_paths_snarl.txt> <path
 |-------------------|-----------------------------------------------------------------------------------------------|
 | **CHR**           | Chromosome name where the variation occurs.                                                   |
 | **POS**           | Position of the snarl within the chromosome.                                                  |
-| **SNARL**         | Identifier for the variant, snarl name/id                    |
+| **SNARL**         | Identifier for the variant, snarl name/id                                                     |
 | **TYPE**          | Type of genetic variation (e.g., SNP, INS, DEL).                                              |
 | **REF**           | Sequence of the reference allele.                                                             |
 | **ALT**           | Sequence of the alternate allele.                                                             |
 | **P_FISHER**      | P-value calculated using Fisher's exact test (binary analysis).                               |
 | **P_CHI2**        | P-value calculated using the Chi-squared test (binary analysis).                              |
-| **P_value**       | P-value calculated using linear regression (quantitative analysis).                           |
-| **TOTAL_SUM**     | Total number of samples that pass for this snarl.                                             |
-| **MIN_ROW_INDEX** | Minimum group of samples that pass through one path of the snarl.                             |
-| **NUM_COLUM**     | Number of paths in the snarl.                                                                 |
-| **INTER_GROUP**   | Sum of the minimum samples that pass through each path.                                       |
-| **AVERAGE**       | Average number of total samples passing through this snarl, divided by the number of paths.   |
+| **TOTAL_SUM**     | Total number of samples that pass for this snarl. (binary analysis).                          |
+| **MIN_ROW_INDEX** | Minimum group of samples that pass through one path of the snarl. (binary analysis).          |
+| **NUM_COLUM**     | Number of paths in the snarl. (binary analysis).                                              |
+| **INTER_GROUP**   | Sum of the minimum samples that pass through each path. (binary analysis).                    |
+| **AVERAGE**       | Average number of total samples passing through this snarl, divided by the number of paths. 
+(binary analysis).  |
+| **P**             | P-value calculated using linear regression (quantitative analysis).                           |
+| **RSQUARED**      | R-squared value indicating the proportion of variance explained by the model (quantitative analysis).          |
+| **SE**            | Standard error of the estimated coefficients in the linear regression(quantitative analysis). |
+| **BETA**          | Beta coefficients representing the estimated effect sizes of the predictors(quantitative analysis).
+|
 
 ### Example of Output:
 
@@ -162,10 +167,11 @@ CHR POS SNARL           TYPE  REF ALT   P_FISHER  P_CHI2  TOTAL_SUM  MIN_ROW_IND
 Below is an example of the output for a quantitative phenotype analysis (-q option) :
 
 ```bash
-CHR POS Snarl           TYPE    REF ALT	P_value
-1   12  5262721_5262719	SNP     A   T   0.9099
-1   15  5262719_5262717	INS     A   ATT 0.9093
-1   18  5262717_5262714	DEL     AA  T   0.9008
+CHR	POS	SNARL	          TYPE	  REF	ALT	RSQUARED	  BETA	      SE	        P
+1   12  5262721_5262719	SNP     A   T   8.3697e-01	1.3878e+01	6.5108e+00	4.0376e-01
+1   15  5262719_5262717	INS     A   ATT 4.4237e-01	1.3238e+01	6.5345e+00	4.6574e-01
+1   18  5262717_5262714	DEL     AA  T   6.3237e-01	1.6458e+01	6.6453e+00	4.7484e-01
+1   19  5262717_5262714	COMPLEX C   NA  4.2342e-01	2.3242e+01	5.3251e+00	1.3245e-01
 ```
 
 ## Visualization

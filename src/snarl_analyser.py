@@ -160,13 +160,13 @@ class SnarlProcessor:
     def quantitative_table(self, snarls, quantitative, covar=None, output="output/quantitative_output.tsv") :
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tBETA\tSE\tP\n'
+            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tRSQUARED\tBETA\tSE\tP\n'
             outf.write(headers.encode('utf-8'))
             for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
-                beta, se, pvalue = self.linear_regression(df, quantitative)
+                rsquared, beta, se, pvalue = self.linear_regression(df, quantitative)
                 chrom = pos = type_var = ref = alt = "NA"
-                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, beta, se, pvalue)
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, rsquared, beta, se, pvalue)
                 outf.write(data.encode('utf-8'))
 
     def identify_correct_path(self, decomposed_snarl: list, idx_srr_save: list) -> list:
@@ -253,11 +253,13 @@ class SnarlProcessor:
 
         x_with_const = sm.add_constant(x)
         result = sm.OLS(y, x_with_const).fit()
-        beta = result.params  # Beta coefficients
-        standard_errors = result.bse  # Standard errors
+
+        rsquared = f"{result.rsquared:.4e}"
+        beta_mean = f"{result.params.mean():.4e}"  # Mean of beta coefficients
+        se_mean = f"{result.bse.mean():.4e}"      # Mean of standard errors
         formatted_p_value = f"{result.f_pvalue:.4e}"
 
-        return beta, standard_errors, formatted_p_value
+        return rsquared, beta_mean, se_mean, formatted_p_value
 
     # # Linear Mixed Model
     # def LMM_quantitatif(self, kinship_matrix, covar: dict, pheno: dict) -> tuple:
