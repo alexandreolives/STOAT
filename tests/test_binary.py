@@ -31,4 +31,4 @@
 #     # Verify that the output directory exists after execution
 #     assert output_dir.exists(), f"Output directory {output_dir} does not exist."
 
-# python3 tests/test_binary.py
+# pytest tests/test_binary.py
