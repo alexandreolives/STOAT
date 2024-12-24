@@ -23,8 +23,8 @@ def test_snarl_analyser():
 
     # Mock sys.argv to simulate the command-line arguments
     with patch.object(sys, 'argv', args):
-        from stoat import main
-        main()
+        import snarl_analyser
+        snarl_analyser.main()
 
     assert output_dir.exists(), f"Output directory {output_dir} does not exist."
 
