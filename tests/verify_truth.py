@@ -6,7 +6,7 @@ import seaborn as sns
 import plotly.express as px
 
 # Function to process the frequency file and get result list with differences
-def process_file(freq_file, threshold=0.2):
+def process_file(freq_file, threshold=0.01):
     df = pd.read_csv(freq_file, sep='\t')
     path_list = []
     true_labels = []
@@ -184,7 +184,7 @@ def p_value_distribution(test_predicted_labels, cleaned_true_labels, list_diff, 
     plt.grid(False)
     plt.savefig('output/test_distribution_false_neg.png', format='png', dpi=300)
 
-def plot_diff_distribution(test_predicted_labels, cleaned_true_labels, list_diff):
+def plot_diff_distribution(test_predicted_labels, cleaned_true_labels, list_diff, output):
     # Identify false negatives: True label is 1 (no difference), but predicted label is 0 (predicted a difference)
     true_negatives_indices = [i for i, (pred, true) in enumerate(zip(test_predicted_labels, cleaned_true_labels)) if pred == 1 and true == 0]
 
@@ -213,31 +213,38 @@ def plot_diff_distribution(test_predicted_labels, cleaned_true_labels, list_diff
     plt.savefig(output + '_distribution_true_true.png', format='png', dpi=300)
     
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(description="Parse a file with start_node, next_node, group, and freq columns.")
     parser.add_argument("freq", help="Path to allele frequence file")
     parser.add_argument("p_value", help="Path to p_value file")
     parser.add_argument("paths", help="Path to p_value file")
-
     args = parser.parse_args()
 
-    # path_list, true_labels, _ = process_file(args.freq)
-    output = "output/truth_confusion_matrix"
+    # Case where all element is a Truth label 
+    THRESHOLD = 0.0
+
+    # Define Truth label from freq file
+    test_path_list, test_true_labels, list_diff = process_file(args.freq, THRESHOLD)
+
+    # Define Truth label from output file and compare with the truth label
+    test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, list_pvalue, list_min_sample = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
+        
     # Match the result_list with the p_value file and write to the output
-    # predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels, p_value = match_snarl(path_list, true_labels, args.p_value, args.paths)
-    # print_confusion_matrix(predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels, output)
+    print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, "tests/binary_tests_output/truth_confusion_matrix")
 
-    # special case
-    test_path_list, test_true_labels, list_diff = process_file(args.freq, 0.0000000000000001)
     p_val_10_2 = 0.01
-    test_predicted_labels_10_2, _, _, cleaned_true_labels, _, _ = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
-    conf_mat_maker(p_val_10_2, test_predicted_labels_10_2, cleaned_true_labels, "output/test_truth_confusion_matrix")
-    plot_diff_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff)
+    conf_mat_maker(p_val_10_2, test_predicted_labels_10_2, cleaned_true_labels, "tests/binary_tests_output/binary_test_truth_confusion_matrix")
+    plot_diff_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff, "tests/binary_tests_output/binary_test")
 
-    test_path_list, test_true_labels, list_diff = process_file(args.freq, 0.0000000000000001)
-    predicted_labels_10_2, _, _, cleaned_true_labels, p_value, min_sample = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
-    p_value_distribution(predicted_labels_10_2, cleaned_true_labels, list_diff, p_value, min_sample)
+    p_val_10_5 = 0.00001
+    conf_mat_maker(p_val_10_5, test_predicted_labels_10_5, cleaned_true_labels, "tests/binary_tests_output/binary_test_truth_confusion_matrix")
+    plot_diff_distribution(test_predicted_labels_10_5, cleaned_true_labels, list_diff, "tests/binary_tests_output/binary_test")
 
-"""
-    python3 src/verify_truth.py ../../snarl_data/simulation_1000vars_100samps/pg.snarls.freq.tsv \
-    output/simulation_1000_binary.tsv ../../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv
-"""
+    p_val_10_8 = 0.000000001
+    conf_mat_maker(p_val_10_8, test_predicted_labels_10_8, cleaned_true_labels, "tests/binary_tests_output/binary_test_truth_confusion_matrix")
+    plot_diff_distribution(test_predicted_labels_10_8, cleaned_true_labels, list_diff, "tests/binary_tests_output/binary_test")
+
+    """
+    python3 src/verify_truth.py tests/simulation/pg.snarls.freq.tsv \
+    tests/binary_tests_output/binary_test.assoc.tsv tests/simulation/snarl_paths.tsv
+    """
