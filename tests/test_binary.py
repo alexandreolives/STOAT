@@ -1,13 +1,9 @@
-import sys
 import os
 from pathlib import Path
 
-# Add the parent directory to the Python path to enable imports from src
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
-
 # Import necessary modules
-import snarl_analyser
-import utils
+import src.snarl_analyser
+import src.utils
 
 def test_snarl_analyser():
     vcf_file = "tests/simulation/binary_data/merged_output.vcf"
@@ -17,15 +13,15 @@ def test_snarl_analyser():
     expected_output = "tests/simulation/expected_binary/binary_analysis.assoc.tsv"
 
     # Perform test logic
-    list_samples = utils.parsing_samples_vcf(vcf_file)
-    vcf_object = snarl_analyser.SnarlProcessor(vcf_file, list_samples)
+    list_samples = src.utils.parsing_samples_vcf(vcf_file)
+    vcf_object = src.snarl_analyser.SnarlProcessor(vcf_file, list_samples)
     vcf_object.fill_matrix()
-    snarl = utils.parse_snarl_path_file(snarl_file)[0]
+    snarl = src.utils.parse_snarl_path_file(snarl_file)[0]
 
     os.makedirs(output_dir, exist_ok=True)
     output = os.path.join(output_dir, "binary_test.assoc.tsv")
 
-    binary_group = utils.parse_pheno_binary_file(phenotype_file)
+    binary_group = src.utils.parse_pheno_binary_file(phenotype_file)
     vcf_object.binary_table(snarl, binary_group, None, True, output)
 
     assert os.path.exists(output), f"Output file {output} was not created."

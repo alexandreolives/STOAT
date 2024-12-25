@@ -1,17 +1,12 @@
 import pytest
-import sys
-import os
 from pathlib import Path
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
-
-import snarl_analyser
-import utils 
+import src.snarl_analyser
+import src.utils 
 
 @pytest.fixture
 def snarl_instance():
     """Fixture to provide an instance of SnarlProcessor."""
-    return snarl_analyser.SnarlProcessor('vcf_path', ['sample1', 'sample2'])
+    return src.snarl_analyser.SnarlProcessor('vcf_path', ['sample1', 'sample2'])
 
 def test_decompose_string(snarl_instance):
     # Test case 1
@@ -86,8 +81,8 @@ def test_matrix(snarl_instance):
 
     # Use the big_vcf file from other_files directory
     vcf_path = Path('tests/other_files/big_vcf.vcf')
-    list_samples = utils.parsing_samples_vcf(vcf_path)
-    snarl_instance = snarl_analyser.SnarlProcessor(vcf_path, list_samples)
+    list_samples = src.utils.parsing_samples_vcf(vcf_path)
+    snarl_instance = src.snarl_analyser.SnarlProcessor(vcf_path, list_samples)
 
     # Call the method to fill the matrix
     snarl_instance.fill_matrix()

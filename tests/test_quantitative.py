@@ -1,13 +1,9 @@
-# import sys
 # import os
 # from pathlib import Path
 
-# # Add the parent directory to the Python path to enable imports from src
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
-
 # # Import necessary modules
-# import snarl_analyser
-# import utils
+# import src.snarl_analyser
+# import src.utils
 
 # def test_snarl_analyser():
 #     vcf_file = "tests/simulation/quantitative_data/merged_output.vcf"
@@ -16,15 +12,15 @@
 #     output_dir = Path("tests/quantitative_tests_output")
 
 #     # Perform test logic
-#     list_samples = utils.parsing_samples_vcf(vcf_file)
-#     vcf_object = snarl_analyser.SnarlProcessor(vcf_file, list_samples)
+#     list_samples = src.utils.parsing_samples_vcf(vcf_file)
+#     vcf_object = src.snarl_analyser.SnarlProcessor(vcf_file, list_samples)
 #     vcf_object.fill_matrix()
-#     snarl = utils.parse_snarl_path_file(snarl_file)[0]
+#     snarl = src.utils.parse_snarl_path_file(snarl_file)[0]
 
 #     os.makedirs(output_dir, exist_ok=True)
 #     output = os.path.join(output_dir, "quantitative_test.assoc.tsv")
 
-#     quantitative_pheno = utils.parse_pheno_quantitatif_file(phenotype_file)
+#     quantitative_pheno = src.utils.parse_pheno_quantitatif_file(phenotype_file)
 #     vcf_object.quantitative_table(snarl, quantitative_pheno, None, False, output)
 
 #     assert os.path.exists(output), f"Output file {output} was not created."
