@@ -114,8 +114,8 @@ def plot_manhattan_binary(file_path, output_manhattan="output_manhattan_plot.png
 
 if __name__ == "__main__" :
 
-    file_path = 'tests/simulation/run_binary/binary_analysis.tsv'
-    output_snarl = "tests/simulation/run_binary/binary_analysis_top_significativity.tsv"
+    file_path = 'tests/simulation/binary_data/run_binary/binary_analysis.tsv'
+    output_snarl = "tests/simulation/binary_data/run_binary/binary_analysis_top_significativity.tsv"
     #significative_snarl_binary(file_path, output_snarl)
     #qq_plot_binary(file_path)
     plot_manhattan_binary(file_path)

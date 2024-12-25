@@ -1,5 +1,5 @@
-2024-12-17 21:36:27,268 [INFO] Command: src/stoat.py -p tests/simulation/pg.full.pg -d tests/simulation/pg.dist -v tests/simulation/merged_output.vcf -b tests/simulation/phenotype.tsv --gaf -o tests/simulation
-2024-12-17 21:36:27,269 [INFO] Output directory: tests/simulation/run_20241217_213627
+2024-12-17 21:36:27,268 [INFO] Command: src/stoat.py -p tests/simulation/binary_data/pg.full.pg -d tests/simulation/binary_data/pg.dist -v tests/simulation/binary_data/merged_output.vcf -b tests/simulation/binary_data/phenotype.tsv --gaf -o tests/simulation
+2024-12-17 21:36:27,269 [INFO] Output directory: tests/simulation/binary_data/run_20241217_213627
 2024-12-17 21:36:27,304 [INFO] Parsing binary phenotype...
 2024-12-17 21:36:27,314 [INFO] Starting snarl path decomposition...
 2024-12-17 21:36:27,463 [INFO] Total of snarls found : 1524

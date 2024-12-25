@@ -71,7 +71,7 @@ def main() :
     if args.binary:
         logger.info("Parsing binary phenotype...")
         pheno = utils.parse_pheno_binary_file(args.binary)
-        merged_dict = pheno[0].copy()  # Make a copy to avoid modifying dict1
+        merged_dict = pheno[0].copy()  # Make a copy to avoid modifying dict
         merged_dict.update(pheno[1]) 
         utils.check_mathing(merged_dict, list_samples, "phenotype")
 
@@ -157,6 +157,6 @@ Usage example:
     -r ../droso_data/fly/fly.deconstruct.vcf -q ../droso_data/pangenome_phenotype.tsv -o output
 
 Usage test:
-    python3 src/stoat.py -p tests/simulation/pg.full.pg -d tests/simulation/pg.dist -v tests/simulation/merged_output.vcf \
-    -b tests/simulation/phenotype.tsv -o tests/simulation
+    python3 src/stoat.py -p tests/simulation/binary_data/pg.full.pg -d tests/simulation/binary_data/pg.dist -v tests/simulation/binary_data/merged_output.vcf \
+    -b tests/simulation/binary_data/phenotype.tsv -o tests/simulation
 """

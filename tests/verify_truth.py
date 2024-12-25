@@ -37,7 +37,6 @@ def match_snarl(path_list, true_labels, p_value_file, paths_file):
     predicted_labels_10_2 = []
     predicted_labels_10_5 = []
     predicted_labels_10_8 = []
-    list_pvalue = []
     cleaned_true_labels = []
     finded_row = 0
 
@@ -61,7 +60,6 @@ def match_snarl(path_list, true_labels, p_value_file, paths_file):
                 match = matched_row.iloc[0]
 
             p_value_fisher = match['P_Fisher']
-            list_pvalue.append(p_value_fisher)
             predicted_labels_10_2.append(0 if p_value_fisher < 0.01 else 1)
             predicted_labels_10_5.append(0 if p_value_fisher < 0.00001 else 1)
             predicted_labels_10_8.append(0 if p_value_fisher < 0.00000001 else 1)
@@ -72,7 +70,7 @@ def match_snarl(path_list, true_labels, p_value_file, paths_file):
     print("finded row : ", finded_row)
     print("total row : ", len(path_list))
 
-    return predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels, list_pvalue
+    return predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels
 
 def conf_mat_maker(p_val, predicted_labels, true_labels, output):
     
@@ -216,26 +214,29 @@ if __name__ == "__main__":
     parser.add_argument("freq", help="Path to allele frequence file")
     parser.add_argument("p_value", help="Path to p_value file")
     parser.add_argument("paths", help="Path to p_value file")
+    parser.add_argument("-t", "--threshold", type=float, required=False, help="Threshold to define the truth label")
+
     args = parser.parse_args()
 
-    # Case where all element is a Truth label 
-    THRESHOLD = 0.0
+    # THRESHOLD = 0.0 : Case where difference between both group snarl is considered like Truth label 
+    THRESHOLD = args.threshold if args.threshold else 0.0
 
     # Define Truth label from freq file
     test_path_list, test_true_labels, list_diff = process_file(args.freq, THRESHOLD)
 
     # Define Truth label from output file and compare with the truth label
-    test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, list_pvalue = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
+    test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
         
     # Plot confusion matrix
     print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, "tests/binary_tests_output/truth_confusion_matrix")
     
     # Plot distribution of p-values for false negatives and true positives
-    plot_diff_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff, "tests/binary_tests_output/binary_test")
-    plot_diff_distribution(test_predicted_labels_10_5, cleaned_true_labels, list_diff, "tests/binary_tests_output/binary_test")
-    plot_diff_distribution(test_predicted_labels_10_8, cleaned_true_labels, list_diff, "tests/binary_tests_output/binary_test")
+    output_diff = "tests/binary_tests_output/binary_test"
+    plot_diff_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff, output_diff)
+    plot_diff_distribution(test_predicted_labels_10_5, cleaned_true_labels, list_diff, output_diff)
+    plot_diff_distribution(test_predicted_labels_10_8, cleaned_true_labels, list_diff, output_diff)
 
     """
-    python3 src/verify_truth.py tests/simulation/pg.snarls.freq.tsv \
-    tests/binary_tests_output/binary_test.assoc.tsv tests/simulation/snarl_paths.tsv
+    python3 src/verify_truth.py tests/simulation/binary_data/pg.snarls.freq.tsv \
+    tests/binary_tests_output/binary_test.assoc.tsv tests/simulation/binary_data/snarl_paths.tsv
     """

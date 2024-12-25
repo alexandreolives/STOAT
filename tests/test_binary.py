@@ -6,10 +6,11 @@ from pathlib import Path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 def test_snarl_analyser():
-    vcf_file = "tests/simulation/merged_output.vcf"
-    phenotype_file = "tests/simulation/phenotype.tsv"
-    snarl_file = "tests/simulation/snarl_paths.tsv"
+    vcf_file = "tests/simulation/binary_data/merged_output.vcf"
+    phenotype_file = "tests/simulation/binary_data/phenotype.tsv"
+    snarl_file = "tests/simulation/binary_data/snarl_paths.tsv"
     output_dir = Path("tests/binary_tests_output")
+    expected_output = "tests/simulation/binary_data/expected_binary/binary_analysis.assoc.tsv"
 
     # Import necessary modules
     import snarl_analyser
@@ -28,9 +29,6 @@ def test_snarl_analyser():
     vcf_object.binary_table(snarl, binary_group, None, True, output)
 
     assert os.path.exists(output), f"Output file {output} was not created."
-
-    # Compare output to expected output simulation
-    expected_output = "tests/simulation/expected_binary/binary_analysis.assoc.tsv"
 
     with open(expected_output, 'r') as expected_file:
         expected_content = expected_file.read()
