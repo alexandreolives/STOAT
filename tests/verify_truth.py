@@ -29,6 +29,7 @@ def process_file(freq_file, threshold=0.01):
     return path_list, true_labels, list_diff
 
 def match_snarl(path_list, true_labels, p_value_file, paths_file):
+
     p_value_df = pd.read_csv(p_value_file, sep='\t')
     paths_df = pd.read_csv(paths_file, sep='\t')
 
@@ -37,8 +38,6 @@ def match_snarl(path_list, true_labels, p_value_file, paths_file):
     predicted_labels_10_5 = []
     predicted_labels_10_8 = []
     list_pvalue = []
-    list_min_sample = []
-
     cleaned_true_labels = []
     finded_row = 0
 
@@ -48,7 +47,6 @@ def match_snarl(path_list, true_labels, p_value_file, paths_file):
         split = p_value_df['SNARL'].str.split('_')
         _id_snarl = (split.str[1].astype(int) <= start_node) & (split.str[0].astype(int) >= next_node)
         matched_row = p_value_df[_id_snarl]
-        min_row = p_value_df['Min_sample']
 
         if not matched_row.empty :
             if len(matched_row) > 1 :
@@ -63,9 +61,7 @@ def match_snarl(path_list, true_labels, p_value_file, paths_file):
                 match = matched_row.iloc[0]
 
             p_value_fisher = match['P_Fisher']
-            min_row = match['Min_sample']
             list_pvalue.append(p_value_fisher)
-            list_min_sample.append(min_row)
             predicted_labels_10_2.append(0 if p_value_fisher < 0.01 else 1)
             predicted_labels_10_5.append(0 if p_value_fisher < 0.00001 else 1)
             predicted_labels_10_8.append(0 if p_value_fisher < 0.00000001 else 1)
@@ -76,7 +72,7 @@ def match_snarl(path_list, true_labels, p_value_file, paths_file):
     print("finded row : ", finded_row)
     print("total row : ", len(path_list))
 
-    return predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels, list_pvalue, list_min_sample
+    return predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels, list_pvalue
 
 def conf_mat_maker(p_val, predicted_labels, true_labels, output):
     
@@ -115,6 +111,7 @@ def print_confusion_matrix(predicted_labels_10_2, predicted_labels_10_5, predict
     conf_mat_maker(p_val_10_8, predicted_labels_10_8, true_labels, output)
 
 def p_value_distribution(test_predicted_labels, cleaned_true_labels, list_diff, p_value, min_sample):
+    
     # Identify indices for false negatives and true positives
     false_negatives_indices = [
         i for i, (pred, true, diff) in enumerate(zip(test_predicted_labels, cleaned_true_labels, list_diff))
@@ -228,7 +225,7 @@ if __name__ == "__main__":
     test_path_list, test_true_labels, list_diff = process_file(args.freq, THRESHOLD)
 
     # Define Truth label from output file and compare with the truth label
-    test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, list_pvalue, list_min_sample = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
+    test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, list_pvalue = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
         
     # Plot confusion matrix
     print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, "tests/binary_tests_output/truth_confusion_matrix")
