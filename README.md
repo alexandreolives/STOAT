@@ -186,7 +186,7 @@ STOAT will generated a manhattan and a QQ plot for binary and quantitatif analys
 
 ### SequenceTube
 
-Use `gaf_creator.py` to geneate a GAF file and [sequenceTubeMap](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
+Use `gaf_creator.py` or `stoat.py --gaf` to geneate a GAF file and [sequenceTubeMap](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
 
 ```bash 
 python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths.tsv> -p <pg_file_path>
