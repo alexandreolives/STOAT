@@ -28,11 +28,7 @@ setup(
         "seaborn==0.13.2",
         "plotly==5.24.1",
         "pytest==8.3.4"
-    ],  
-    # ADD LIBDSG DEPENDENCY
-    # git clone --recursive https://github.com/vgteam/libbdsg.git
-    # cd libbdsg
-    # pip install .
+    ],
     extras_require={
         "libbdsg": []
     },

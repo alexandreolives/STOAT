@@ -24,9 +24,7 @@ def extract_vcf_header(input_vcf):
                 header_lines.extend([
                     '##INFO=<ID=P,Number=1,Type=Float,Description="P-value from GWAS">',
                     '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
-                    '##FILTER=<ID=PASS,Description="Passed all filters">',
                     '##FILTER=<ID=LOWQ,Description="Low quality based on p-value threshold">',
-                    '##FILTER=<ID=FAIL,Description="Failed basic quality filters">'
                 ])
                 # Determine the number of samples
                 num_samples = len(line.strip().split('\t')) - 9  # Columns after the FORMAT field
@@ -51,7 +49,7 @@ def create_vcf_from_gwas(gwas_file, input_vcf, output_vcf):
             next(gwas)
             for line in gwas:
                 fields = line.strip().split('\t')
-                chrom, pos, snarl_id, var_type, ref, alt, p_value = fields
+                chrom, pos, snarl_id, _, ref, alt, p_value = fields
 
                 # Create placeholder fields
                 qual = "."

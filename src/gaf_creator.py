@@ -38,7 +38,7 @@ def calcul_proportion_signi(number_ind_group0: int, number_ind_group1: int, p_va
     proportion_group1 = 60 - proportion_group0
     
     # Step 2: Calculate the adjustment factor based on a logarithmic scale of p_value
-    # Adding 1e-10 to avoid log(0); adjust multiplier (e.g., 10) based on desired impact
+    # Adding 1e-10 to avoid log(0)
     adjustment_factor = -math.log(max(p_value, 1e-10))  # Multiplier can be tuned for desired effect
 
     # Step 3: Apply the adjustment to the group with the higher initial proportion
@@ -153,7 +153,7 @@ def parse_graph_tree(pg_file) :
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Parse a file and create a GAF file.")
-    parser.add_argument('-s', '--snarl', type=str, help="Path to the variant snarl file. (output file of snarl_analyser.py)", required=True)
+    parser.add_argument('-g', '--gwas', type=str, help="Path to the gwas output binary analysis file. (output file of snarl_analyser.py)", required=True)
     parser.add_argument('-l', '--pathlist', type=str, help="Path to the list tested snarl file. (output file of list_snarl_paths.py)", required=True)
     parser.add_argument('-p', '--pg', type=str, help='the input pangenome .pg file', required=True)
     parser.add_argument('-o', '--output', type=str, help="Path to the output GAF file.", required=False)
@@ -164,8 +164,7 @@ if __name__ == "__main__":
     output = os.path.join(output_dir, "output.gaf")
 
     pg = parse_graph_tree(args.pg)
-    snarl_dic = src.utils.parse_snarl_path_file(args.pathlist)
-    parse_input_file(args.snarl, snarl_dic, pg, output)
+    snarl_dic = src.utils.parse_snarl_path_file(args.pathlist)[0]
+    parse_input_file(args.gwas, snarl_dic, pg, output)
 
-# python3 src/gaf_creator.py -s output/simulation_1000_binary.tsv -l ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -p ../snarl_data/simulation_1000vars_100samps/pg.pg
-
+# python3 src/gaf_creator.py -g tests/simulation/expected_binary/binary_analysis_pos.assoc.tsv -l tests/simulation/binary_data/snarl_paths.tsv -p tests/simulation/binary_data/pg.full.pg 
