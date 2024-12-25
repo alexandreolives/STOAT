@@ -27,43 +27,17 @@ jobs:
 
     # Step 3: Install build tools and dependencies
     - name: Install build tools
-      run: |
-        python -m pip install --upgrade pip
-        pip install setuptools wheel setuptools_scm build
+      run: python -m pip install --upgrade pip && pip install setuptools wheel setuptools_scm build
+    
+    # Step 4: Add libbdsg dependency
+    - name: Install libbdsg
+      run: git clone --recursive https://github.com/vgteam/libbdsg.git && cd libbdsg && pip install .
 
-    # # Step 5: Patch pyproject.toml for libbdsg
-    # - name: Patch pyproject.toml for libbdsg
-    #   run: |
-    #     git clone --recursive https://github.com/vgteam/libbdsg.git
-    #     cd libbdsg
-    #     echo "[build-system]" > pyproject.toml
-    #     echo "requires = ['setuptools', 'wheel', 'setuptools_scm']" >> pyproject.toml
-    #     echo "build-backend = 'setuptools.build_meta'" >> pyproject.toml
-    #     echo "[tool.setuptools_scm]" >> pyproject.toml
-    #     echo "version_scheme = 'guess-next-dev'" >> pyproject.toml
-    #     echo "local_scheme = 'node-and-date'" >> pyproject.toml
-    #     cd ..
-
-    # # Step 6: Clean up the libbdsg directory to avoid git clone errors
-    # - name: Clean up libbdsg directory if it exists
-    #   run: |
-    #     if [ -d "libbdsg" ]; then
-    #       rm -rf libbdsg
-    #     fi
-
-    # # Step 7: Build and install libbdsg
-    # - name: Build and install libbdsg
-    #   run: |
-    #     git clone --recursive https://github.com/vgteam/libbdsg.git
-    #     cd libbdsg
-    #     python -m build  # Use modern build process
-    #     pip install dist/*.whl  # Install the built wheel
-    #     cd ..
-
-    # Step 8: Install other dependencies
+    # Step 5: Install other dependencies
     - name: Install dependencies
-      run: pip install -r requirements.txt
+      run: |
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; else echo "requirements.txt not found"; fi
 
-    # Step 9: Run tests
+    # Step 6: Run tests
     - name: Run tests
       run: pytest
