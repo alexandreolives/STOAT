@@ -1,5 +1,9 @@
+# import sys
 # import os
 # from pathlib import Path
+
+# # Add the parent directory to the sys.path
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # # Import necessary modules
 # import src.snarl_analyser
