@@ -2,8 +2,8 @@ src/__pycache__
 output/*
 stoat.egg-info
 build
-.vscode/*
-.pytest_cache/*
+.vscode
+.pytest_cache
 .DS_Store
 tests/.DS_Store
 STOAT.egg-info

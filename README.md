@@ -31,7 +31,7 @@ cd STOAT
 pip install -r requirements.txt
 
 # install bdsg version > 3.0.0 
-# DO NOT use pip install bdsg cause version 3.0.0 instead do :
+# DO NOT use pip install bdsg cause it's in version 3.0.0, instead do :
 git clone --recursive https://github.com/vgteam/libbdsg.git
 cd libbdsg
 pip install .
@@ -51,14 +51,14 @@ pip install .
 ## Input format file
 
 Required files :
-- pg_file : Pangenome graph file, formats accepted: .pg or .xg.
-- dist_file : Distance file generated with vg dist, format: .dist.
-- vcf_ref : Reference node positions in the pangenome graph generated with vg deconstruct, formats: .vcf.
+- pg : Pangenome graph file, formats accepted: .pg or .xg.
+- dist : Distance file generated with vg dist, format: .dist.
+- ref : VCF referenting chromosomes and positions in the pangenome graph generated with vg deconstruct, formats: .vcf (only).
 - vcf : Merged VCF file, created using bcftools merge, formats: .vcf or .vcf.gz.
-- pheno : Three-column file with FID (family/sample name), IID (sample name), and PHENO (integer/float). Format: .txt or .tsv (tab-separated).
+- phenotype : phenotype file organise in three-column with FID (family/sample name), IID (sample name), and PHENO (integer/float). Format: .txt or .tsv (tab-separated).
 
 Optional file : 
-- list_paths : Two-column file containing snarl names and the list of paths through the snarl's netgraph, separated by tabs. Format: .txt or .tsv.
+- paths : Two-column file containing snarl names and the list of paths through the snarl's netgraph, separated by tabs. Format: .txt or .tsv.
 
 ## Usage
 
@@ -67,10 +67,10 @@ Use `stoat.py` if you want to launch the full tool at once, starting from snarl 
 - Run full tool :
 ```bash
 # binary trait
-python3 stoat.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.tsv
+python3 stoat.py -p <pg.pg> -d <dist.dist> -v <vcf.vcf.gz> -r <ref.vcf> -b <phenotype.txt> -o output
 
 # quantative trait
-python3 stoat.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.tsv
+python3 stoat.py -p <pg.pg> -d <dist.dist> -v <vcf.vcf.gz> -r <ref.vcf> -q <phenotype.txt> -o output
 ```
 
 Explanation of all options:
@@ -123,16 +123,16 @@ Alternatively, you can specify the script you want to launch, depending on your 
 
 ```bash
 # decompose pangenome
-python3 list_snarl_paths.py -p <path_to_pg_file.pg> -d <path_to_dist_file.dist> -o <output.tsv>
+python3 list_snarl_paths.py -p <pg.pg> -d <dist.dist> -o <output.tsv>
 
 # binary trait with list_path already computed (can also do with quantitative trait) and gaf creation 
-python3 stoat.py -l <list_paths_snarl.txt> -v <path_to_vcf_file.vcf.gz> -r <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> --gaf -o output.tsv
+python3 stoat.py -l <paths.txt> -v <vcf.vcf.gz> -r <ref.vcf.gz> -b <phenotype.txt> --gaf -o output.tsv
 
 # binary trait
-python3 snarl_analyser.py <path_to_vcf_file.vcf.gz> <list_paths_snarl.txt> <path_to_vcf_reference_file.vcf.gz> -b <path_to_group_file.txt> -o output.txt
+python3 snarl_analyser.py <vcf.vcf.gz> <paths.txt> <ref.vcf.gz> -b <phenotype.txt> -o output.txt
 
 # quantitative trait 
-python3 snarl_analyser.py <path_to_vcf_file.vcf.gz> <list_paths_snarl.txt> <path_to_vcf_reference_file.vcf.gz> -q <path_to_pheno_file.txt> -o output.txt
+python3 snarl_analyser.py <vcf.vcf.gz> <paths.txt> <ref.vcf.gz> -q <phenotype.txt> -o output.txt
 ```
 
 ## Output
@@ -189,7 +189,7 @@ STOAT will generated a manhattan and a QQ plot for binary and quantitatif analys
 Use `gaf_creator.py` or `stoat.py --gaf` to geneate a GAF file and [sequenceTubeMap](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
 
 ```bash 
-python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <decomposition_paths.tsv> -p <pg_file_path>
+python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <paths.tsv> -p <pg.pg>
 ```
 <p align="center">
 <img src="pictures/seqTube.png" width="600">
