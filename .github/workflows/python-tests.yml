@@ -46,6 +46,6 @@ jobs:
     - name: Install pybind11
       run: pip install pybind11
 
-      # Step 6: Run tests
+    # Step 6: Run tests
     - name: Run tests
       run: python3 -m pytest

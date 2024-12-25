@@ -196,3 +196,11 @@ python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <paths.tsv> -p <pg.p
 </p>
 
 Description : Color represente the different paths group (red : group 1 & blue : group 0) and opacity represente the number of samples in that paths (number of samples passing trought each paths % 60).
+
+### TODO 
+
+[] Modify list_paths.py to determine ref chr/pos of each snarl 
+[] Implemente LMM 
+[] Add quantitative simulation data + fonctionnal quantitative test + verify quantitative truth.
+[] Add more unitest
+[] correct github action and setup.py
