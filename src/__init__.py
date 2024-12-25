@@ -1,1 +1,1 @@
-from stoat import main
+from src.stoat import main
