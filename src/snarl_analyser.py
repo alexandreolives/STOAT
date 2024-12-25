@@ -143,9 +143,6 @@ class SnarlProcessor:
         Generate a binary table with statistical results and write to a file.
         """
         
-        print("output : ", output)
-        print("test")
-
         headers = ('CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\tGROUP_PATHS\n')
         with open(output, 'wb') as outf:
             outf.write(headers.encode('utf-8'))

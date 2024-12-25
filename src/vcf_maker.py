@@ -1,4 +1,5 @@
 import argparse
+
 def extract_vcf_header(input_vcf):
     header_lines = []
     column_header = None

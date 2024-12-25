@@ -14,26 +14,26 @@ from datetime import datetime
 def main() : 
 
     # Argument Parsing
-    parser = argparse.ArgumentParser(description='Parse and analyze snarl from VCF file')
-    parser.add_argument('-p', type=utils.check_file, help='The input pangenome .pg file', required=False)
-    parser.add_argument('-d', type=utils.check_file, help='The input distance index .dist file', required=False)
-    parser.add_argument("-t", type=list_snarl_paths.check_threshold, help='Children threshold', required=False)
-    parser.add_argument("-v", type=utils.check_format_vcf_file, help="Path to the merged VCF file (.vcf or .vcf.gz)", required=True)
-    parser.add_argument("-r", type=utils.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (only .vcf)", required=False)
+    parser = argparse.ArgumentParser(description="Run the Stoat GWAS analysis pipeline")
+    parser.add_argument('-p', "--pg",type=utils.check_file, help='The input pangenome .pg file', required=False)
+    parser.add_argument('-d', "--dist",type=utils.check_file, help='The input distance index .dist file', required=False)
+    parser.add_argument("-t", "--threshold",type=list_snarl_paths.check_threshold, help='Children threshold', required=False)
+    parser.add_argument("-v", "--vcf",type=utils.check_format_vcf_file, help="Path to the merged VCF file (.vcf or .vcf.gz)", required=True)
+    parser.add_argument("-r", "--reference", type=utils.check_format_vcf_file, help="Path to the VCF file referencing all snarl positions (only .vcf)", required=False)
     parser.add_argument("-l", "--listpath", type=utils.check_format_list_path, help="Path to the list paths", required=False)
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-b", "--binary", type=utils.check_format_pheno, help="Path to the binary group file (.txt or .tsv)")
     group.add_argument("-q", "--quantitative", type=utils.check_format_pheno, help="Path to the quantitative phenotype file (.txt or .tsv)")
     parser.add_argument("-c", "--covariate", type=utils.check_covariate_file, required=False, help="Path to the covariate file (.txt or .tsv)")
-    parser.add_argument("-g", "--gaf", action="store_true", required=False, help="Prepare binary gwas output to do gaf file + make gaf on 10th significatif paths")
+    parser.add_argument("-g", "--gaf", action="store_true", required=False, help="Prepare binary gwas output to do gaf file + make gaf for the 10th significant paths")
     parser.add_argument("-o", "--output", type=str, required=False, help="Base path for the output directory")
     args = parser.parse_args()
 
     if args.quantitative and args.gaf:
         parser.error("The '--gaf' argument cannot be used with the '--quantitative' ('-q') argument.")
 
-    if not args.listpath and (not args.p or not args.d) :
+    if not args.listpath and (not args.pg or not args.dist) :
         parser.error("When --listpath (-l) is not provided, both -p and -d must be specified to compute it.")
 
     # Generate unique output directory based on timestamp
@@ -60,7 +60,7 @@ def main() :
     logger.info(f"Output directory: {output_dir}")
 
     # Check vcf samples matching other files (pheno, covar)
-    list_samples = utils.parsing_samples_vcf(args.v)
+    list_samples = utils.parsing_samples_vcf(args.vcf)
 
     if args.covariate :
         covar = utils.parse_covariate_file(args.covariate)
@@ -84,7 +84,7 @@ def main() :
         # Step 1: Parse the Pangenome Graph and Create Snarl Paths to Test
         start_time = time.time()
         logger.info("Starting snarl path decomposition...")
-        stree, pg, root = list_snarl_paths.parse_graph_tree(args.p, args.d)
+        stree, pg, root = list_snarl_paths.parse_graph_tree(args.pg, args.dist)
         snarls = list_snarl_paths.save_snarls(stree, root)
         logger.info(f"Total of snarls found : {len(snarls)}")
         logger.info("Saving snarl path decomposition...")
@@ -92,23 +92,23 @@ def main() :
         output_snarl_path_not_analyse = os.path.join(output_dir, "snarl_not_analyse.tsv")
         output_snarl_path = os.path.join(output_dir, "snarl_paths.tsv")
 
-        threshold = int(args.t) if args.t else 10 
+        threshold = int(args.threshold) if args.threshold else 10 
         snarl_paths, paths_number_analysis = list_snarl_paths.loop_over_snarls_write(stree, snarls, pg, output_snarl_path, output_snarl_path_not_analyse, threshold)
         logger.info(f"Total of paths analyse : {paths_number_analysis}")
 
     else :
-        if args.p or args.d : 
+        if args.pg or args.dist : 
             logger.info("list snarls path are provided, .pg and .dist will be not analyse")
         input_snarl_path = args.listpath
         snarl_paths, paths_number_analysis = utils.parse_snarl_path_file(input_snarl_path)
         logger.info(f"Total of snarls found : {paths_number_analysis}")
 
     # Step 2: Parse VCF Files and Fill the Matrix
-    vcf_object = snarl_analyser.SnarlProcessor(args.v, list_samples)
+    vcf_object = snarl_analyser.SnarlProcessor(args.vcf, list_samples)
     logger.info("Starting fill matrix...")
     vcf_object.fill_matrix()
 
-    reference_vcf = args.r if args.r else args.v
+    reference_vcf = args.reference if args.reference else args.vcf
 
     # Step 3: P-value Analysis (Binary or Quantitative)
     # Handle Binary Analysis
@@ -148,9 +148,8 @@ def main() :
         p_value_analysis.plot_manhattan_quantitatif(output_file, output_manh)
 
     logger.info(f"GWAS analysis completed in {time.time() - start_time:.2f} seconds.")
-
-main()
-
+    logger.info(f"Output directory: {output_dir}")
+    
 """
 Usage example:
     python3 src/stoat.py -p ../droso_data/fly/fly.pg -d ../droso_data/fly/fly.dist -v ../droso_data/pangenome.dm6.vcf \
