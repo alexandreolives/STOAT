@@ -5,16 +5,16 @@ from pathlib import Path
 # Add the parent directory to the Python path to enable imports from src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
+# Import necessary modules
+import snarl_analyser
+import utils
+
 def test_snarl_analyser():
     vcf_file = "tests/simulation/binary_data/merged_output.vcf"
     phenotype_file = "tests/simulation/binary_data/phenotype.tsv"
     snarl_file = "tests/simulation/binary_data/snarl_paths.tsv"
     output_dir = Path("tests/binary_tests_output")
-    expected_output = "tests/simulation/binary_data/expected_binary/binary_analysis.assoc.tsv"
-
-    # Import necessary modules
-    import snarl_analyser
-    import utils
+    expected_output = "tests/simulation/expected_binary/binary_analysis.assoc.tsv"
 
     # Perform test logic
     list_samples = utils.parsing_samples_vcf(vcf_file)

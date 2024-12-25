@@ -5,15 +5,15 @@
 # # Add the parent directory to the Python path to enable imports from src
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
+# # Import necessary modules
+# import snarl_analyser
+# import utils
+
 # def test_snarl_analyser():
 #     vcf_file = "tests/simulation/quantitative_data/merged_output.vcf"
 #     phenotype_file = "tests/simulation/quantitative_data/phenotype.tsv"
 #     snarl_file = "tests/simulation/quantitative_data/snarl_paths.tsv"
 #     output_dir = Path("tests/quantitative_tests_output")
-
-#     # Import necessary modules
-#     import snarl_analyser
-#     import utils
 
 #     # Perform test logic
 #     list_samples = utils.parsing_samples_vcf(vcf_file)
