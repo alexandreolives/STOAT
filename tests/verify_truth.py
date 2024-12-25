@@ -78,7 +78,7 @@ def match_snarl(path_list, true_labels, p_value_file, paths_file):
 
     return predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels, list_pvalue, list_min_sample
 
-def conf_mat_maker(p_val, predicted_labels, true_labels, output) :
+def conf_mat_maker(p_val, predicted_labels, true_labels, output):
     
     # Calculate confusion matrix for p-value < p_val
     print(f"\nMetrics for p-value < {p_val}:")
@@ -86,7 +86,7 @@ def conf_mat_maker(p_val, predicted_labels, true_labels, output) :
     print(f"Confusion Matrix for p-value < {p_val}:\n{cm}")
     prec = precision_score(true_labels, predicted_labels)
     recall = recall_score(true_labels, predicted_labels)
-    f1= f1_score(true_labels, predicted_labels)
+    f1 = f1_score(true_labels, predicted_labels)
     print(f"Precision: {prec:.3f}")
     print(f"Recall: {recall:.3f}")
     print(f"F1 Score: {f1:.3f}")
@@ -94,8 +94,8 @@ def conf_mat_maker(p_val, predicted_labels, true_labels, output) :
     # Plot confusion matrix for p-value < p_val
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
-                xticklabels=['Predicted Pos', 'Predicted Neg'], 
-                yticklabels=['True Pos', 'True Neg'],
+                xticklabels=['Predicted Neg', 'Predicted Pos'], 
+                yticklabels=['True Neg', 'True Pos'],
                 annot_kws={"size": 30})
     plt.xticks(fontsize=16)  
     plt.yticks(fontsize=16)  
@@ -185,32 +185,33 @@ def p_value_distribution(test_predicted_labels, cleaned_true_labels, list_diff, 
     plt.savefig('output/test_distribution_false_neg.png', format='png', dpi=300)
 
 def plot_diff_distribution(test_predicted_labels, cleaned_true_labels, list_diff, output):
-    # Identify false negatives: True label is 1 (no difference), but predicted label is 0 (predicted a difference)
-    true_negatives_indices = [i for i, (pred, true) in enumerate(zip(test_predicted_labels, cleaned_true_labels)) if pred == 1 and true == 0]
+    
+    # Identify false negatives: True label is 0 (difference), but predicted label is 1 (predicted no difference)
+    false_negatives_indices = [i for i, (pred, true) in enumerate(zip(test_predicted_labels, cleaned_true_labels)) if pred == 1 and true == 0]
 
     # Extract the corresponding differences for false negatives
-    true_negative_diffs = [list_diff[i]*100 for i in true_negatives_indices]
+    false_negative_diffs = [list_diff[i]*100 for i in false_negatives_indices]
 
     # Plot the distribution of differences for false negatives
     plt.figure(figsize=(10, 6))
-    sns.histplot(true_negative_diffs, bins=20, kde=True, color='blue')
-    plt.title("Distribution of Differences for True Negatives", fontsize=16)
+    sns.histplot(false_negative_diffs, bins=20, kde=True, color='blue')
+    plt.title("Distribution of Differences for False Negatives", fontsize=16)
     plt.xlabel("Difference (%)", fontsize=14)
     plt.ylabel("Frequency", fontsize=14)
     plt.grid(False)
-    plt.savefig(output + '_distribution_true_neg.png', format='png', dpi=300)
+    plt.savefig(output + '_distribution_false_neg.png', format='png', dpi=300)
 
-    true_true_indices = [i for i, (pred, true) in enumerate(zip(test_predicted_labels, cleaned_true_labels)) if pred == 0 and true == 0]
-    true_true_diffs = [list_diff[i]*100 for i in true_true_indices]
+    true_positive_indices = [i for i, (pred, true) in enumerate(zip(test_predicted_labels, cleaned_true_labels)) if pred == 0 and true == 0]
+    true_positive_diffs = [list_diff[i]*100 for i in true_positive_indices]
 
-    # Plot the distribution of differences for false negatives
+    # Plot the distribution of differences for true positives
     plt.figure(figsize=(10, 6))
-    sns.histplot(true_true_diffs, bins=20, kde=True, color='blue')
-    plt.title("Distribution of Differences for True True", fontsize=16)
+    sns.histplot(true_positive_diffs, bins=20, kde=True, color='blue')
+    plt.title("Distribution of Differences for True Positives", fontsize=16)
     plt.xlabel("Difference (%)", fontsize=14)
     plt.ylabel("Frequency", fontsize=14)
     plt.grid(False)
-    plt.savefig(output + '_distribution_true_true.png', format='png', dpi=300)
+    plt.savefig(output + '_distribution_true_positives.png', format='png', dpi=300)
     
 if __name__ == "__main__":
 
@@ -229,19 +230,12 @@ if __name__ == "__main__":
     # Define Truth label from output file and compare with the truth label
     test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, list_pvalue, list_min_sample = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
         
-    # Match the result_list with the p_value file and write to the output
+    # Plot confusion matrix
     print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, "tests/binary_tests_output/truth_confusion_matrix")
-
-    p_val_10_2 = 0.01
-    conf_mat_maker(p_val_10_2, test_predicted_labels_10_2, cleaned_true_labels, "tests/binary_tests_output/binary_test_truth_confusion_matrix")
+    
+    # Plot distribution of p-values for false negatives and true positives
     plot_diff_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff, "tests/binary_tests_output/binary_test")
-
-    p_val_10_5 = 0.00001
-    conf_mat_maker(p_val_10_5, test_predicted_labels_10_5, cleaned_true_labels, "tests/binary_tests_output/binary_test_truth_confusion_matrix")
     plot_diff_distribution(test_predicted_labels_10_5, cleaned_true_labels, list_diff, "tests/binary_tests_output/binary_test")
-
-    p_val_10_8 = 0.000000001
-    conf_mat_maker(p_val_10_8, test_predicted_labels_10_8, cleaned_true_labels, "tests/binary_tests_output/binary_test_truth_confusion_matrix")
     plot_diff_distribution(test_predicted_labels_10_8, cleaned_true_labels, list_diff, "tests/binary_tests_output/binary_test")
 
     """
