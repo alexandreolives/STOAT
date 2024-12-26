@@ -24,27 +24,21 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-
-    # Step 3: Install build tools and dependencies
-    - name: Install build tools
-      run: python -m pip install --upgrade pip && pip install setuptools wheel setuptools_scm build
-
-    # Step 4: Install jansson dependency
-    - name: Install jansson
-      run: sudo apt-get update && sudo apt-get install -y libjansson-dev
-
-    # Step 4: Add libbdsg dependency
-    - name: Install libbdsg
-      run: git clone --recursive https://github.com/vgteam/libbdsg.git && cd libbdsg && pip install .
+    
+    - name: build libbdsg
+      run: |
+        set -e
+        brew install libomp doxygen jansson
+        mkdir -p build
+        cd build
+        cmake .. -DRUN_DOXYGEN=ON -DPYTHON_EXECUTABLE="$(which python3)"
+        echo "Build with $(nproc) threads"
+        make -j$(nproc) VERBOSE=1
 
     # Step 5: Install other dependencies
     - name: Install dependencies
       run: |
         if [ -f requirements.txt ]; then pip install -r requirements.txt; else echo "requirements.txt not found"; fi
-
-    # Step 5: Install pybind11
-    - name: Install pybind11
-      run: pip install pybind11
 
     # Step 6: Run tests
     - name: Run tests

@@ -1,6 +1,6 @@
-from cyvcf2 import VCF
+from cyvcf2 import VCF # type: ignore
 import argparse
-import pandas as pd
+import pandas as pd # type: ignore
 from collections import defaultdict
 import os
 

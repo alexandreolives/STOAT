@@ -1,15 +1,15 @@
 import argparse
 import src.utils
-from cyvcf2 import VCF
+from cyvcf2 import VCF # type: ignore
 from typing import List
-import numpy as np
-import pandas as pd
-import statsmodels.api as sm
-from scipy.stats import chi2_contingency
-from scipy.stats import fisher_exact
+import numpy as np # type: ignore
+import pandas as pd # type: ignore
+import statsmodels.api as sm # type: ignore
+from scipy.stats import chi2_contingency # type: ignore
+from scipy.stats import fisher_exact # type: ignore
 from typing import IO, Any, Optional, Union
-# from limix.stats import logisticMixedModel
-# from limix.stats import scan
+# from limix.stats import logisticMixedModel # type: ignore
+# from limix.stats import scan # type: ignore
 import time
 import os
  

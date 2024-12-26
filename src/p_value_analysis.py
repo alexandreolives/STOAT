@@ -1,6 +1,6 @@
-import pandas as pd
+import pandas as pd # type: ignore
 import matplotlib.pyplot as plt
-import qmplot
+import qmplot # type: ignore
 
 SIGNIFICANCE_THRESHOLD = 0.00001
 

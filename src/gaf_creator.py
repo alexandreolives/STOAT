@@ -1,5 +1,5 @@
 import argparse
-import bdsg
+import bdsg # type: ignore
 import src.utils
 import re 
 import math
