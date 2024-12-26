@@ -24,10 +24,19 @@ jobs:
     - name: Install requirements dependencies
       run: pip install -r requirements.txt
       
-    - name: Install libbdsg
+    - name: Install libbdsg and pybind11
       run: |
         sudo apt-get install -y libomp-dev doxygen libjansson-dev
         git clone --recursive https://github.com/vgteam/libbdsg.git && cd libbdsg && pip install .
+        pip install pybind11
 
     - name: Run pytest tests
       run: python3 -m pytest
+
+# Run python3 -m pytest
+# Traceback (most recent call last):
+#   File "/home/runner/work/STOAT/STOAT/libbdsg/bdsg/deps/pybind11/tests/conftest.py", line 20, in <module>
+#     import pybind11_tests
+# ModuleNotFoundError: No module named 'pybind11_tests'
+# Unable to find the test binary "/opt/hostedtoolcache/Python/3.10.15/x64/lib/python3.10/site-packages/pytest/gtest_catch_exceptions_ex_test_". Please make sure to provide
+# a path to the binary via the --build_dir flag or the BUILD_DIR
