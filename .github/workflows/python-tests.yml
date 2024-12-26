@@ -28,7 +28,7 @@ jobs:
     - name: build libbdsg
       run: |
         set -e
-        brew install libomp doxygen jansson
+        sudo apt-get install libomp doxygen jansson
         mkdir -p build
         cd build
         cmake .. -DRUN_DOXYGEN=ON -DPYTHON_EXECUTABLE="$(which python3)"
