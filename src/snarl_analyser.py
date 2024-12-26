@@ -7,7 +7,7 @@ import pandas as pd # type: ignore
 import statsmodels.api as sm # type: ignore
 from scipy.stats import chi2_contingency # type: ignore
 from scipy.stats import fisher_exact # type: ignore
-from typing import IO, Any, Optional, Union
+from typing import IO, Any, Optional
 # from limix.stats import logisticMixedModel # type: ignore
 # from limix.stats import scan # type: ignore
 import time
@@ -139,7 +139,7 @@ class SnarlProcessor:
 
         self.matrix.set_row_header(row_header_dict)
 
-    def binary_table(self, snarls:dict, binary_groups:tuple[dict, dict], covar=None, gaf=False, output="output/binary_output.tsv"):
+    def binary_table(self, snarls:dict, binary_groups:tuple[dict, dict], covar:Optional[dict]=None, gaf:bool=False, output:str="output/binary_output.tsv"):
         """
         Generate a binary table with statistical results and write to a file.
         """
@@ -159,7 +159,7 @@ class SnarlProcessor:
                         f'{chi2_p_value}\t{total_sum}\t{min_sample}\t{numb_colum}\t{inter_group}\t{average}\t{group_paths}\n')
                 outf.write(data.encode('utf-8'))
 
-    def quantitative_table(self, snarls:dict, quantitative_dict:dict, covar:dict=None, output:str="output/quantitative_output.tsv") :
+    def quantitative_table(self, snarls:dict, quantitative_dict:dict, covar:Optional[dict]=None, output:str="output/quantitative_output.tsv") :
 
         with open(output, 'wb') as outf:
             headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tRSQUARED\tBETA\tSE\tP\n'
@@ -258,13 +258,35 @@ class SnarlProcessor:
 
         rsquared = f"{result.rsquared:.4e}"
         beta_mean = f"{result.params.mean():.4e}"  # Mean of beta coefficients
-        se_mean = f"{result.bse.mean():.4e}"      # Mean of standard errors
+        se_mean = f"{result.bse.mean():.4e}"       # Mean of standard errors
         formatted_p_value = f"{result.f_pvalue:.4e}"
 
         return rsquared, beta_mean, se_mean, formatted_p_value
 
     # # Linear Mixed Model
-    # def LMM_quantitatif(self, kinship_matrix, covar:dict, pheno:dict) -> tuple:
+
+    # def calculate_kinship_quantitative(self) -> pd.DataFrame:
+    #     """
+    #     Calculate the kinship matrix based on a sample-path matrix.
+    #     Returns: pd.DataFrame: Kinship matrix as a DataFrame.
+    #     """
+    #     # Convert to NumPy array for calculations
+    #     data = self.matrix.get_matrix()
+        
+    #     # Standardize each column (center and scale by standard deviation)
+    #     means = np.mean(data, axis=0)
+    #     std_devs = np.std(data, axis=0, ddof=1)
+    #     standardized_data = (data - means) / std_devs
+
+    #     # Compute the kinship matrix
+    #     n_paths = data.shape[1]
+    #     kinship_matrix = np.dot(standardized_data, standardized_data.T) / n_paths
+
+    #     # Convert back to DataFrame with sample names
+    #     kinship_df = pd.DataFrame(kinship_matrix, index=matrix.index, columns=matrix.index)
+    #     return kinship_df
+
+    # def LMM_quantitatif(self, kinship_matrix:pd.DataFrame, covar:dict, pheno:dict) -> tuple:
     #     """
     #     Perform Linear Mixed Model (LMM) for quantitative phenotype data.
     #     """
@@ -289,24 +311,21 @@ class SnarlProcessor:
     #     heritability = results.stats["h2"]      # Heritability estimate (proportion of variance explained by GRM)
     #     return p_value, beta, beta_se, ll, heritability
 
-    def chi2_test(self, df:pd.DataFrame) -> Union[float, str]:
-        """Calculate p_value from list of dataframe using chi-2 test"""
+    def chi2_test(self, df:pd.DataFrame) -> str:
+        """Calculate p_value using chi-2 test"""
 
         # Check if dataframe has at least 2 columns and more than 0 counts in every cell
         if df.shape[1] >= 2 and np.all(df.sum(axis=0)) and np.all(df.sum(axis=1)):
-            try:
-                # Perform Chi-Square test
-                p_value = chi2_contingency(df)[1] # from scipy.stats import chi2_contingency
-                p_value = f"{p_value:.4e}"
+            # Perform Chi-Square test
+            p_value = chi2_contingency(df)[1] # from scipy.stats import chi2_contingency
+            p_value = f"{p_value:.4e}"
 
-            except ValueError as e:
-                p_value = "Error"
         else:
             p_value = "NA"
 
         return p_value
 
-    def fisher_test(self, df:pd.DataFrame) -> float :
+    def fisher_test(self, df:pd.DataFrame) -> str:
         """Calcul p_value using fisher exact test"""
 
         try:
@@ -323,16 +342,12 @@ class SnarlProcessor:
     #     """
     #     Perform Logistic Mixed Model on a binary phenotype.
     #     """
-    #     # Ensure phenotype mapping
-    #     if not all(ind in df.index for ind in pheno.keys()):
-    #         raise ValueError("Some individuals in the phenotype file do not match the genotype file.")
 
     #     # Map phenotype to df
     #     df['Target'] = df.index.map(pheno)
     #     y = df['Target'].values
     #     X = covar[df.index].values  # Covariates should match the index of genotype data
-    #     K = np.corrcoef(df.T)       # This is a placeholder for the kinship matrix (should be computed properly in practice)
-    #     lmm = logisticMixedModel(y=y, K=K)
+    #     lmm = logisticMixedModel(y=y, K=kinship_matrix, X=X)
         
     #     # Fit the model with covariates
     #     lmm.fit(X)
@@ -343,17 +358,17 @@ class SnarlProcessor:
     #     return p_value, beta, vcomp
     
     def format_group_paths(self, df:pd.DataFrame) :
+        """Format group paths as a string for adding gaf column information."""
         result = []
         for column in df.columns:
             column_values = [f"{df.loc[group, column]}" for group in df.index]
             result.append(":".join(column_values))
 
-        # Join all results with ", "
         final_str = ",".join(result)
         return final_str
     
     def binary_stat_test(self, df:pd.DataFrame, gaf:bool=False) -> tuple:
-        """ Perform statistical tests and calculate descriptive statistics on a binary data frame. """
+        """ Perform statistical tests and calculate descriptive statistics on the binary analysis."""
         fisher_p_value = self.fisher_test(df)
         chi2_p_value = self.chi2_test(df)
 

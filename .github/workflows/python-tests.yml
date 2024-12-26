@@ -21,9 +21,7 @@ jobs:
     - name: Install libbdsg dependencies
       run: |
         sudo apt-get install -y libomp-dev doxygen libjansson-dev
-        git clone --recursive https://github.com/vgteam/libbdsg.git
-        pip install libbdsg/
-      shell: bash
+        git clone --recursive https://github.com/vgteam/libbdsg.git && cd libbdsg && pip install 
 
     - name: Install dependencies
       run: |

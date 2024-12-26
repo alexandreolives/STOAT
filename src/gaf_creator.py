@@ -127,11 +127,11 @@ def parse_input_file(input_file, snarl_dic, pg, output_file):
                     write_gaf_lines(sequence_name_g0[idx], path, length_path, prop_g0, outfile1)
                     write_gaf_lines(sequence_name_g1[idx], path, length_path, prop_g1, outfile2)
 
-def decompose_snarl(snarl) :
+def decompose_snarl(snarl:str) -> list:
     snarl_node = list(map(int, re.findall(r'\d+', snarl)))
     return snarl_node
 
-def calcul_path_length(pg, snarl):
+def calcul_path_length(pg:bdsg.bdsg.PackedGraph, snarl:str) -> int:
 
     snarl_node = decompose_snarl(snarl)
     length_node = 0
@@ -143,7 +143,7 @@ def calcul_path_length(pg, snarl):
 
     return length_node
 
-def parse_graph_tree(pg_file) :
+def parse_graph_tree(pg_file:str) -> bdsg.bdsg.PackedGraph:
 
     # load graph
     pg = bdsg.bdsg.PackedGraph()

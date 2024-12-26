@@ -207,3 +207,5 @@ Description : Color represente the different paths group (red : group 1 & blue :
 - [ ] Add more unit tests.
 
 - [ ] Correct GitHub Actions and `setup.py`.
+
+- [ ] Correct `vcf_maker.py`.
