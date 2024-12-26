@@ -22,16 +22,12 @@ jobs:
       run: |
         sudo apt-get install -y libomp-dev doxygen libjansson-dev
         git clone --recursive https://github.com/vgteam/libbdsg.git
-        mkdir -p build
-        cd build
-        cmake ../libbdsg -DRUN_DOXYGEN=ON -DPYTHON_EXECUTABLE="$(which python3)"
-        echo "Build with $(nproc) threads"
-        make -j$(nproc) VERBOSE=1
+        pip install libbdsg/
       shell: bash
 
     - name: Install dependencies
       run: |
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; else echo "requirements.txt not found"; fi
+        pip install -r requirements.txt
 
     - name: Run tests
       run: python3 -m pytest
