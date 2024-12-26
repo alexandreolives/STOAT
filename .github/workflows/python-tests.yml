@@ -13,13 +13,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout repository with submodules
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
-
-    # Step 2: Set up Python environment
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -34,12 +27,11 @@ jobs:
         cmake .. -DRUN_DOXYGEN=ON -DPYTHON_EXECUTABLE="$(which python3)"
         echo "Build with $(nproc) threads"
         make -j$(nproc) VERBOSE=1
+      shell: bash
 
-    # Step 5: Install other dependencies
     - name: Install dependencies
       run: |
         if [ -f requirements.txt ]; then pip install -r requirements.txt; else echo "requirements.txt not found"; fi
 
-    # Step 6: Run tests
     - name: Run tests
       run: python3 -m pytest
