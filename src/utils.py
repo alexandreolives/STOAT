@@ -4,18 +4,18 @@ import pandas as pd
 from collections import defaultdict
 import os
 
-def parsing_samples_vcf(vcf_path) :
+def parsing_samples_vcf(vcf_path:str) -> list :
     try :
         return VCF(vcf_path).samples
     except :
         raise f"Error : VCF parsing error, verify {vcf_path} format"
 
-def parse_covariate_file(filepath):
+def parse_covariate_file(filepath:str) -> dict:
 
     covariates = pd.read_csv(filepath)
     return covariates.set_index("ID").to_dict(orient="index")
 
-def parse_pheno_binary_file(group_file : str):
+def parse_pheno_binary_file(group_file:str) -> tuple[dict, dict]:
 
     df = pd.read_csv(group_file, sep='\t')
     
@@ -28,7 +28,7 @@ def parse_pheno_binary_file(group_file : str):
     group_1 = {sample: 1 for sample in df[df['PHENO'] == 1]['IID']}
     return group_0, group_1
  
-def parse_pheno_quantitatif_file(file_path : str) -> dict:
+def parse_pheno_quantitatif_file(file_path:str) -> dict:
 
     df = pd.read_csv(file_path, sep='\t')
 
@@ -36,7 +36,7 @@ def parse_pheno_quantitatif_file(file_path : str) -> dict:
     parsed_pheno = dict(zip(df['IID'], df['PHENO']))
     return parsed_pheno
 
-def parse_snarl_path_file(path_file: str) -> dict:
+def parse_snarl_path_file(path_file:str) -> tuple[dict, int]:
     
     # Initialize an empty dictionary for the snarl paths
     snarl_paths = defaultdict(list)
@@ -53,19 +53,19 @@ def parse_snarl_path_file(path_file: str) -> dict:
 
     return snarl_paths, snarl_number_analysis
 
-def parse_covariate_file(covar_path : str) -> dict :
+def parse_covariate_file(covar_path:str) -> dict:
 
     covariates = pd.read_csv(covar_path)
 
     # Convert to dictionary with ID as the key and the rest of the row as the value
     return covariates.set_index("ID").to_dict(orient="index")
 
-def check_file(file_path) :
+def check_file(file_path: str) -> str:
     if not os.path.exists(file_path) or not os.path.isfile(file_path):
         raise argparse.ArgumentTypeError(f"Error: File '{file_path}' not found or is not a valid file.")
     return file_path
 
-def check_mathing(elements, list_samples, file_name) :
+def check_mathing(elements:dict, list_samples:list, file_name:str) -> None:
     """Check if all sample name in the pheno file are matching with vcf sample name else return error"""
     
     set_sample = set(list_samples)
@@ -75,7 +75,7 @@ def check_mathing(elements, list_samples, file_name) :
     if missing_elements :
         raise ValueError(f"The following sample name from vcf are not present in {file_name} file : {missing_elements}")
 
-def check_format_list_path(file_path : str) -> str:
+def check_format_list_path(file_path:str) -> str:
     """
     Function to check if the provided file path is a valid list path file.
     """
@@ -104,7 +104,7 @@ def check_format_list_path(file_path : str) -> str:
 
     return file_path
 
-def check_format_vcf_file(file_path : str) -> str:
+def check_format_vcf_file(file_path:str) -> str:
     """
     Function to check if the provided file path is a valid VCF file.
     """
@@ -114,7 +114,7 @@ def check_format_vcf_file(file_path : str) -> str:
         raise argparse.ArgumentTypeError(f"The file {file_path} is not a valid VCF file. It must have a .vcf extension or .vcf.gz.")
     return file_path
 
-def check_format_pheno(file_path: str) -> str:
+def check_format_pheno(file_path:str) -> str:
     
     check_file(file_path)
     
@@ -143,7 +143,7 @@ def check_format_pheno(file_path: str) -> str:
 
     return file_path
 
-def check_covariate_file(file_path):
+def check_covariate_file(file_path:str) -> str:
     
     # Check if the file exists
     check_file(file_path)

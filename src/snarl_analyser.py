@@ -7,37 +7,38 @@ import pandas as pd
 import statsmodels.api as sm
 from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact
+from typing import IO, Any, Optional, Union
 # from limix.stats import logisticMixedModel
 # from limix.stats import scan
 import time
 import os
  
 class Matrix :
-    def __init__(self, default_row_number=1_000_000, column_number=2):
+    def __init__(self, default_row_number:int=1_000_000, column_number:int=2):
         self.default_row_number = default_row_number 
         self.matrix = np.zeros((default_row_number, column_number), dtype=bool)
         self.row_header = None
 
-    def get_matrix(self):
+    def get_matrix(self) -> np.zeros:
         return self.matrix
 
-    def set_matrix(self, expended_matrix) :
+    def set_matrix(self, expended_matrix:int) -> None:
         self.matrix = expended_matrix
 
-    def get_row_header(self):
+    def get_row_header(self) -> Optional[dict]:
         return self.row_header
 
-    def get_default_row_number(self):
+    def get_default_row_number(self) -> int:
         return self.default_row_number
 
-    def set_row_header(self, row_header):
+    def set_row_header(self, row_header:dict) -> None:
         self.row_header = row_header  
 
-    def add_data(self, idx_snarl, idx_geno):
+    def add_data(self, idx_snarl:int, idx_geno:int) -> None:
         self.matrix[idx_snarl, idx_geno] = 1
 
 class SnarlProcessor:
-    def __init__(self, vcf_path: str, list_samples: list):
+    def __init__(self, vcf_path:str, list_samples:list):
         self.list_samples = list_samples
         self.matrix = Matrix(1_000_000, len(self.list_samples)*2)
         self.vcf_path = vcf_path
@@ -53,14 +54,14 @@ class SnarlProcessor:
         expanded_matrix[:current_rows, :] = data_matrix
         self.matrix.set_matrix(expanded_matrix)
 
-    def determine_str(self, s: str, length_s : int, i: int) -> tuple[int, int]:
+    def determine_str(self, s:str, length_s:int, i:int) -> tuple[int, int]:
         """Extract an integer from a string starting at index i."""
         start_idx = i
         while i < length_s and s[i] not in ['>', '<']:
             i += 1
         return i, s[start_idx:i]
 
-    def decompose_string(self, s: str) -> List[str]:
+    def decompose_string(self, s:str) -> List[str]:
         """Decompose a string with snarl information."""
         result = []
         i = 0
@@ -81,11 +82,11 @@ class SnarlProcessor:
         
         return result
 
-    def decompose_snarl(self, lst: List[str]) -> List[List[str]]:
+    def decompose_snarl(self, lst:List[str]) -> List[List[str]]:
         """Decompose a list of snarl strings."""
         return [self.decompose_string(s) for s in lst]
 
-    def get_or_add_index(self, ordered_dict, key, length_ordered_dict):
+    def get_or_add_index(self, ordered_dict:dict, key:str, length_ordered_dict:int) -> int:
         """ 
         Retrieve the index of the key if it exists in the OrderedDict.
         If the key does not exist, add it and return the new index.
@@ -97,7 +98,7 @@ class SnarlProcessor:
             ordered_dict[key] = new_index
             return new_index
     
-    def push_matrix(self, idx_snarl, decomposed_snarl, row_header_dict, index_column):
+    def push_matrix(self, idx_snarl:int, decomposed_snarl:str, row_header_dict:dict, index_column:int) -> None:
         """Add True to the matrix if snarl is found"""
 
         # Retrieve or add the index in one step and calculate the length once
@@ -112,7 +113,7 @@ class SnarlProcessor:
         # Add data to the matrix
         self.matrix.add_data(idx_snarl, index_column)
 
-    def fill_matrix(self):
+    def fill_matrix(self) -> None:
         """Parse VCF file (main function)"""
         row_header_dict = dict()
 
@@ -127,7 +128,7 @@ class SnarlProcessor:
                 allele_1, allele_2 = genotype[:2]  # assume there are only 2 allele
                 col_idx = index_column * 2
 
-                if allele_1 == -1 or allele_2 == -1 : # case where we got ./.
+                if allele_1 == -1 or allele_2 == -1 :# case where we got ./.
                     continue
 
                 for decompose_allele_1 in list_list_decomposed_snarl[allele_1] :
@@ -138,7 +139,7 @@ class SnarlProcessor:
 
         self.matrix.set_row_header(row_header_dict)
 
-    def binary_table(self, snarls, binary_groups, covar=None, gaf=False, output="output/binary_output.tsv"):
+    def binary_table(self, snarls:dict, binary_groups:tuple[dict, dict], covar=None, gaf=False, output="output/binary_output.tsv"):
         """
         Generate a binary table with statistical results and write to a file.
         """
@@ -158,19 +159,19 @@ class SnarlProcessor:
                         f'{chi2_p_value}\t{total_sum}\t{min_sample}\t{numb_colum}\t{inter_group}\t{average}\t{group_paths}\n')
                 outf.write(data.encode('utf-8'))
 
-    def quantitative_table(self, snarls, quantitative, covar=None, output="output/quantitative_output.tsv") :
+    def quantitative_table(self, snarls:dict, quantitative_dict:dict, covar:dict=None, output:str="output/quantitative_output.tsv") :
 
         with open(output, 'wb') as outf:
             headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tRSQUARED\tBETA\tSE\tP\n'
             outf.write(headers.encode('utf-8'))
             for snarl, list_snarl in snarls.items() :
                 df = self.create_quantitative_table(list_snarl)
-                rsquared, beta, se, pvalue = self.linear_regression(df, quantitative)
+                rsquared, beta, se, pvalue = self.linear_regression(df, quantitative_dict)
                 chrom = pos = type_var = ref = alt = "NA"
                 data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, rsquared, beta, se, pvalue)
                 outf.write(data.encode('utf-8'))
 
-    def identify_correct_path(self, decomposed_snarl: list, idx_srr_save: list) -> list:
+    def identify_correct_path(self, decomposed_snarl:list, idx_srr_save:list) -> list:
         """
         Return a list of column indices where all specific elements of this column in the matrix are 1.
         """
@@ -198,7 +199,7 @@ class SnarlProcessor:
 
         return idx_srr_save
 
-    def create_binary_table(self, groups, list_path_snarl) -> pd.DataFrame:
+    def create_binary_table(self, binary_groups:tuple[dict, dict], list_path_snarl:list[str]) -> pd.DataFrame:
         """Generates a binary table DataFrame indicating the presence of snarl paths in given groups based on matrix data"""
         
         length_column_headers = len(list_path_snarl)
@@ -217,17 +218,17 @@ class SnarlProcessor:
             for idx in idx_srr_save:
                 srr = self.list_samples[idx // 2]
 
-                if srr in groups[0]:
+                if srr in binary_groups[0]:
                     g0[idx_g] += 1
 
-                if srr in groups[1]:
+                if srr in binary_groups[1]:
                     g1[idx_g] += 1
 
         # Create and return the DataFrame
         df = pd.DataFrame([g0, g1], index=['G0', 'G1'], columns=list_path_snarl)
         return df
 
-    def create_quantitative_table(self, column_headers: list) -> pd.DataFrame:
+    def create_quantitative_table(self, column_headers:list) -> pd.DataFrame:
         length_sample = len(self.list_samples)
 
         # Initialize a zero matrix for genotypes with shape (length_sample, len(column_headers))
@@ -245,7 +246,7 @@ class SnarlProcessor:
         df = pd.DataFrame(genotypes, index=self.list_samples, columns=column_headers)
         return df
     
-    def linear_regression(self, df, pheno : dict, covar=None) -> tuple :
+    def linear_regression(self, df:pd.DataFrame, pheno:dict, covar:dict=None) -> tuple :
 
         df = df.astype(int)
         df['Target'] = df.index.map(pheno)
@@ -263,7 +264,7 @@ class SnarlProcessor:
         return rsquared, beta_mean, se_mean, formatted_p_value
 
     # # Linear Mixed Model
-    # def LMM_quantitatif(self, kinship_matrix, covar: dict, pheno: dict) -> tuple:
+    # def LMM_quantitatif(self, kinship_matrix, covar:dict, pheno:dict) -> tuple:
     #     """
     #     Perform Linear Mixed Model (LMM) for quantitative phenotype data.
     #     """
@@ -288,7 +289,7 @@ class SnarlProcessor:
     #     heritability = results.stats["h2"]      # Heritability estimate (proportion of variance explained by GRM)
     #     return p_value, beta, beta_se, ll, heritability
 
-    def chi2_test(self, df) -> float:
+    def chi2_test(self, df:pd.DataFrame) -> Union[float, str]:
         """Calculate p_value from list of dataframe using chi-2 test"""
 
         # Check if dataframe has at least 2 columns and more than 0 counts in every cell
@@ -305,14 +306,14 @@ class SnarlProcessor:
 
         return p_value
 
-    def fisher_test(self, df) -> float : 
+    def fisher_test(self, df:pd.DataFrame) -> float :
         """Calcul p_value using fisher exact test"""
 
         try:
             p_value = fisher_exact(df)[1] # from scipy.stats import fisher_exact
             p_value = f"{p_value:.4e}"
 
-        except ValueError as e: 
+        except ValueError as e:
             p_value = 'NA'
         
         return p_value
@@ -341,7 +342,7 @@ class SnarlProcessor:
 
     #     return p_value, beta, vcomp
     
-    def format_group_paths(self, df) : 
+    def format_group_paths(self, df:pd.DataFrame) :
         result = []
         for column in df.columns:
             column_values = [f"{df.loc[group, column]}" for group in df.index]
@@ -351,7 +352,7 @@ class SnarlProcessor:
         final_str = ",".join(result)
         return final_str
     
-    def binary_stat_test(self, df, gaf) :
+    def binary_stat_test(self, df:pd.DataFrame, gaf:bool=False) -> tuple:
         """ Perform statistical tests and calculate descriptive statistics on a binary data frame. """
         fisher_p_value = self.fisher_test(df)
         chi2_p_value = self.chi2_test(df)
@@ -382,11 +383,11 @@ if __name__ == "__main__" :
     list_samples = src.utils.parsing_samples_vcf(args.vcf_path)
     vcf_object = SnarlProcessor(args.vcf_path, list_samples)
     vcf_object.fill_matrix()
-    print(f"Time Matrix : {time.time() - start} s")
+    print(f"Time Matrix :{time.time() - start} s")
 
     start = time.time()
     snarl = src.utils.parse_snarl_path_file(args.snarl)[0]
-    covar = src.utils.parse_covariate_file(args.covariate) if args.covariate else ""
+    covar = src.utils.parse_covariate_file(args.covariate) if args.covariate else None
 
     output_dir = args.output or "output"    
     os.makedirs(output_dir, exist_ok=True)
@@ -394,18 +395,18 @@ if __name__ == "__main__" :
 
     if args.binary:
         binary_group = src.utils.parse_pheno_binary_file(args.binary)
-        vcf_object.binary_table(snarl, binary_group, covar, False, output)
+        vcf_object.binary_table(snarl, binary_group, covar, output=output)
 
     # python3 src/snarl_analyser.py tests/other_files/small_vcf.vcf tests/other_files/list_snarl_short.txt -b tests/other_files/group.txt
     # python3 src/snarl_analyser.py ../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../snarl_data/group.txt
     # python3 src/snarl_analyser.py ../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
 
     if args.quantitative:
-        quantitative = src.utils.parse_pheno_quantitatif_file(args.quantitative)
-        vcf_object.quantitative_table(snarl, quantitative, covar, False, output)
+        quantitative_dict = src.utils.parse_pheno_quantitatif_file(args.quantitative)
+        vcf_object.quantitative_table(snarl, quantitative_dict, covar, output=output)
 
     # python3 src/snarl_analyser.py tests/other_files/small_vcf.vcf tests/other_files/list_snarl_short.txt -q tests/other_files/pheno.txt
 
-    print(f"Time P-value: {time.time() - start} s")
+    print(f"Time P-value:{time.time() - start} s")
 
 
