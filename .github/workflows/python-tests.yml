@@ -25,10 +25,10 @@ jobs:
       with:
         python-version: '3.10'
     
-    - name: build libbdsg
+    - name: Install dependencies
       run: |
-        set -e
-        sudo apt-get install libomp doxygen jansson
+        sudo apt-get update
+        sudo apt-get install -y libomp-dev doxygen libjansson-dev
         mkdir -p build
         cd build
         cmake .. -DRUN_DOXYGEN=ON -DPYTHON_EXECUTABLE="$(which python3)"
