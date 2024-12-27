@@ -27,7 +27,7 @@ def parse_pheno_binary_file(group_file:str) -> tuple[dict, dict]:
     group_0 = {sample: 0 for sample in df[df['PHENO'] == 0]['IID']}
     group_1 = {sample: 1 for sample in df[df['PHENO'] == 1]['IID']}
     return group_0, group_1
- 
+
 def parse_pheno_quantitatif_file(file_path:str) -> dict:
 
     df = pd.read_csv(file_path, sep='\t')

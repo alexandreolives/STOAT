@@ -40,7 +40,7 @@ def classify_variant(ref, list_alt) :
     return list_type_var
     
 def write_pos_snarl(vcf_file, output_file, type):
-    #vcf_dict = parse_vcf_to_dict(vcf_file)
+
     vcf_dict = parse_vcf_to_dict(vcf_file)
     save_info = vcf_dict.get(1, ("NA", "NA", "NA", "NA", "NA"))
 
@@ -57,13 +57,20 @@ def write_pos_snarl(vcf_file, output_file, type):
             columns = line.strip().split('\t')
             snarl = columns[2]
             inversed_snarl = reverse_numbers(snarl)
-            chrom, list_pos, list_type_var, ref, list_alt = vcf_dict.get(snarl) or vcf_dict.get(inversed_snarl) or (*save_info[:2], "NA", "NA", "UNK")
+            chrom, list_pos, list_type_var, dict_ref_alt = vcf_dict.get(snarl) or vcf_dict.get(inversed_snarl) or (*save_info[:2], "NA", "NA", "UNK")
 
-            save_info = (chrom, list_pos, list_type_var, ref, list_alt)
-            columns[0], columns[4] = chrom, ref
-            columns[1] = ",".join(map(str, list_pos)) if list_pos else "NA"
-            columns[3] = ",".join(map(str, list_type_var)) if list_type_var != "NA" else "NA"
-            columns[5] = ",".join(map(str, list_alt)) if list_alt not in ["UNK", "NA"] else list_alt
+            ref = []
+            list_alt = []
+            for key, value in dict_ref_alt.items():
+                ref.append(key)
+                list_alt.append(value)
+            
+            save_info = (chrom, list_pos, list_type_var, dict_ref_alt)
+            columns[0] = chrom
+            columns[1] = ",".join(map(str, list_pos))
+            columns[3] = ",".join(map(str, list_type_var))
+            columns[4] = ",".join(map(str, ref))
+            columns[5] = ",".join(map(str, ":".join(map(str, list_alt))))
 
             # Write the modified line to the temp file
             out_f.write('\t'.join(columns) + '\n')
@@ -77,19 +84,19 @@ def write_dic(vcf_dict, fields):
 
     # Process snarl, ref, and alt
     snarl = modify_snarl(snarl_raw)  # Pre-defined function
-    ref = ref or "NA"
-    alt = alt.split(",") if alt and alt != "NA" and "," in alt else [alt or "NA"]
+    alt = alt.split(",") if "," in alt else [alt]
 
     # Determine variant type
-    variant_type = classify_variant(ref, alt) if ref != "NA" and alt != ["NA"] else ["NA"]
+    variant_type = classify_variant(ref, alt)
 
     # Update dictionary
     if snarl not in vcf_dict:
-        vcf_dict[snarl] = [chr, [pos], variant_type, ref, alt]
+        dict_ref_alt = {ref : alt}
+        vcf_dict[snarl] = [chr, [pos], variant_type, dict_ref_alt]
     else:
         vcf_dict[snarl][1].append(pos)
         vcf_dict[snarl][2].extend(variant_type)
-        vcf_dict[snarl][4] = ["NA"]  # alt becomes unknown if multiple entries exist
+        vcf_dict[snarl][3].update({ref : alt})
 
     return vcf_dict
 

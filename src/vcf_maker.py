@@ -1,7 +1,9 @@
 import argparse
 
 def extract_vcf_header(input_vcf):
-    header_lines = []
+    header_lines = ['##fileformat=VCFv4.2\t',
+                    '##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">\t',
+                    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">"\t']
     column_header = None
     num_samples = 0
 
@@ -9,23 +11,10 @@ def extract_vcf_header(input_vcf):
     with open(input_vcf, 'r') as vcf:
         for line in vcf:
             if line.startswith("##"):
-                # Replace specific headers with custom definitions only once
-                if line.startswith("##INFO=<ID=P,"):
-                    continue
-                elif line.startswith("##FORMAT=<ID=GT,"):
-                    continue
-                elif line.startswith("##FILTER="):
-                    continue
-                header_lines.append(line)  # Collect unmodified metadata lines
-
+                continue  # Skip the header lines
             elif line.startswith("#CHROM"):
                 column_header = line  # Identify the column header line
                 # Add new or updated headers before the column header
-                header_lines.extend([
-                    '##INFO=<ID=P,Number=1,Type=Float,Description="P-value from GWAS">',
-                    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
-                    '##FILTER=<ID=LOWQ,Description="Low quality based on p-value threshold">',
-                ])
                 # Determine the number of samples
                 num_samples = len(line.strip().split('\t')) - 9  # Columns after the FORMAT field
                 break  # No need to read further; the header ends here
@@ -41,25 +30,31 @@ def create_vcf_from_gwas(gwas_file, input_vcf, output_vcf):
         out_vcf.writelines(header_lines)
         out_vcf.write(column_header)
 
-        # Generate placeholder sample data (e.g., "." repeated for each sample)
-        sample_placeholder = "\t".join(["."] * num_samples)
-
         # Process GWAS file and generate VCF body
         with open(gwas_file, 'r') as gwas:
             next(gwas)
             for line in gwas:
                 fields = line.strip().split('\t')
-                chrom, pos, snarl_id, _, ref, alt, p_value = fields
+                #CHR	POS	SNARL	TYPE	REF	ALT	P_FISHER
+                chrom, pos, snarl_id, path, list_ref, list_alt, p_value = fields[:7]
+                path_number = len(path.split(','))
+
+                # Generate placeholder sample data (e.g., "." repeated for each sample)
+                sample_placeholder = "/".join(["."] * path_number) # GT field placeholder for one sample
+                placeholder = "\t".join(sample_placeholder * num_samples) # GT field placeholder for all sample
 
                 # Create placeholder fields
                 qual = "."
                 filter_field = "PASS" if float(p_value) <= 0.05 else "LOWQ"
                 info_field = f"P={p_value}"
                 format_field = "GT"
+                list_alt = list_alt.split(':').split(',')
 
-                # Create and write the VCF line
-                vcf_line = f"{chrom}\t{pos}\t{snarl_id}\t{ref}\t{alt}\t{qual}\t{filter_field}\t{info_field}\t{format_field}\t{sample_placeholder}\n"
-                out_vcf.write(vcf_line)
+                for ref in list_ref :
+                    for alt in list_alt :    
+                        # Create and write the VCF line
+                        vcf_line = f"{chrom}\t{pos}\t{snarl_id}\t{ref}\t{alt}\t{qual}\t{filter_field}\t{info_field}\t{format_field}\t{placeholder}\n"
+                        out_vcf.write(vcf_line)
 
 def main():
     parser = argparse.ArgumentParser(description="Convert GWAS output to a VCF file using an input VCF header.")

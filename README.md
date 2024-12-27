@@ -1,4 +1,4 @@
-# STOAT
+# STOAT (Snarl Tree Orchestrated Association Test)
 
 <p align="center">
     <a href="https://www.python.org/downloads/release/python-3100/"><img src="https://img.shields.io/badge/Python-3.10-blue.svg"></a>
@@ -208,4 +208,4 @@ Description : Color represente the different paths group (red : group 1 & blue :
 
 - [ ] Correct GitHub Actions and `setup.py`.
 
-- [ ] Correct `vcf_maker.py`.
+- [ ] Correct `write_position.py` (multi ref for a single id snarl) + `vcf_maker.py` (add multi line ref for a single id snarl).
