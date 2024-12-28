@@ -67,13 +67,15 @@ def write_pos_snarl(vcf_file, output_file, type):
                     pos_list.append(pos)
                     ref_list.append(ref_base)
                     list_list_alt.append(alt_list)
-            
+
             save_info = (chrom, dict_pos_ref_alt, list_type_var)
             columns[0] = chrom
             columns[1] = ",".join(map(str, pos_list))
             columns[3] = ",".join(map(str, list_type_var))
             columns[4] = ",".join(map(str, ref_list))
             columns[5] = ":".join([",".join(map(str, sublist)) for sublist in list_list_alt])
+            # I got a list of list of str i want that columns[5] get 
+            # a list of str with "," separator of each element in the sublist and ":" separator of each sublist
 
             # Write the modified line to the temp file
             out_f.write('\t'.join(columns) + '\n')
@@ -100,7 +102,10 @@ def write_dic(vcf_dict, fields):
         if pos not in vcf_dict[snarl][1]:
             vcf_dict[snarl][1][pos] = {ref: alt}
         else:
-            vcf_dict[snarl][1][pos][ref] = alt
+            if ref not in vcf_dict[snarl][1][pos]:
+                vcf_dict[snarl][1][pos][ref] = alt
+            else:
+                vcf_dict[snarl][1][pos][ref].extend(alt)
         vcf_dict[snarl][2].extend(variant_type)
 
     return vcf_dict
