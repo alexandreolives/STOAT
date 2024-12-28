@@ -56,7 +56,7 @@ def create_vcf_from_gwas(gwas_file, input_vcf, output_vcf):
                         vcf_line = f"{chrom}\t{pos}\t{snarl_id}\t{ref}\t{alt}\t{qual}\t{filter_field}\t{info_field}\t{format_field}\t{placeholder}\n"
                         out_vcf.write(vcf_line)
 
-def main():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert GWAS output to a VCF file using an input VCF header.")
     parser.add_argument('-g', '--gwas', type=str, required=True, help="Path to the GWAS output file (TSV format).")
     parser.add_argument('-i', '--input_vcf', type=str, required=True, help="Path to the input VCF file (to extract header information).")
@@ -66,9 +66,6 @@ def main():
 
     # Run the function with the parsed arguments
     create_vcf_from_gwas(args.gwas, args.input_vcf, args.output_vcf)
-
-if __name__ == "__main__":
-    main()
 
 # (base) mbagarre@irsd0440:~/Bureau/STOAT$ bcftools norm tests/vcf_test.vcf -m -any -f ../droso_data/fly/ref.fa > vcf_test.normalized.vcf
 # [E::vcf_hdr_read] No sample line

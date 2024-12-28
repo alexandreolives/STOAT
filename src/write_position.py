@@ -57,20 +57,20 @@ def write_pos_snarl(vcf_file, output_file, type):
             columns = line.strip().split('\t')
             snarl = columns[2]
             inversed_snarl = reverse_numbers(snarl)
-            chrom, list_pos, list_type_var, dict_ref_alt = vcf_dict.get(snarl) or vcf_dict.get(inversed_snarl) or (*save_info[:2], "NA", "NA", "UNK")
+            chrom, list_pos, list_type_var, dict_ref_alt = vcf_dict.get(snarl) or vcf_dict.get(inversed_snarl) or (*save_info[:2], "NA", {"NA":"UNK"})
 
             ref = []
-            list_alt = []
+            list_list_alt = []
             for key, value in dict_ref_alt.items():
                 ref.append(key)
-                list_alt.append(value)
+                list_list_alt.append(value)
             
             save_info = (chrom, list_pos, list_type_var, dict_ref_alt)
             columns[0] = chrom
             columns[1] = ",".join(map(str, list_pos))
             columns[3] = ",".join(map(str, list_type_var))
             columns[4] = ",".join(map(str, ref))
-            columns[5] = ",".join(map(str, ":".join(map(str, list_alt))))
+            columns[5] = ":".join([",".join(map(str, sublist)) for sublist in list_list_alt])
 
             # Write the modified line to the temp file
             out_f.write('\t'.join(columns) + '\n')
@@ -96,7 +96,13 @@ def write_dic(vcf_dict, fields):
     else:
         vcf_dict[snarl][1].append(pos)
         vcf_dict[snarl][2].extend(variant_type)
-        vcf_dict[snarl][3].update({ref : alt})
+        if ref not in vcf_dict[snarl][3]:
+            vcf_dict[snarl][3][ref] = alt
+        else:
+            vcf_dict[snarl][3][ref].extend(alt)
+
+    if snarl == "4208_4249" :
+        print(len(alt))
 
     return vcf_dict
 
@@ -119,8 +125,8 @@ def parse_vcf_to_dict(vcf_file):
     return vcf_dict
 
 if __name__ == "__main__" :
-    reference = "/home/mbagarre/Bureau/decomposed/fly.deconstruct.vcf"
-    output_file = "output/run_20241218_105430/quantitative_analysis.tsv"
+    reference = "tests/simulation/binary_data/merged_output.vcf"
+    output_file = "output/run_20241228_003954/binary_analysis.tsv"
     write_pos_snarl(reference, output_file, "quantitatif")
 
 # python3 src/write_position.py

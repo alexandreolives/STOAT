@@ -58,6 +58,8 @@ def main() :
     command_line = " ".join(sys.argv)
     logger.info(f"Command: {command_line}")
 
+    start_time = time.time()
+
     # Check vcf samples matching other files (pheno, covar)
     list_samples = src.utils.parsing_samples_vcf(args.vcf)
 
@@ -80,8 +82,6 @@ def main() :
         src.utils.check_mathing(pheno, list_samples, "phenotype")
 
     if not args.listpath : 
-        # Step 1: Parse the Pangenome Graph and Create Snarl Paths to Test
-        start_time = time.time()
         logger.info("Starting snarl path decomposition...")
         stree, pg, root = src.list_snarl_paths.parse_graph_tree(args.pg, args.dist)
         snarls = src.list_snarl_paths.save_snarls(stree, root)
