@@ -35,23 +35,25 @@ def create_vcf_from_gwas(gwas_file, input_vcf, output_vcf):
             next(gwas)
             for line in gwas:
                 fields = line.strip().split('\t')
-                #CHR	POS	SNARL	TYPE	REF	ALT	P_FISHER
-                chrom, pos, snarl_id, path, list_ref, list_alt, p_value = fields[:7]
-                path_number = len(path.split(','))
+                #CHR POS SNARL TYPE	REF	ALT	P_FISHER
+                chrom, pos_str, snarl_id, _, ref_str_brut, alt_str_brut, p_value = fields[:7]
 
                 # Generate placeholder sample data (e.g., "." repeated for each sample)
-                sample_placeholder = "/".join(["."] * path_number) # GT field placeholder for one sample
-                placeholder = "\t".join(sample_placeholder * num_samples) # GT field placeholder for all sample
+                sample_placeholder = "./."  # GT field placeholder for one sample
+                placeholder = "\t".join([sample_placeholder] * num_samples)  # GT field placeholder for all samples
 
                 # Create placeholder fields
                 qual = "."
                 filter_field = "PASS" if float(p_value) <= 0.05 else "LOWQ"
                 info_field = f"P={p_value}"
                 format_field = "GT"
-                list_alt = list_alt.split(':').split(',')
+                list_pos = pos_str.split(',')
+                list_ref = ref_str_brut.split(',')
+                list_alt = alt_str_brut.split(':')
+                list_list_alt = [alt_str.split(',') for alt_str in list_alt]
 
-                for ref in list_ref :
-                    for alt in list_alt :    
+                for idx, pos in enumerate(list_pos) :
+                    for alt, ref in zip(list_list_alt[idx], list_ref[idx]) :
                         # Create and write the VCF line
                         vcf_line = f"{chrom}\t{pos}\t{snarl_id}\t{ref}\t{alt}\t{qual}\t{filter_field}\t{info_field}\t{format_field}\t{placeholder}\n"
                         out_vcf.write(vcf_line)
@@ -66,6 +68,8 @@ if __name__ == "__main__":
 
     # Run the function with the parsed arguments
     create_vcf_from_gwas(args.gwas, args.input_vcf, args.output_vcf)
+
+# python3 src/vcf_maker.py -g output/run_20241228_003954/binary_analysis.tsv -i tests/simulation/binary_data/merged_output.vcf -o test_vcf.vcf
 
 # (base) mbagarre@irsd0440:~/Bureau/STOAT$ bcftools norm tests/vcf_test.vcf -m -any -f ../droso_data/fly/ref.fa > vcf_test.normalized.vcf
 # [E::vcf_hdr_read] No sample line

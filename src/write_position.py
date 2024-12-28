@@ -42,7 +42,7 @@ def classify_variant(ref, list_alt) :
 def write_pos_snarl(vcf_file, output_file, type):
 
     vcf_dict = parse_vcf_to_dict(vcf_file)
-    save_info = vcf_dict.get(1, ("NA", "NA", "NA", "NA", "NA"))
+    save_info = vcf_dict.get(1, ("NA", {"NA" : {"NA" : "NA"}}, "NA"))
 
     # Use a temporary file to write the updated lines
     temp_output_file = output_file + ".tmp"
@@ -57,19 +57,22 @@ def write_pos_snarl(vcf_file, output_file, type):
             columns = line.strip().split('\t')
             snarl = columns[2]
             inversed_snarl = reverse_numbers(snarl)
-            chrom, list_pos, list_type_var, dict_ref_alt = vcf_dict.get(snarl) or vcf_dict.get(inversed_snarl) or (*save_info[:2], "NA", {"NA":"UNK"})
+            chrom, dict_pos_ref_alt, list_type_var = vcf_dict.get(snarl) or vcf_dict.get(inversed_snarl) or (save_info[0], save_info[1], save_info[2])
 
-            ref = []
+            ref_list = []
+            pos_list = []
             list_list_alt = []
-            for key, value in dict_ref_alt.items():
-                ref.append(key)
-                list_list_alt.append(value)
+            for pos, ref_alt_dict in dict_pos_ref_alt.items():
+                for ref_base, alt_list in ref_alt_dict.items():
+                    pos_list.append(pos)
+                    ref_list.append(ref_base)
+                    list_list_alt.append(alt_list)
             
-            save_info = (chrom, list_pos, list_type_var, dict_ref_alt)
+            save_info = (chrom, dict_pos_ref_alt, list_type_var)
             columns[0] = chrom
-            columns[1] = ",".join(map(str, list_pos))
+            columns[1] = ",".join(map(str, pos_list))
             columns[3] = ",".join(map(str, list_type_var))
-            columns[4] = ",".join(map(str, ref))
+            columns[4] = ",".join(map(str, ref_list))
             columns[5] = ":".join([",".join(map(str, sublist)) for sublist in list_list_alt])
 
             # Write the modified line to the temp file
@@ -91,18 +94,14 @@ def write_dic(vcf_dict, fields):
 
     # Update dictionary
     if snarl not in vcf_dict:
-        dict_ref_alt = {ref : alt}
-        vcf_dict[snarl] = [chr, [pos], variant_type, dict_ref_alt]
+        dict_pos_ref_alt = {pos : {ref : alt}}
+        vcf_dict[snarl] = [chr, dict_pos_ref_alt, variant_type]
     else:
-        vcf_dict[snarl][1].append(pos)
-        vcf_dict[snarl][2].extend(variant_type)
-        if ref not in vcf_dict[snarl][3]:
-            vcf_dict[snarl][3][ref] = alt
+        if pos not in vcf_dict[snarl][1]:
+            vcf_dict[snarl][1][pos] = {ref: alt}
         else:
-            vcf_dict[snarl][3][ref].extend(alt)
-
-    if snarl == "4208_4249" :
-        print(len(alt))
+            vcf_dict[snarl][1][pos][ref] = alt
+        vcf_dict[snarl][2].extend(variant_type)
 
     return vcf_dict
 
