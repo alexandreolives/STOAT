@@ -28,15 +28,14 @@ STOAT supports both binary and quantitative phenotypes:
 ````bash
 git clone https://github.com/Plogeur/STOAT.git
 cd STOAT
-pip install -r requirements.txt
+pip install -r requirements.txt # or you can use : pip install .
 
-# install bdsg version > 3.0.0 
-# DO NOT use pip install bdsg cause it's in version 3.0.0, instead do :
+# install bdsg version > 3.0.0
+# see more installation information on the bdsg github repo
+# DO NOT use pip install bdsg (cause it's in version 3.0.0) instead do :
 git clone --recursive https://github.com/vgteam/libbdsg.git
 cd libbdsg
 pip install .
-
-# see more installation information on bdsg github
 ````
 
 ## Dependencies

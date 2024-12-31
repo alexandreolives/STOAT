@@ -1,4 +1,24 @@
 from setuptools import setup, find_packages
+import subprocess
+import os
+
+class CustomInstallCommand:
+    """Custom installation to include libbdsg installation."""
+    @staticmethod
+    def install_libbdsg():
+        try:
+            # Clone the repository with --recursive
+            subprocess.check_call(["git", "clone", "--recursive", "https://github.com/vgteam/libbdsg.git"])
+            os.chdir("libbdsg")  # Change into the cloned directory
+            # Install using pip
+            subprocess.check_call(["pip", "install", "."])
+            os.chdir("..")  # Return to the original directory
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to install libbdsg: {e}")
+            raise
+
+# Call the function to ensure libbdsg is installed before setup
+CustomInstallCommand.install_libbdsg()
 
 setup(
     name="STOAT",
@@ -28,12 +48,6 @@ setup(
         "seaborn==0.13.2",
         "plotly==5.24.1",
         "pytest==8.3.4"
-    ],
-    extras_require={
-        "libbdsg": []
-    },
-    dependency_links=[
-        "git+https://github.com/vgteam/libbdsg.git#egg=libbdsg"
     ],
     entry_points={
         "console_scripts": [
