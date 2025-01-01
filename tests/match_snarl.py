@@ -97,5 +97,4 @@ if __name__ == "__main__":
     main()
 
 # INPUT : one column with only snarl per file 
-
 # python3 match_snarl.py -f1 plink.normalized.assoc.tsv -f2 snarl.normalized.tsv 

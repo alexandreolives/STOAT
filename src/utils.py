@@ -1,8 +1,12 @@
 from cyvcf2 import VCF # type: ignore
 import argparse
+import numpy as np
 import pandas as pd # type: ignore
 from collections import defaultdict
+from typing import Any
 import os
+
+# ----------------- Parse functions -----------------
 
 def parsing_samples_vcf(vcf_path:str) -> list :
     try :
@@ -60,12 +64,55 @@ def parse_covariate_file(covar_path:str) -> dict:
     # Convert to dictionary with ID as the key and the rest of the row as the value
     return covariates.set_index("ID").to_dict(orient="index")
 
+def parse_plink_grm(prefix: str) -> pd.DataFrame:
+    """ Parse PLINK GRM binary files and return the kinship matrix as a pandas DataFrame. """
+
+    # File paths
+    grm_bin_file = f"{prefix}.grm.bin"
+    grm_id_file = f"{prefix}.grm.id"
+    
+    # Read IDs (FIDs and IIDs)
+    with open(grm_id_file, 'r') as f:
+        ids = [line.strip().split() for line in f.readlines()]
+        ids = [f"{fid}_{iid}" for fid, iid in ids]  # Combine FID and IID as unique individual IDs
+    
+    n = len(ids)  # Number of individuals
+    
+    # Read GRM values
+    with open(grm_bin_file, 'rb') as f:
+        grm_values = np.frombuffer(f.read(), dtype=np.float64)
+    
+    # Reconstruct the full GRM matrix (symmetric matrix)
+    grm_matrix = np.zeros((n, n))
+    idx = 0
+    for i in range(n):
+        for j in range(i + 1):
+            grm_matrix[i, j] = grm_values[idx]
+            grm_matrix[j, i] = grm_values[idx]  # Ensure matrix is symmetric
+            idx += 1
+    
+    # Create a pandas DataFrame for easy manipulation
+    kinship_matrix = pd.DataFrame(grm_matrix, index=ids, columns=ids)
+    return kinship_matrix, ids
+
+# ----------------- Check functions -----------------
+
 def check_file(file_path: str) -> str:
     if not os.path.exists(file_path) or not os.path.isfile(file_path):
         raise argparse.ArgumentTypeError(f"Error: File '{file_path}' not found or is not a valid file.")
     return file_path
 
-def check_mathing(elements:dict, list_samples:list, file_name:str) -> None:
+def check_kinship_prefix(prefix_path:str) -> str:
+    """ Function to check if the provided file path is a valid PLINK kinship file. """
+
+    # Check if the other files exist
+    check_file(f"{prefix_path}.grm.bin")
+    check_file(f"{prefix_path}.grm.id")
+    check_file(f"{prefix_path}.grm.N.bin")
+    
+    return prefix_path
+
+def check_mathing(elements:Any, list_samples:list, file_name:str) -> None:
     """Check if all sample name in the pheno file are matching with vcf sample name else return error"""
     
     set_sample = set(list_samples)

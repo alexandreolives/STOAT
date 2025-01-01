@@ -1,13 +1,12 @@
 import argparse
 import src.utils
 from cyvcf2 import VCF # type: ignore
-from typing import List
 import numpy as np # type: ignore
 import pandas as pd # type: ignore
 import statsmodels.api as sm # type: ignore
 from scipy.stats import chi2_contingency # type: ignore
 from scipy.stats import fisher_exact # type: ignore
-from typing import IO, Any, Optional
+from typing import IO, Any, Optional, List
 # from limix.stats import logisticMixedModel # type: ignore
 # from limix.stats import scan # type: ignore
 import time
@@ -139,7 +138,7 @@ class SnarlProcessor:
 
         self.matrix.set_row_header(row_header_dict)
 
-    def binary_table(self, snarls:dict, binary_groups:tuple[dict, dict], covar:Optional[dict]=None, gaf:bool=False, output:str="output/binary_output.tsv"):
+    def binary_table(self, snarls:dict, binary_groups:tuple[dict, dict], kinship_matrix:pd.DataFrame=None, covar:Optional[dict]=None, gaf:bool=False, output:str="output/binary_output.tsv"):
         """
         Generate a binary table with statistical results and write to a file.
         """
@@ -159,7 +158,7 @@ class SnarlProcessor:
                         f'{chi2_p_value}\t{total_sum}\t{min_sample}\t{numb_colum}\t{inter_group}\t{average}\t{group_paths}\n')
                 outf.write(data.encode('utf-8'))
 
-    def quantitative_table(self, snarls:dict, quantitative_dict:dict, covar:Optional[dict]=None, output:str="output/quantitative_output.tsv") :
+    def quantitative_table(self, snarls:dict, quantitative_dict:dict, kinship_matrix:pd.DataFrame=None, covar:Optional[dict]=None, output:str="output/quantitative_output.tsv") :
 
         with open(output, 'wb') as outf:
             headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tRSQUARED\tBETA\tSE\tP\n'
@@ -263,28 +262,7 @@ class SnarlProcessor:
 
         return rsquared, beta_mean, se_mean, formatted_p_value
 
-    # # Linear Mixed Model
-
-    # def calculate_kinship_quantitative(self) -> pd.DataFrame:
-    #     """
-    #     Calculate the kinship matrix based on a sample-path matrix.
-    #     Returns: pd.DataFrame: Kinship matrix as a DataFrame.
-    #     """
-    #     # Convert to NumPy array for calculations
-    #     data = self.matrix.get_matrix()
-        
-    #     # Standardize each column (center and scale by standard deviation)
-    #     means = np.mean(data, axis=0)
-    #     std_devs = np.std(data, axis=0, ddof=1)
-    #     standardized_data = (data - means) / std_devs
-
-    #     # Compute the kinship matrix
-    #     n_paths = data.shape[1]
-    #     kinship_matrix = np.dot(standardized_data, standardized_data.T) / n_paths
-
-    #     # Convert back to DataFrame with sample names
-    #     kinship_df = pd.DataFrame(kinship_matrix, index=matrix.index, columns=matrix.index)
-    #     return kinship_df
+    # Linear Mixed Model
 
     # def LMM_quantitatif(self, kinship_matrix:pd.DataFrame, covar:dict, pheno:dict) -> tuple:
     #     """

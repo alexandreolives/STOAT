@@ -7,30 +7,47 @@
 
 # # Import necessary modules
 # import src.snarl_analyser
+# import src.list_snarl_paths
 # import src.utils
 
-# def test_snarl_analyser():
+# def test_snarl_simulation_analyser():
 #     vcf_file = "tests/simulation/quantitative_data/merged_output.vcf"
 #     phenotype_file = "tests/simulation/quantitative_data/phenotype.tsv"
-#     snarl_file = "tests/simulation/quantitative_data/snarl_paths.tsv"
+#     dist_file = "tests/simulation/quantitative_data/pg.dist"
+#     pg_file = "tests/simulation/quantitative_data/pg.full.pg"
 #     output_dir = Path("tests/quantitative_tests_output")
+
+#     expected_output_snarl_path = "tests/simulation/quantitative_data/snarl_paths.tsv"
+#     expected_output = "tests/simulation/quantitative_data/quantitative_analysis.assoc.tsv"
 
 #     # Perform test logic
 #     list_samples = src.utils.parsing_samples_vcf(vcf_file)
 #     vcf_object = src.snarl_analyser.SnarlProcessor(vcf_file, list_samples)
 #     vcf_object.fill_matrix()
-#     snarl = src.utils.parse_snarl_path_file(snarl_file)[0]
+#     stree, pg, root = src.list_snarl_paths.parse_graph_tree(pg_file,dist_file)
+#     snarls = src.list_snarl_paths.save_snarls(stree, root)
+
+#     output_snarl_path_not_analyse = os.path.join(output_dir, "snarl_not_analyse.tsv")
+#     output_snarl_path = os.path.join(output_dir, "snarl_paths.tsv")    
+#     snarl_paths = src.list_snarl_paths.loop_over_snarls_write(stree, snarls, pg, output_snarl_path, output_snarl_path_not_analyse, children_treshold=10)[0]
+
+#     assert os.path.exists(output_snarl_path), f"Output file {output_snarl_path} was not created."
+
+#     with open(expected_output_snarl_path, 'r') as expected_snarl_path:
+#         expected_content_snarl_path = expected_snarl_path.read()
+
+#     with open(output_snarl_path, 'r') as output_snarl_path:
+#         output_content_output_snarl_path = output_snarl_path.read()
+
+#     assert output_content_output_snarl_path == expected_content_snarl_path, "The output content does not match the expected content."
 
 #     os.makedirs(output_dir, exist_ok=True)
 #     output = os.path.join(output_dir, "quantitative_test.assoc.tsv")
 
 #     quantitative_pheno = src.utils.parse_pheno_quantitatif_file(phenotype_file)
-#     vcf_object.quantitative_table(snarl, quantitative_pheno, None, False, output)
+#     vcf_object.quantitative_table(snarl, quantitative_pheno, output=output)
 
 #     assert os.path.exists(output), f"Output file {output} was not created."
-
-#     # Compare output to expected output simulation
-#     expected_output = "tests/simulation/quantitative_data/expected_quantitative/quantitative_test.assoc.tsv"
 
 #     with open(expected_output, 'r') as expected_file:
 #         expected_content = expected_file.read()
@@ -39,5 +56,3 @@
 #         output_content = output_file.read()
 
 #     assert output_content == expected_content, "The output content does not match the expected content."
-
-# # pytest tests/test_quantitative.py

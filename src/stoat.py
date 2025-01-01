@@ -26,6 +26,7 @@ def main() :
     group.add_argument("-b", "--binary", type=src.utils.check_format_pheno, help="Path to the binary group file (.txt or .tsv)")
     group.add_argument("-q", "--quantitative", type=src.utils.check_format_pheno, help="Path to the quantitative phenotype file (.txt or .tsv)")
     parser.add_argument("-c", "--covariate", type=src.utils.check_covariate_file, required=False, help="Path to the covariate file (.txt or .tsv)")
+    parser.add_argument("-k", "--kinship", type=src.utils.check_kinship_prefix, required=False, help="Path to the covariate file (.txt or .tsv)")
     parser.add_argument("-g", "--gaf", action="store_true", required=False, help="Prepare binary gwas output to do gaf file + make gaf for the 10th significant paths")
     parser.add_argument("-o", "--output", type=str, required=False, help="Base path for the output directory")
     args = parser.parse_args()
@@ -65,21 +66,25 @@ def main() :
 
     if args.covariate :
         covar = src.utils.parse_covariate_file(args.covariate)
-        src.utils.check_mathing(covar, list_samples, "covariate")
+        src.utils.check_mathing(covar, list_samples, args.covariate)
+        kinship_matrix, kinship_ind = src.utils.parse_plink_grm(args.kinship)
+        src.utils.check_mathing(kinship_ind, list_samples, args.kinship)
+
     else :
         covar = None
+        kinship_matrix = None
 
     if args.binary:
         logger.info("Parsing binary phenotype...")
         pheno = src.utils.parse_pheno_binary_file(args.binary)
         merged_dict = pheno[0].copy()  # Make a copy to avoid modifying dict
         merged_dict.update(pheno[1]) 
-        src.utils.check_mathing(merged_dict, list_samples, "phenotype")
+        src.utils.check_mathing(merged_dict, list_samples, args.binary)
 
     elif args.quantitative:
         logger.info("Parsing quantitative phenotype...")
         pheno = src.utils.parse_pheno_quantitatif_file(args.quantitative)
-        src.utils.check_mathing(pheno, list_samples, "phenotype")
+        src.utils.check_mathing(pheno, list_samples, args.quantitative)
 
     if not args.listpath : 
         logger.info("Starting snarl path decomposition...")
@@ -115,7 +120,7 @@ def main() :
         gaf = True if args.gaf else False
         output_snarl = os.path.join(output_dir, "binary_analysis.tsv")
         logger.info("Binary table creation...")
-        vcf_object.binary_table(snarl_paths, pheno, covar, gaf, output_snarl)
+        vcf_object.binary_table(snarl_paths, pheno, kinship_matrix, covar, gaf, output_snarl)
         logger.info("Writing position...")
         src.write_position.write_pos_snarl(reference_vcf, output_snarl, "binary")
 
@@ -134,7 +139,7 @@ def main() :
     elif args.quantitative:
         output_file = os.path.join(output_dir, "quantitative_analysis.tsv")
         logger.info("Quantitative table creation...")
-        vcf_object.quantitative_table(snarl_paths, pheno, covar, output_file)
+        vcf_object.quantitative_table(snarl_paths, pheno, kinship_matrix, covar, output_file)
         logger.info("Writing position...")
         src.write_position.write_pos_snarl(reference_vcf, output_file, "quantitatif")
 
