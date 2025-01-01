@@ -38,6 +38,7 @@ jobs:
       
     - name: Install libbdsg and pybind11
       run: |
+        sudo apt-get install -y libjansson-dev
         git clone --recursive https://github.com/vgteam/libbdsg.git && cd libbdsg && pip install .
 
     - name: Run pytest tests
