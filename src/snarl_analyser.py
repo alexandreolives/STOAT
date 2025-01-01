@@ -198,7 +198,7 @@ class SnarlProcessor:
 
         return idx_srr_save
 
-    def create_binary_table(self, binary_groups:tuple[dict, dict], list_path_snarl:list[str]) -> pd.DataFrame:
+    def create_binary_table(self, binary_groups:dict, list_path_snarl:list[str]) -> pd.DataFrame:
         """Generates a binary table DataFrame indicating the presence of snarl paths in given groups based on matrix data"""
         
         length_column_headers = len(list_path_snarl)
@@ -217,10 +217,9 @@ class SnarlProcessor:
             for idx in idx_srr_save:
                 srr = self.list_samples[idx // 2]
 
-                if srr in binary_groups[0]:
+                if binary_groups[srr] == 0:
                     g0[idx_g] += 1
-
-                if srr in binary_groups[1]:
+                else :
                     g1[idx_g] += 1
 
         # Create and return the DataFrame

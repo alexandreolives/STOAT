@@ -203,8 +203,4 @@ Description : Color represente the different paths group (red : group 1 & blue :
 
 - [ ] Add quantitative simulation data, functional quantitative tests, and verify quantitative truth.
 
-- [ ] Add more unit tests.
-
-- [ ] Correct GitHub Actions and `setup.py`.
-
-- [ ] Correct `write_position.py` (multi ref for a single id snarl) + `vcf_maker.py` (add multi line ref for a single id snarl).
+- [ ] Correct GitHub Actions.

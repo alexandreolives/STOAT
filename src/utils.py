@@ -19,26 +19,31 @@ def parse_covariate_file(filepath:str) -> dict:
     covariates = pd.read_csv(filepath)
     return covariates.set_index("ID").to_dict(orient="index")
 
-def parse_pheno_binary_file(group_file:str) -> tuple[dict, dict]:
+def parse_pheno_binary_file(group_file:str) -> dict:
 
     df = pd.read_csv(group_file, sep='\t')
     
-    # Ensure binary phenotype is valid
-    if not set(df['PHENO'].dropna()).issubset({0, 1}):
-        raise ValueError("The 'PHENO' column must contain only binary values (0 or 1).")
-
-    # Create dictionaries for group 0 and group 1
-    group_0 = {sample: 0 for sample in df[df['PHENO'] == 0]['IID']}
-    group_1 = {sample: 1 for sample in df[df['PHENO'] == 1]['IID']}
-    return group_0, group_1
+    # Get unique phenotypes
+    unique_phenotypes = df['PHENO'].unique()
+    
+    # Check if there are exactly two phenotypes
+    if len(unique_phenotypes) != 2:
+        raise ValueError(f"Expected exactly 2 unique phenotypes, but found {len(unique_phenotypes)}: {unique_phenotypes}")
+    
+    # Map phenotypes to binary values (0 and 1)
+    phenotype_mapping = {phenotype: idx for idx, phenotype in enumerate(sorted(unique_phenotypes))}
+    
+    # Create a dictionary with sample names (IID) as keys and binary phenotypes as values
+    binary_pheno = df.set_index('IID')['PHENO'].map(phenotype_mapping).to_dict()
+    return binary_pheno
 
 def parse_pheno_quantitatif_file(file_path:str) -> dict:
 
     df = pd.read_csv(file_path, sep='\t')
 
     # Extract the IID (second column) and PHENO (third column) and convert PHENO to float
-    parsed_pheno = dict(zip(df['IID'], df['PHENO']))
-    return parsed_pheno
+    quantitative_pheno = dict(zip(df['IID'], df['PHENO']))
+    return quantitative_pheno
 
 def parse_snarl_path_file(path_file:str) -> tuple[dict, int]:
     
@@ -102,25 +107,24 @@ def check_file(file_path: str) -> str:
         raise argparse.ArgumentTypeError(f"Error: File '{file_path}' not found or is not a valid file.")
     return file_path
 
-def check_kinship_prefix(prefix_path:str) -> str:
+def check_kinship_prefix(prefix_path: str) -> str:
     """ Function to check if the provided file path is a valid PLINK kinship file. """
 
     # Check if the other files exist
     check_file(f"{prefix_path}.grm.bin")
     check_file(f"{prefix_path}.grm.id")
-    check_file(f"{prefix_path}.grm.N.bin")
     
     return prefix_path
 
-def check_mathing(elements:Any, list_samples:list, file_name:str) -> None:
-    """Check if all sample name in the pheno file are matching with vcf sample name else return error"""
+def check_matching(elements: dict, list_samples: list, file_name: str) -> None:
+    """Check if all sample names in the pheno file are matching with VCF sample names, else return error."""
     
-    set_sample = set(list_samples)
-    set_elements = set(elements)
-    missing_elements = set_sample - set_elements
+    set_samples = set(list_samples)
+    set_elements = set(elements.keys())
+    missing_elements = set_samples - set_elements
 
-    if missing_elements :
-        raise ValueError(f"The following sample name from vcf are not present in {file_name} file : {missing_elements}")
+    if missing_elements:
+        raise ValueError(f"The following sample names from VCF are not present in {file_name} file: {missing_elements}")
 
 def check_format_list_path(file_path:str) -> str:
     """
