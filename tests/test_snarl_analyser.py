@@ -1,15 +1,17 @@
 import pytest
-from pathlib import Path
-import numpy as np  # type: ignore
 import pandas as pd # type: ignore
+import sys
+import os
 
-import src.snarl_analyser
-import src.utils 
+# Add the parent directory to the sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+
+import snarl_analyser
 
 @pytest.fixture
 def snarl_instance():
     """Fixture to provide an instance of SnarlProcessor."""
-    return src.snarl_analyser.SnarlProcessor('vcf_path', ['sample1', 'sample2'])
+    return snarl_analyser.SnarlProcessor('vcf_path', ['sample1', 'sample2'])
 
 def test_decompose_string(snarl_instance):
     # Test case 1

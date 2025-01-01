@@ -1,4 +1,4 @@
-import bdsg
+import bdsg # type: ignore
 import argparse
 from collections import Counter
 

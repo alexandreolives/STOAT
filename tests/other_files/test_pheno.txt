@@ -1,3 +1,0 @@
-FID	IID	PHENO
-1	A	0.5
-2	B	1.0

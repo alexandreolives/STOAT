@@ -1,24 +1,24 @@
 from setuptools import setup, find_packages
-import subprocess
-import os
+# import subprocess
+# import os
 
-class CustomInstallCommand:
-    """Custom installation to include libbdsg installation."""
-    @staticmethod
-    def install_libbdsg():
-        try:
-            # Clone the repository with --recursive
-            subprocess.check_call(["git", "clone", "--recursive", "https://github.com/vgteam/libbdsg.git"])
-            os.chdir("libbdsg")  # Change into the cloned directory
-            # Install using pip
-            subprocess.check_call(["pip", "install", "."])
-            os.chdir("..")  # Return to the original directory
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to install libbdsg: {e}")
-            raise
+# class CustomInstallCommand:
+#     """Custom installation to include libbdsg installation."""
+#     @staticmethod
+#     def install_libbdsg():
+#         try:
+#             # Clone the repository with --recursive
+#             subprocess.check_call(["git", "clone", "--recursive", "https://github.com/vgteam/libbdsg.git"])
+#             os.chdir("libbdsg")  # Change into the cloned directory
+#             # Install using pip
+#             subprocess.check_call(["pip", "install", "."])
+#             os.chdir("..")  # Return to the original directory
+#         except subprocess.CalledProcessError as e:
+#             print(f"Failed to install libbdsg: {e}")
+#             raise
 
-# Call the function to ensure libbdsg is installed before setup
-CustomInstallCommand.install_libbdsg()
+# # Call the function to ensure libbdsg is installed before setup
+# CustomInstallCommand.install_libbdsg()
 
 setup(
     name="STOAT",

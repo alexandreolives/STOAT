@@ -1,5 +1,5 @@
 import argparse
-import src.utils
+import utils
 from cyvcf2 import VCF # type: ignore
 import numpy as np # type: ignore
 import pandas as pd # type: ignore
@@ -361,32 +361,32 @@ class SnarlProcessor:
     
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
-    parser.add_argument("vcf_path", type=src.utils.check_format_vcf_file, help="Path to the vcf file (.vcf or .vcf.gz)")
-    parser.add_argument("snarl", type=src.utils.check_format_list_path, help="Path to the snarl file that containt snarl and aT (.txt or .tsv)")
+    parser.add_argument("vcf_path", type=utils.check_format_vcf_file, help="Path to the vcf file (.vcf or .vcf.gz)")
+    parser.add_argument("snarl", type=utils.check_format_list_path, help="Path to the snarl file that containt snarl and aT (.txt or .tsv)")
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-b", "--binary", type=src.utils.check_format_pheno, help="Path to the binary phenotype file (.txt or .tsv)")
-    group.add_argument("-q", "--quantitative", type=src.utils.check_format_pheno, help="Path to the quantitative phenotype file (.txt or .tsv)")
-    parser.add_argument("-c", "--covariate", type=src.utils.check_covariate_file, required=False, help="Path to the covariate file (.txt or .tsv)")
+    group.add_argument("-b", "--binary", type=utils.check_format_pheno, help="Path to the binary phenotype file (.txt or .tsv)")
+    group.add_argument("-q", "--quantitative", type=utils.check_format_pheno, help="Path to the quantitative phenotype file (.txt or .tsv)")
+    parser.add_argument("-c", "--covariate", type=utils.check_covariate_file, required=False, help="Path to the covariate file (.txt or .tsv)")
     parser.add_argument("-o", "--output", type=str, required=False, help="Path to the output file")
     args = parser.parse_args()
 
     start = time.time()
-    list_samples = src.utils.parsing_samples_vcf(args.vcf_path)
+    list_samples = utils.parsing_samples_vcf(args.vcf_path)
     vcf_object = SnarlProcessor(args.vcf_path, list_samples)
     vcf_object.fill_matrix()
     print(f"Time Matrix :{time.time() - start} s")
 
     start = time.time()
-    snarl = src.utils.parse_snarl_path_file(args.snarl)[0]
-    covar = src.utils.parse_covariate_file(args.covariate) if args.covariate else None
+    snarl = utils.parse_snarl_path_file(args.snarl)[0]
+    covar = utils.parse_covariate_file(args.covariate) if args.covariate else None
 
     output_dir = args.output or "output"    
     os.makedirs(output_dir, exist_ok=True)
     output = os.path.join(output_dir, "stoat.assoc.tsv")
 
     if args.binary:
-        binary_group = src.utils.parse_pheno_binary_file(args.binary)
+        binary_group = utils.parse_pheno_binary_file(args.binary)
         vcf_object.binary_table(snarl, binary_group, covar, output=output)
 
     # python3 src/snarl_analyser.py tests/other_files/small_vcf.vcf tests/other_files/list_snarl_short.txt -b tests/other_files/group.txt
@@ -394,7 +394,7 @@ if __name__ == "__main__" :
     # python3 src/snarl_analyser.py ../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
 
     if args.quantitative:
-        quantitative_dict = src.utils.parse_pheno_quantitatif_file(args.quantitative)
+        quantitative_dict = utils.parse_pheno_quantitatif_file(args.quantitative)
         vcf_object.quantitative_table(snarl, quantitative_dict, covar, output=output)
 
     # python3 src/snarl_analyser.py tests/other_files/small_vcf.vcf tests/other_files/list_snarl_short.txt -q tests/other_files/pheno.txt

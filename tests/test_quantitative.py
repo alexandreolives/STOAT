@@ -3,12 +3,12 @@
 # from pathlib import Path
 
 # # Add the parent directory to the sys.path
-# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 # # Import necessary modules
-# import src.snarl_analyser
-# import src.list_snarl_paths
-# import src.utils
+# import snarl_analyser
+# import list_snarl_paths
+# import utils
 
 # def test_snarl_simulation_analyser():
 #     vcf_file = "tests/simulation/quantitative_data/merged_output.vcf"
@@ -21,15 +21,15 @@
 #     expected_output = "tests/simulation/quantitative_data/quantitative_analysis.assoc.tsv"
 
 #     # Perform test logic
-#     list_samples = src.utils.parsing_samples_vcf(vcf_file)
-#     vcf_object = src.snarl_analyser.SnarlProcessor(vcf_file, list_samples)
+#     list_samples = utils.parsing_samples_vcf(vcf_file)
+#     vcf_object = snarl_analyser.SnarlProcessor(vcf_file, list_samples)
 #     vcf_object.fill_matrix()
-#     stree, pg, root = src.list_snarl_paths.parse_graph_tree(pg_file,dist_file)
-#     snarls = src.list_snarl_paths.save_snarls(stree, root)
+#     stree, pg, root = list_snarl_paths.parse_graph_tree(pg_file,dist_file)
+#     snarls = list_snarl_paths.save_snarls(stree, root)
 
 #     output_snarl_path_not_analyse = os.path.join(output_dir, "snarl_not_analyse.tsv")
 #     output_snarl_path = os.path.join(output_dir, "snarl_paths.tsv")    
-#     snarl_paths = src.list_snarl_paths.loop_over_snarls_write(stree, snarls, pg, output_snarl_path, output_snarl_path_not_analyse, children_treshold=10)[0]
+#     snarl_paths = list_snarl_paths.loop_over_snarls_write(stree, snarls, pg, output_snarl_path, output_snarl_path_not_analyse, children_treshold=10)[0]
 
 #     assert os.path.exists(output_snarl_path), f"Output file {output_snarl_path} was not created."
 
@@ -44,7 +44,7 @@
 #     os.makedirs(output_dir, exist_ok=True)
 #     output = os.path.join(output_dir, "quantitative_test.assoc.tsv")
 
-#     quantitative_pheno = src.utils.parse_pheno_quantitatif_file(phenotype_file)
+#     quantitative_pheno = utils.parse_pheno_quantitatif_file(phenotype_file)
 #     vcf_object.quantitative_table(snarl, quantitative_pheno, output=output)
 
 #     assert os.path.exists(output), f"Output file {output} was not created."

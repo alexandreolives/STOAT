@@ -1,6 +1,6 @@
 import bdsg # type: ignore
 import argparse
-import src.utils
+import utils
 import re
 from collections import defaultdict
 import time 
@@ -279,8 +279,8 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
 if __name__ == "__main__" :
 
     parser = argparse.ArgumentParser('List path through the netgraph of each snarl in a pangenome')
-    parser.add_argument('-p', type=src.utils.check_file, help='The input pangenome .pg file', required=True)
-    parser.add_argument('-d', type=src.utils.check_file, help='The input distance index .dist file', required=True)
+    parser.add_argument('-p', type=utils.check_file, help='The input pangenome .pg file', required=True)
+    parser.add_argument('-d', type=utils.check_file, help='The input distance index .dist file', required=True)
     parser.add_argument("-t", type=check_threshold, help='Children threshold', required=False)
     parser.add_argument('-o', help='output file', type=str, required=False)
     args = parser.parse_args()

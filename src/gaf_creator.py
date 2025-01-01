@@ -1,6 +1,6 @@
 import argparse
 import bdsg # type: ignore
-import src.utils
+import utils
 import re 
 import math
 import os 
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     output = os.path.join(output_dir, "output.gaf")
 
     pg = parse_graph_tree(args.pg)
-    snarl_dic = src.utils.parse_snarl_path_file(args.pathlist)[0]
+    snarl_dic = utils.parse_snarl_path_file(args.pathlist)[0]
     parse_input_file(args.gwas, snarl_dic, pg, output)
 
 # python3 src/gaf_creator.py -g tests/simulation/expected_binary/binary_analysis_pos.assoc.tsv -l tests/simulation/binary_data/snarl_paths.tsv -p tests/simulation/binary_data/pg.full.pg 
