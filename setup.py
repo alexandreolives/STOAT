@@ -9,7 +9,7 @@ class CustomInstallCommand:
         try:
             # Clone the repository with --recursive
             subprocess.check_call(["git", "clone", "--recursive", "https://github.com/vgteam/libbdsg.git"])
-            os.chdir("libbdsg")  # Change into the cloned directory
+            os.chdir("libbdsg")
             # Install using pip
             subprocess.check_call(["pip", "install", "."])
             os.chdir("..")  # Return to the original directory
