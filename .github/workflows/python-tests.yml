@@ -42,7 +42,7 @@ jobs:
         git clone --recursive https://github.com/vgteam/libbdsg.git && cd libbdsg && pip install .
 
     - name: Run pytest tests
-      run: python3 pytest
+      run: python3 -m pytest
 
 # Run python3 -m pytest
 # Traceback (most recent call last):
