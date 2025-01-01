@@ -28,13 +28,6 @@ STOAT supports both binary and quantitative phenotypes:
 ````bash
 git clone https://github.com/Plogeur/STOAT.git
 cd STOAT
-pip install -r requirements.txt # or you can use : pip install .
-
-# install bdsg version > 3.0.0
-# see more installation information on the bdsg github repo
-# DO NOT use pip install bdsg (cause it's in version 3.0.0) instead do :
-git clone --recursive https://github.com/vgteam/libbdsg.git
-cd libbdsg
 pip install .
 ````
 
@@ -61,15 +54,15 @@ Optional file :
 
 ## Usage
 
-Use `stoat.py` if you want to launch the full tool at once, starting from snarl path identification (identifying the multiple paths that can be taken by a sample based on the pangenome graph) and ending with the results plots (Manhattan plot and QQ plot).
+Use `stoat tool` if you want to launch the full tool at once, starting from snarl path identification (identifying the multiple paths that can be taken by a sample based on the pangenome graph) and ending with the results plots (Manhattan plot and QQ plot).
 
 - Run full tool :
 ```bash
 # binary trait
-python3 stoat.py -p <pg.pg> -d <dist.dist> -v <vcf.vcf.gz> -r <ref.vcf> -b <phenotype.txt> -o output
+stoat -p <pg.pg> -d <dist.dist> -v <vcf.vcf.gz> -r <ref.vcf> -b <phenotype.txt> -o output
 
 # quantative trait
-python3 stoat.py -p <pg.pg> -d <dist.dist> -v <vcf.vcf.gz> -r <ref.vcf> -q <phenotype.txt> -o output
+stoat -p <pg.pg> -d <dist.dist> -v <vcf.vcf.gz> -r <ref.vcf> -q <phenotype.txt> -o output
 ```
 
 Explanation of all options:
@@ -122,16 +115,13 @@ Alternatively, you can specify the script you want to launch, depending on your 
 
 ```bash
 # decompose pangenome
-python3 list_snarl_paths.py -p <pg.pg> -d <dist.dist> -o <output.tsv>
+python3 stoat/list_snarl_paths.py -p <pg.pg> -d <dist.dist> -o <paths.txt>
 
-# binary trait with list_path already computed (can also do with quantitative trait) and gaf creation 
-python3 stoat.py -l <paths.txt> -v <vcf.vcf.gz> -r <ref.vcf.gz> -b <phenotype.txt> --gaf -o output.tsv
+# binary trait with list_path already computed and gaf creation 
+stoat -l <paths.txt> -v <vcf.vcf.gz> -r <ref.vcf.gz> -b <phenotype.txt> --gaf -o output.tsv
 
-# binary trait
-python3 snarl_analyser.py <vcf.vcf.gz> <paths.txt> <ref.vcf.gz> -b <phenotype.txt> -o output.txt
-
-# quantitative trait 
-python3 snarl_analyser.py <vcf.vcf.gz> <paths.txt> <ref.vcf.gz> -q <phenotype.txt> -o output.txt
+# quantitative trait with list_path already computed
+stoat -l <paths.txt> -v <vcf.vcf.gz> -r <ref.vcf.gz> -q <phenotype.txt> -o output.tsv
 ```
 
 ## Output
@@ -185,10 +175,10 @@ STOAT will generated a manhattan and a QQ plot for binary and quantitatif analys
 
 ### SequenceTube
 
-Use `gaf_creator.py` or `stoat.py --gaf` to geneate a GAF file and [sequenceTubeMap](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
+Use `gaf_creator.py` or `stoat --gaf` to geneate a GAF file and [sequenceTubeMap](https://github.com/vgteam/sequenceTubeMap) tool to visualize your gwas binary region results.
 
 ```bash 
-python3 gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <paths.tsv> -p <pg.pg>
+python3 stoat/gaf_creator.py -s <binary_gwas_stoat_output.tsv> -l <paths.tsv> -p <pg.pg>
 ```
 <p align="center">
 <img src="pictures/seqTube.png" width="600">

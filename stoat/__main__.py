@@ -1,10 +1,10 @@
 import argparse
-import list_snarl_paths
-import snarl_analyser
-import utils
-import p_value_analysis
-import write_position
-import gaf_creator
+from stoat import list_snarl_paths
+from stoat import snarl_analyser
+from stoat import utils
+from stoat import p_value_analysis
+from stoat import write_position
+from stoat import gaf_creator
 import time
 import logging
 import os

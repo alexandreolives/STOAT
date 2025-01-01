@@ -1,14 +1,10 @@
-import sys
 import os
 from pathlib import Path
 
-# Add the parent directory to the sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
-
 # Import necessary modules
-import snarl_analyser
-import list_snarl_paths
-import utils
+from stoat import snarl_analyser
+from stoat import list_snarl_paths
+from stoat import utils
 
 def test_snarl_simulation_analyser():
     vcf_file = "tests/simulation/binary_data/merged_output.vcf"

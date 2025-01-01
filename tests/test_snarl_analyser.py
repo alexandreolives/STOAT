@@ -3,10 +3,7 @@ import pandas as pd # type: ignore
 import sys
 import os
 
-# Add the parent directory to the sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
-
-import snarl_analyser
+from stoat import snarl_analyser
 
 @pytest.fixture
 def snarl_instance():

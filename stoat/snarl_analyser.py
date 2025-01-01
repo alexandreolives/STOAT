@@ -1,12 +1,12 @@
 import argparse
-import utils
+from stoat import utils
 from cyvcf2 import VCF # type: ignore
 import numpy as np # type: ignore
 import pandas as pd # type: ignore
 import statsmodels.api as sm # type: ignore
 from scipy.stats import chi2_contingency # type: ignore
 from scipy.stats import fisher_exact # type: ignore
-from typing import IO, Any, Optional, List
+from typing import Optional, List
 # from limix.stats import logisticMixedModel # type: ignore
 # from limix.stats import scan # type: ignore
 import time
@@ -375,7 +375,7 @@ if __name__ == "__main__" :
     list_samples = utils.parsing_samples_vcf(args.vcf_path)
     vcf_object = SnarlProcessor(args.vcf_path, list_samples)
     vcf_object.fill_matrix()
-    print(f"Time Matrix :{time.time() - start} s")
+    print(f"Time Matrix : {time.time() - start} s")
 
     start = time.time()
     snarl = utils.parse_snarl_path_file(args.snarl)[0]
@@ -389,7 +389,7 @@ if __name__ == "__main__" :
         binary_group = utils.parse_pheno_binary_file(args.binary)
         vcf_object.binary_table(snarl, binary_group, covar, output=output)
 
-    # python3 src/snarl_analyser.py tests/other_files/small_vcf.vcf tests/other_files/list_snarl_short.txt -b tests/other_files/group.txt
+    # python3 src/snarl_analyser.py tests/other_files/big_vcf.vcf tests/other_files/list_snarl_short.txt -b tests/other_files/group.txt
     # python3 src/snarl_analyser.py ../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../snarl_data/group.txt
     # python3 src/snarl_analyser.py ../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
 
@@ -397,8 +397,8 @@ if __name__ == "__main__" :
         quantitative_dict = utils.parse_pheno_quantitatif_file(args.quantitative)
         vcf_object.quantitative_table(snarl, quantitative_dict, covar, output=output)
 
-    # python3 src/snarl_analyser.py tests/other_files/small_vcf.vcf tests/other_files/list_snarl_short.txt -q tests/other_files/pheno.txt
+    # python3 src/snarl_analyser.py tests/other_files/big_vcf.vcf tests/other_files/list_snarl_short.txt -q tests/other_files/pheno.txt
 
-    print(f"Time P-value:{time.time() - start} s")
+    print(f"Time P-value : {time.time() - start} s")
 
 
