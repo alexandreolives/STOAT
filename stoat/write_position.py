@@ -49,7 +49,7 @@ def write_pos_snarl(vcf_file, output_file, type):
 
     with open(output_file, 'r', encoding='utf-8') as in_f, open(temp_output_file, 'w', encoding='utf-8') as out_f:
         if type == "quantitatif" :
-            out_f.write("CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n")
+            out_f.write("CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tRSQUARED\tBETA\tSE\tP\n")
         elif type == "binary" :
             out_f.write("CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\tGROUP_PATHS\n")
         next(in_f)

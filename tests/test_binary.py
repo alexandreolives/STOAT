@@ -5,6 +5,7 @@ from pathlib import Path
 from stoat import snarl_analyser
 from stoat import list_snarl_paths
 from stoat import utils
+from stoat import write_position
 
 def test_snarl_simulation_analyser():
     vcf_file = "tests/simulation/binary_data/merged_output.vcf"
@@ -42,6 +43,7 @@ def test_snarl_simulation_analyser():
 
     binary_group = utils.parse_pheno_binary_file(phenotype_file)
     vcf_object.binary_table(snarl_paths, binary_group, gaf=True, output=output)
+    write_position.write_pos_snarl(vcf_file, output, "binary")
 
     assert os.path.exists(output), f"Output file {output} was not created."
 
