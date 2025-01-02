@@ -191,6 +191,6 @@ Description : Color represente the different paths group (red : group 1 & blue :
 
 - [ ] Implement LMM (Linear Mixed Models).
 
-- [ ] Add quantitative simulation data, functional quantitative tests, and verify quantitative truth.
+- [ ] verify quantitative truth.
 
 - [ ] Correct GitHub Actions.

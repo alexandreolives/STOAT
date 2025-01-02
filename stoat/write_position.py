@@ -43,6 +43,7 @@ def write_pos_snarl(vcf_file, output_file, type):
 
     vcf_dict = parse_vcf_to_dict(vcf_file)
     save_info = vcf_dict.get(1, ("NA", {"NA" : {"NA" : "NA"}}, "NA"))
+    seen = False
 
     # Use a temporary file to write the updated lines
     temp_output_file = output_file + ".tmp"
@@ -59,23 +60,22 @@ def write_pos_snarl(vcf_file, output_file, type):
             inversed_snarl = reverse_numbers(snarl)
             chrom, dict_pos_ref_alt, list_type_var = vcf_dict.get(snarl) or vcf_dict.get(inversed_snarl) or (save_info[0], save_info[1], save_info[2])
 
-            ref_list = []
-            pos_list = []
-            list_list_alt = []
+            pos_dic = {}
             for pos, ref_alt_dict in dict_pos_ref_alt.items():
                 for ref_base, alt_list in ref_alt_dict.items():
-                    pos_list.append(pos)
-                    ref_list.append(ref_base)
-                    list_list_alt.append(alt_list)
+                    if not pos in pos_dic :
+                        pos_dic[pos] = {ref_base : alt_list}
+                    else :
+                        pos_dic[pos].update({ref_base : alt_list})
 
             save_info = (chrom, dict_pos_ref_alt, list_type_var)
             columns[0] = chrom
-            columns[1] = ",".join(map(str, pos_list))
-            columns[3] = ",".join(map(str, list_type_var))
-            columns[4] = ",".join(map(str, ref_list))
-            columns[5] = ":".join([",".join(map(str, sublist)) for sublist in list_list_alt])
-            # I got a list of list of str i want that columns[5] get 
-            # a list of str with "," separator of each element in the sublist and ":" separator of each sublist
+            columns[1] = ",".join(map(str, pos_dic.keys()))  # POS
+            columns[3] = ",".join(map(str, list_type_var))   # TYPE VAR (INS, DEL, etc.)
+            columns[4] = ",".join(",".join(map(str, pos_dic[pos].keys())) for pos in pos_dic)  # REF
+            columns[5] = ":".join(
+                [",".join(map(str, alt_list)) for pos in pos_dic for alt_list in pos_dic[pos].values()]
+            )  # ALT: list of lists formatted with ',' and ':'
 
             # Write the modified line to the temp file
             out_f.write('\t'.join(columns) + '\n')
@@ -129,8 +129,8 @@ def parse_vcf_to_dict(vcf_file):
     return vcf_dict
 
 if __name__ == "__main__" :
-    reference = "tests/simulation/binary_data/merged_output.vcf"
-    output_file = "output/run_20241228_003954/binary_analysis.tsv"
+    reference = "../droso_data/pangenome.dm6.vcf"
+    output_file = "output/run_20250102_134046/quantitative_analysis.tsv"
     write_pos_snarl(reference, output_file, "quantitatif")
 
-# python3 src/write_position.py
+# python3 stoat/write_position.py

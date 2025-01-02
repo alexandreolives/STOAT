@@ -61,13 +61,6 @@ def parse_snarl_path_file(path_file:str) -> tuple[dict, int]:
 
     return snarl_paths, snarl_number_analysis
 
-def parse_covariate_file(covar_path:str) -> dict:
-
-    covariates = pd.read_csv(covar_path)
-
-    # Convert to dictionary with ID as the key and the rest of the row as the value
-    return covariates.set_index("ID").to_dict(orient="index")
-
 def parse_plink_grm(prefix: str) -> pd.DataFrame:
     """ Parse PLINK GRM binary files and return the kinship matrix as a pandas DataFrame. """
 
