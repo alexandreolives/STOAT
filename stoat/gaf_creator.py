@@ -1,6 +1,6 @@
 import argparse
 import bdsg # type: ignore
-import utils
+from stoat import utils
 import re 
 import math
 import os 
