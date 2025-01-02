@@ -69,9 +69,9 @@ def main() :
 
     if args.covariate :
         covar = utils.parse_covariate_file(args.covariate)
-        utils.check_mathing(covar, list_samples, args.covariate)
+        utils.check_matching(covar, list_samples, args.covariate)
         kinship_matrix, kinship_ind = utils.parse_plink_grm(args.kinship)
-        utils.check_mathing(kinship_ind, list_samples, args.kinship)
+        utils.check_matching(kinship_ind, list_samples, args.kinship)
 
     else :
         covar = None
@@ -85,7 +85,7 @@ def main() :
         logger.info("Parsing quantitative phenotype...")
         pheno = utils.parse_pheno_quantitatif_file(args.quantitative)
     
-    utils.check_mathing(pheno, list_samples, args.quantitative)
+    utils.check_matching(pheno, list_samples, args.quantitative)
 
     if not args.listpath : 
         logger.info("Starting snarl path decomposition...")

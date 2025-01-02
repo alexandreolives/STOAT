@@ -1,25 +1,32 @@
 import argparse
 
 def extract_vcf_header(input_vcf):
-    header_lines = ['##fileformat=VCFv4.2\t',
-                    '##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">\t',
-                    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">"\t']
+    header_lines = [
+        '##fileformat=VCFv4.2\n',
+        '##INFO=<ID=P,Number=1,Type=String,Description="P-value">\n',
+        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n'
+    ]
     column_header = None
-    num_samples = 0
+    sample_names = []
+    chr_name = []
 
     # Open the VCF file and process line by line
     with open(input_vcf, 'r') as vcf:
         for line in vcf:
-            if line.startswith("##"):
-                continue  # Skip the header lines
+            if line.startswith("##contig=<ID="):
+                chr_name.append(line.strip())
+            
             elif line.startswith("#CHROM"):
-                column_header = line  # Identify the column header line
-                # Add new or updated headers before the column header
-                # Determine the number of samples
-                num_samples = len(line.strip().split('\t')) - 9  # Columns after the FORMAT field
+                column_header = line.strip()  # Get the column header line
+                columns = column_header.split('\t')
+                sample_names = columns[9:]  # Extract sample names from column 10 onward
                 break  # No need to read further; the header ends here
 
-    return header_lines, column_header, num_samples
+    # Add sample names to the header lines
+    header_lines.extend([f"{chr}\n" for chr in chr_name])
+    header_lines.extend([f"##SAMPLE=<ID={sample}>\n" for sample in sample_names])
+
+    return header_lines, column_header, len(sample_names)
 
 def create_vcf_from_gwas(gwas_file, input_vcf, output_vcf):
     # Extract the header lines, column header, and number of samples
@@ -28,7 +35,7 @@ def create_vcf_from_gwas(gwas_file, input_vcf, output_vcf):
     # Open the output VCF for writing
     with open(output_vcf, 'w') as out_vcf:
         out_vcf.writelines(header_lines)
-        out_vcf.write(column_header)
+        out_vcf.write(column_header + '\n')
 
         # Process GWAS file and generate VCF body
         with open(gwas_file, 'r') as gwas:
@@ -39,7 +46,7 @@ def create_vcf_from_gwas(gwas_file, input_vcf, output_vcf):
                 chrom, pos_str, snarl_id, _, ref_str_brut, alt_str_brut, p_value = fields[:7]
 
                 # Generate placeholder sample data (e.g., "." repeated for each sample)
-                sample_placeholder = "./."  # GT field placeholder for one sample
+                sample_placeholder = "0/0"  # GT field placeholder for one sample
                 placeholder = "\t".join([sample_placeholder] * num_samples)  # GT field placeholder for all samples
 
                 # Create placeholder fields
@@ -48,12 +55,22 @@ def create_vcf_from_gwas(gwas_file, input_vcf, output_vcf):
                 info_field = f"P={p_value}"
                 format_field = "GT"
                 list_pos = pos_str.split(',')
-                list_ref = ref_str_brut.split(',')
+                list_ref = ref_str_brut.split(':')
+                list_list_ref = [ref_str.split(',') for ref_str in list_ref]
                 list_alt = alt_str_brut.split(':')
                 list_list_alt = [alt_str.split(',') for alt_str in list_alt]
 
+                dict_pos = {}
                 for idx, pos in enumerate(list_pos) :
-                    for alt, ref in zip(list_list_alt[idx], list_ref[idx]) :
+                    dict_pos[pos] = [list_list_ref[idx], list_list_alt[idx]]
+
+                if snarl_id == "5262717_5262719" :
+                    print("list_pos : ", list_pos)
+                    print("list_ref : ", list_ref)
+                    print("list_list_alt : ", list_list_alt)
+
+                for pos, [list_ref, list_alt] in dict_pos.items() :
+                    for ref, alt in zip(list_ref, list_alt) :
                         # Create and write the VCF line
                         vcf_line = f"{chrom}\t{pos}\t{snarl_id}\t{ref}\t{alt}\t{qual}\t{filter_field}\t{info_field}\t{format_field}\t{placeholder}\n"
                         out_vcf.write(vcf_line)
@@ -70,7 +87,3 @@ if __name__ == "__main__":
     create_vcf_from_gwas(args.gwas, args.input_vcf, args.output_vcf)
 
 # python3 src/vcf_maker.py -g output/run_20241228_003954/binary_analysis.tsv -i tests/simulation/binary_data/merged_output.vcf -o test_vcf.vcf
-
-# (base) mbagarre@irsd0440:~/Bureau/STOAT$ bcftools norm tests/vcf_test.vcf -m -any -f ../droso_data/fly/ref.fa > vcf_test.normalized.vcf
-# [E::vcf_hdr_read] No sample line
-# Failed to read from tests/vcf_test.vcf: could not parse header

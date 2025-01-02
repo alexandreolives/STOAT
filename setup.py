@@ -54,7 +54,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "stoat=src.stoat:main",  # CLI entry point
+            "stoat=stoat:main",  # CLI entry point
         ]
     },
 )

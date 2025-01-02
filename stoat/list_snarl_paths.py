@@ -1,6 +1,6 @@
 import bdsg # type: ignore
 import argparse
-from .utils import check_file
+from stoat import utils
 import re
 from collections import defaultdict
 import time 
@@ -81,13 +81,16 @@ def calcul_type_variant(list_list_length_paths) :
     list_type_variant = []
     for path_lengths in list_list_length_paths :
         
-        if len(path_lengths) > 3 or path_lengths[1] == '-1' : # Case snarl in snarl
+        # Case snarl in snarl or 4 node snarl
+        if len(path_lengths) > 3 or path_lengths[1] == '-1' :
             list_type_variant.append("COMPLEX")
 
-        elif len(path_lengths) == 3 : # Case simple path len 3
+        # Case simple path len 3
+        elif len(path_lengths) == 3 :
             list_type_variant.append("SNP" if path_lengths[1] == 1 else "INS")
 
-        else : # length < 3 / Deletion
+        # length < 3 / Deletion
+        else :
             list_type_variant.append("DEL")
 
     return list_type_variant
@@ -203,9 +206,9 @@ def fill_pretty_paths(stree, pg, finished_paths) :
         pretty_paths.append(ppath.print()) 
         length_net_paths.append(length_net)
 
-    length_net_paths = calcul_type_variant(length_net_paths)
-    assert len(length_net_paths) == len(pretty_paths)
-    return pretty_paths, length_net_paths
+    type_variants = calcul_type_variant(length_net_paths)
+    assert len(type_variants) == len(pretty_paths)
+    return pretty_paths, type_variants
 
 def write_header_output(output_file) :
     with open(output_file, 'w') as outf:
@@ -279,8 +282,8 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
 if __name__ == "__main__" :
 
     parser = argparse.ArgumentParser('List path through the netgraph of each snarl in a pangenome')
-    parser.add_argument('-p', type=check_file, help='The input pangenome .pg file', required=True)
-    parser.add_argument('-d', type=check_file, help='The input distance index .dist file', required=True)
+    parser.add_argument('-p', type=utils.check_file, help='The input pangenome .pg file', required=True)
+    parser.add_argument('-d', type=utils.check_file, help='The input distance index .dist file', required=True)
     parser.add_argument("-t", type=check_threshold, help='Children threshold', required=False)
     parser.add_argument('-o', help='output file', type=str, required=False)
     args = parser.parse_args()

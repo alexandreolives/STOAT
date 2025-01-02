@@ -2,7 +2,7 @@ import pandas as pd # type: ignore
 import matplotlib.pyplot as plt
 import qmplot # type: ignore
 
-SIGNIFICANCE_THRESHOLD = 0.00001
+SIGNIFICANCE_THRESHOLD = 0.00001 # >10^-5
 
 def process_file(file_path, p_col, output_snarl, writer_function):
     # Read and filter the dataframe based on significance threshold
@@ -27,7 +27,7 @@ def write_significative_snarl_binary(tupple_snarl, output_snarl):
             f.write(('\t'.join(map(str, row)) + '\n').encode('utf-8'))
 
 def write_significative_snarl_quantitatif(tupple_snarl, output_snarl):
-    headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP\n'
+    headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tRSQUARED\tBETA\tSE\tP\n'
     with open(output_snarl, "wb") as f:
         f.write(headers.encode('utf-8'))
         for row in tupple_snarl:
@@ -53,9 +53,11 @@ def plot_manhattan_quantitatif(file_path, output_manhattan="output_manhattan_plo
     data = pd.read_csv(file_path, sep="\t")
 
     # Clean data
-    cleaned_data = data.dropna(subset=['CHR', 'P', 'POS'])
-    cleaned_data['POS'] = cleaned_data['POS'].apply(lambda x: int(str(x).split(',')[0]) if ',' in str(x) else int(x))
-    cleaned_data['P'] = cleaned_data['P'].apply(lambda x: max(x, 1e-300))  # Avoid log10(0)
+    cleaned_data = data.dropna(subset=['CHR', 'P', 'POS']).copy()  # Use .copy() to avoid potential slice issues
+    cleaned_data.loc[:, 'POS'] = cleaned_data['POS'].apply(lambda x: int(str(x).split(',')[0]) if ',' in str(x) else int(x))
+    cleaned_data.loc[:, 'P'] = cleaned_data['P'].apply(lambda x: max(x, 1e-300))  # Avoid log10(0)
+    
+    # Prepare data for plotting
     plot_data = cleaned_data[['CHR', 'POS', 'P']].sort_values(by=['CHR', 'POS'])
 
     _, ax = plt.subplots(figsize=(12, 4), facecolor='w', edgecolor='k')
@@ -93,9 +95,9 @@ def plot_manhattan_binary(file_path, output_manhattan="output_manhattan_plot.png
     data = pd.read_csv(file_path, sep="\t")
 
     # Clean data
-    cleaned_data = data.dropna(subset=['CHR', 'P_FISHER', 'POS'])
-    cleaned_data['POS'] = cleaned_data['POS'].apply(lambda x: int(str(x).split(',')[0]) if ',' in str(x) else int(x))
-    cleaned_data['P_FISHER'] = cleaned_data['P_FISHER'].apply(lambda x: max(x, 1e-300))  # Avoid log10(0)
+    cleaned_data = data.dropna(subset=['CHR', 'P_FISHER', 'POS']).copy()
+    cleaned_data.loc[:, 'POS'] = cleaned_data['POS'].apply(lambda x: int(str(x).split(',')[0]) if ',' in str(x) else int(x))
+    cleaned_data[:, 'P_FISHER'] = cleaned_data['P_FISHER'].apply(lambda x: max(x, 1e-300))  # Avoid log10(0)
     plot_data = cleaned_data[['CHR', 'POS', 'P_FISHER']].sort_values(by=['CHR', 'POS'])
 
     _, ax = plt.subplots(figsize=(12, 4), facecolor='w', edgecolor='k')
