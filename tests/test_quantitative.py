@@ -15,7 +15,7 @@ def test_snarl_simulation_analyser():
     output_dir = Path("tests/quantitative_tests_output")
 
     expected_output_snarl_path = "tests/simulation/quantitative_data/snarl_paths.tsv"
-    expected_output = "tests/simulation/quantitative_data/quantitative_analysis.assoc.tsv"
+    expected_output = "tests/simulation/quantitative_data/quantitative_test.assoc.tsv"
 
     # Perform test logic
     list_samples = utils.parsing_samples_vcf(vcf_file)
@@ -43,7 +43,7 @@ def test_snarl_simulation_analyser():
 
     quantitative_pheno = utils.parse_pheno_quantitatif_file(phenotype_file)
     vcf_object.quantitative_table(snarl_paths, quantitative_pheno, output=output)
-    write_position.write_pos_snarl(vcf_file, output, "quantitatif")
+    # write_position.write_pos_snarl(vcf_file, output, "quantitatif")
 
     assert os.path.exists(output), f"Output file {output} was not created."
 

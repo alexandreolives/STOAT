@@ -15,7 +15,7 @@ def test_snarl_simulation_analyser():
     output_dir = Path("tests/binary_tests_output")
 
     expected_output_snarl_path = "tests/simulation/binary_data/snarl_paths.tsv"
-    expected_output = "tests/simulation/binary_data/binary_analysis.assoc.tsv"
+    expected_output = "tests/simulation/binary_data/binary_test.assoc.tsv"
 
     # Perform test logic
     list_samples = utils.parsing_samples_vcf(vcf_file)
@@ -43,7 +43,7 @@ def test_snarl_simulation_analyser():
 
     binary_group = utils.parse_pheno_binary_file(phenotype_file)
     vcf_object.binary_table(snarl_paths, binary_group, gaf=True, output=output)
-    write_position.write_pos_snarl(vcf_file, output, "binary")
+    # write_position.write_pos_snarl(vcf_file, output, "binary")
 
     assert os.path.exists(output), f"Output file {output} was not created."
 

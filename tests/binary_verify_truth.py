@@ -4,9 +4,10 @@ from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
+import re
 
 # Function to process the frequency file and get result list with differences
-def process_file(freq_file, threshold=0.01):
+def process_file(freq_file, threshold=20):
     df = pd.read_csv(freq_file, sep='\t')
     path_list = []
     true_labels = []
@@ -18,12 +19,12 @@ def process_file(freq_file, threshold=0.01):
         row_2 = df.iloc[i + 1]
         diff = abs(row_1['freq'] - row_2['freq'])
 
-        if diff >= threshold:
+        if diff > threshold:
             true_labels.append(0)
         else :
             true_labels.append(1)
 
-        path_list.append(f"{int(row_1['next_node'])}_{int(row_1['start_node'])}")
+        path_list.append(f"{int(row_1['start_node'])}_{int(row_1['next_node'])}")
         list_diff.append(float(diff))
 
     return path_list, true_labels, list_diff
@@ -31,45 +32,47 @@ def process_file(freq_file, threshold=0.01):
 def match_snarl(path_list, true_labels, p_value_file, paths_file):
 
     p_value_df = pd.read_csv(p_value_file, sep='\t')
-    paths_df = pd.read_csv(paths_file, sep='\t')
+    paths_df = pd.read_csv(paths_file, sep='\t')['paths']
+    split = p_value_df['SNARL'].str.split('_')
 
     # To store predicted labels
     predicted_labels_10_2 = []
     predicted_labels_10_5 = []
     predicted_labels_10_8 = []
     cleaned_true_labels = []
-    finded_row = 0
 
     for idx, snarl_id in enumerate(path_list):
 
         start_node, next_node = map(int, snarl_id.split('_'))
-        split = p_value_df['SNARL'].str.split('_')
-        _id_snarl = (split.str[1].astype(int) <= start_node) & (split.str[0].astype(int) >= next_node)
-        matched_row = p_value_df[_id_snarl]
+        # We want to know if the snarl is in the range of the snarl in the p_value file
+        matched_row = p_value_df[(split.str[1].astype(int) <= start_node) & (split.str[0].astype(int) >= next_node) |
+                                 (split.str[0].astype(int) <= start_node) & (split.str[1].astype(int) >= next_node)]
 
-        if not matched_row.empty :
-            if len(matched_row) > 1 :
-                split_paths = paths_df['paths'][_id_snarl]
-                indices = split_paths.index
-                for idx_paths, list_paths in enumerate(split_paths) :
-                    for path in list_paths.split(',') :
-                        if f"{next_node}>{start_node}" in path :
-                            match = matched_row.loc[indices[idx_paths]]
+        # print("snarl_id  : ", snarl_id)
+        # print("matched_row : ", matched_row)
 
-            else :
-                match = matched_row.iloc[0]
+        # Case where the snarl is found 
+        if not matched_row.empty:
+            indices = matched_row.index
+            split_paths = [paths_df[idx] for idx in indices]
+            # Check if at least one path in the snarl contains the start node followed by the next node
+            for idx_paths, list_path in enumerate(split_paths):
+                # print("list_path : ", list_path)
+                for path in list_path.split(',') :
+                    # print("path : ", path)
+                    decomposed_path = [int(num) for num in re.findall(r'\d+', path)]
+                    # print("decomposed_path : ", decomposed_path)
+                    if start_node in decomposed_path and next_node in decomposed_path:
+                        p_value_fisher = matched_row.loc[indices[idx_paths]]['P_FISHER']
+                        # print("p_value_fisher : ", p_value_fisher)
+                        break
 
-            p_value_fisher = match['P_Fisher']
             predicted_labels_10_2.append(0 if p_value_fisher < 0.01 else 1)
             predicted_labels_10_5.append(0 if p_value_fisher < 0.00001 else 1)
             predicted_labels_10_8.append(0 if p_value_fisher < 0.00000001 else 1)
-
-            finded_row += 1
             cleaned_true_labels.append(true_labels[idx])
-    
-    print("finded row : ", finded_row)
+        
     print("total row : ", len(path_list))
-
     return predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, cleaned_true_labels
 
 def conf_mat_maker(p_val, predicted_labels, true_labels, output):
@@ -88,14 +91,14 @@ def conf_mat_maker(p_val, predicted_labels, true_labels, output):
     # Plot confusion matrix for p-value < p_val
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
-                xticklabels=['Predicted Neg', 'Predicted Pos'], 
-                yticklabels=['True Neg', 'True Pos'],
+                xticklabels=['Positive', 'Negative'], 
+                yticklabels=['Positive', 'Negative'],
                 annot_kws={"size": 30})
     plt.xticks(fontsize=16)  
     plt.yticks(fontsize=16)  
     plt.title(f'Confusion Matrix for p-value < {p_val}', fontsize=18)  # Increase title font size
-    plt.xlabel('Predicted Labels', fontsize=20)  # Increase x-label font size
-    plt.ylabel('True Labels', fontsize=20)  # Increase y-label font size
+    plt.xlabel('Truth Labels', fontsize=20)  # Increase x-label font size
+    plt.ylabel('Predicted Labels', fontsize=20)  # Increase y-label font size
     plt.savefig(output + f'_{p_val}.png', format='png', dpi=300)
 
 def print_confusion_matrix(predicted_labels_10_2, predicted_labels_10_5, predicted_labels_10_8, true_labels, output):
@@ -179,7 +182,7 @@ def p_value_distribution(test_predicted_labels, cleaned_true_labels, list_diff, 
     plt.grid(False)
     plt.savefig('output/test_distribution_false_neg.png', format='png', dpi=300)
 
-def plot_diff_distribution(test_predicted_labels, cleaned_true_labels, list_diff, output):
+def plot_diff_distribution(test_predicted_labels, cleaned_true_labels, list_diff, output, pvalue):
     
     # Identify false negatives: True label is 0 (difference), but predicted label is 1 (predicted no difference)
     false_negatives_indices = [i for i, (pred, true) in enumerate(zip(test_predicted_labels, cleaned_true_labels)) if pred == 1 and true == 0]
@@ -190,11 +193,11 @@ def plot_diff_distribution(test_predicted_labels, cleaned_true_labels, list_diff
     # Plot the distribution of differences for false negatives
     plt.figure(figsize=(10, 6))
     sns.histplot(false_negative_diffs, bins=20, kde=True, color='blue')
-    plt.title("Distribution of Differences for False Negatives", fontsize=16)
+    plt.title("Distribution of Differences for False Positive", fontsize=16)
     plt.xlabel("Difference (%)", fontsize=14)
     plt.ylabel("Frequency", fontsize=14)
     plt.grid(False)
-    plt.savefig(output + '_distribution_false_neg.png', format='png', dpi=300)
+    plt.savefig(output + pvalue + '_distribution_false_positive.png', format='png', dpi=300)
 
     true_positive_indices = [i for i, (pred, true) in enumerate(zip(test_predicted_labels, cleaned_true_labels)) if pred == 0 and true == 0]
     true_positive_diffs = [list_diff[i]*100 for i in true_positive_indices]
@@ -206,7 +209,7 @@ def plot_diff_distribution(test_predicted_labels, cleaned_true_labels, list_diff
     plt.xlabel("Difference (%)", fontsize=14)
     plt.ylabel("Frequency", fontsize=14)
     plt.grid(False)
-    plt.savefig(output + '_distribution_true_positives.png', format='png', dpi=300)
+    plt.savefig(output + pvalue + '_distribution_true_positives.png', format='png', dpi=300)
     
 if __name__ == "__main__":
 
@@ -218,25 +221,29 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # THRESHOLD = 0.0 : Case where difference between both group snarl is considered like Truth label 
-    THRESHOLD = args.threshold if args.threshold else 0.0
+    # THRESHOLD_FREQ : Threshold to define the truth label by comparing the frequence difference between both group
+    THRESHOLD_FREQ = args.threshold if args.threshold else 0.2 # Default value is =>20% difference == Truth label 0
 
     # Define Truth label from freq file
-    test_path_list, test_true_labels, list_diff = process_file(args.freq, THRESHOLD)
+    test_path_list, test_true_labels, list_diff = process_file(args.freq, THRESHOLD_FREQ)
 
     # Define Truth label from output file and compare with the truth label
     test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
         
     # Plot confusion matrix
-    print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, "tests/binary_tests_output/truth_confusion_matrix")
+    print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, f"tests/binary_tests_output/confusion_matrix_{THRESHOLD_FREQ}")
     
+    # THRESHOLD_FREQ = 0.0 : Case where just a difference between both group snarl is considered like Truth label
+    THRESHOLD_FREQ = 0.0
+    test_path_list, test_true_labels, list_diff = process_file(args.freq, THRESHOLD_FREQ)
+    test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths)
+    print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, f"tests/binary_tests_output/confusion_matrix_{THRESHOLD_FREQ}")
+
     # Plot distribution of p-values for false negatives and true positives
     output_diff = "tests/binary_tests_output/binary_test"
-    plot_diff_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff, output_diff)
-    plot_diff_distribution(test_predicted_labels_10_5, cleaned_true_labels, list_diff, output_diff)
-    plot_diff_distribution(test_predicted_labels_10_8, cleaned_true_labels, list_diff, output_diff)
+    plot_diff_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff, output_diff, "10^-2")
 
     """
-    python3 src/verify_truth.py tests/simulation/binary_data/pg.snarls.freq.tsv \
+    python3 tests/binary_verify_truth.py tests/simulation/binary_data/pg.snarls.freq.tsv \
     tests/binary_tests_output/binary_test.assoc.tsv tests/simulation/binary_data/snarl_paths.tsv
     """

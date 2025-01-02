@@ -16,7 +16,7 @@ class CustomInstallCommand:
         except subprocess.CalledProcessError as e:
             print(f"Failed to install libbdsg: {e}")
             raise
- 
+
 # Check if libbdsg is already installed
 try:
     import bdsg

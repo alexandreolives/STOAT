@@ -4,8 +4,7 @@ stoat.egg-info
 build
 .vscode
 .pytest_cache
-.DS_Store
 tests/.DS_Store
 stoat/.DS_Store
 STOAT.egg-info
-
+.DS_Store
