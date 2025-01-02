@@ -55,17 +55,22 @@ def create_vcf_from_gwas(gwas_file, input_vcf, output_vcf):
                 info_field = f"P={p_value}"
                 format_field = "GT"
                 list_pos = pos_str.split(',')
-                list_ref = [ref_str_brut.split(',')]
+                list_ref = ref_str_brut.split(':')
+                list_list_ref = [ref_str.split(',') for ref_str in list_ref]
                 list_alt = alt_str_brut.split(':')
                 list_list_alt = [alt_str.split(',') for alt_str in list_alt]
+
+                dict_pos = {}
+                for idx, pos in enumerate(list_pos) :
+                    dict_pos[pos] = [list_list_ref[idx], list_list_alt[idx]]
 
                 if snarl_id == "5262717_5262719" :
                     print("list_pos : ", list_pos)
                     print("list_ref : ", list_ref)
                     print("list_list_alt : ", list_list_alt)
 
-                for idx, pos in enumerate(list_pos) :
-                    for alt, ref in zip(list_list_alt[idx], list_ref[idx]) :
+                for pos, [list_ref, list_alt] in dict_pos.items() :
+                    for ref, alt in zip(list_ref, list_alt) :
                         # Create and write the VCF line
                         vcf_line = f"{chrom}\t{pos}\t{snarl_id}\t{ref}\t{alt}\t{qual}\t{filter_field}\t{info_field}\t{format_field}\t{placeholder}\n"
                         out_vcf.write(vcf_line)

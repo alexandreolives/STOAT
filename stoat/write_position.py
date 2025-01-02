@@ -72,10 +72,9 @@ def write_pos_snarl(vcf_file, output_file, type):
             columns[0] = chrom
             columns[1] = ",".join(map(str, pos_dic.keys()))  # POS
             columns[3] = ",".join(map(str, list_type_var))   # TYPE VAR (INS, DEL, etc.)
-            columns[4] = ",".join(",".join(map(str, pos_dic[pos].keys())) for pos in pos_dic)  # REF
-            columns[5] = ":".join(
-                [",".join(map(str, alt_list)) for pos in pos_dic for alt_list in pos_dic[pos].values()]
-            )  # ALT: list of lists formatted with ',' and ':'
+            columns[4] = ":".join(",".join(map(str, pos_dic[pos].keys())) for pos in pos_dic)  # REF
+            # ALT: list of lists formatted with ',' for mutltiple alt in 1 ref and ':' for each position
+            columns[5] = ":".join([",".join(map(str, alt_list)) for pos in pos_dic for alt_list in pos_dic[pos].values()])
 
             # Write the modified line to the temp file
             out_f.write('\t'.join(columns) + '\n')
