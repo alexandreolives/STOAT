@@ -76,7 +76,7 @@ def parse_input_file(input_file, snarl_dic, pg, output_file):
         for line in infile:
             columns = line.strip().split()
 
-            #CHR POS SNARL TYPE	REF	ALT	P_Fisher P_Chi2 TOTAL_SUM MIN_ROW_INDEX NUM_COLUM INTER_GROUP AVERAGE GROUP_PATHS
+            #CHR POS SNARL TYPE	REF	ALT	P_Fisher P_Chi2 ALLELE_NUM MIN_ROW_INDEX NUM_COLUM INTER_GROUP AVERAGE GROUP_PATHS
             snarl = columns[2]
             pfisher, pchi = columns[6:8]
             group_paths = columns[13]

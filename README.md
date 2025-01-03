@@ -46,7 +46,7 @@ Required files :
 - pg : Pangenome graph file, formats accepted: .pg or .xg.
 - dist : Distance file generated with vg dist, format: .dist.
 - ref : VCF referenting chromosomes and positions in the pangenome graph generated with vg deconstruct, formats: .vcf (only).
-- vcf : Merged VCF file, created using bcftools merge, formats: .vcf or .vcf.gz.
+- vcf : Merged VCF file, created using bcftools merge, formats: .vcf or .vcf.gz. (ex : `bcftools merge -m none -Oz -o test`)
 - phenotype : phenotype file organise in three-column with FID (family/sample name), IID (sample name), and PHENO (integer/float). Format: .txt or .tsv (tab-separated).
 
 Optional file : 
@@ -136,7 +136,7 @@ stoat -l <paths.txt> -v <vcf.vcf.gz> -r <ref.vcf.gz> -q <phenotype.txt> -o outpu
 | **ALT**           | Sequence of the alternate allele.                                                             |
 | **P_FISHER**      | P-value calculated using Fisher's exact test (binary analysis).                               |
 | **P_CHI2**        | P-value calculated using the Chi-squared test (binary analysis).                              |
-| **TOTAL_SUM**     | Total number of samples that pass for this snarl. (binary analysis).                          |
+| **ALLELE_NUM**    | Total number of alleles that pass in this snarl.                                              |
 | **MIN_ROW_INDEX** | Minimum group of samples that pass through one path of the snarl. (binary analysis).          |
 | **NUM_COLUM**     | Number of paths in the snarl. (binary analysis).                                              |
 | **INTER_GROUP**   | Sum of the minimum samples that pass through each path. (binary analysis).                    |
@@ -151,7 +151,7 @@ stoat -l <paths.txt> -v <vcf.vcf.gz> -r <ref.vcf.gz> -q <phenotype.txt> -o outpu
 Below is an example of the output for a binary phenotype analysis:
 
 ```bash
-CHR POS SNARL           TYPE  REF ALT   P_FISHER  P_CHI2  TOTAL_SUM  MIN_ROW_INDEX NUM_COLUM INTER_GROUP AVERAGE
+CHR POS SNARL           TYPE  REF ALT   P_FISHER  P_CHI2  ALLELE_NUM  MIN_ROW_INDEX NUM_COLUM INTER_GROUP AVERAGE
 1   12  5262721_5262719 SNP   A   T     0.4635    0.5182  286        2             137       46          143.0
 1   15  5262719_5262717 INS   A   ATT   0.8062    0.8747  286        2             141       34          143.0
 1   18  5262717_5262714 DEL   AA  T     0.2120    0.2363  286        2             134       32          143.0

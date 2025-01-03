@@ -143,7 +143,11 @@ class SnarlProcessor:
         Generate a binary table with statistical results and write to a file.
         """
         
-        headers = ('CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tTOTAL_SUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE\tGROUP_PATHS\n')
+        common_headers = (
+            "CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tP_FISHER\tP_CHI2\tALLELE_NUM\tMIN_ROW_INDEX\tNUM_COLUM\tINTER_GROUP\tAVERAGE"
+        )
+        headers = f"{common_headers}\tGROUP_PATHS\n" if gaf else f"{common_headers}\n"
+
         with open(output, 'wb') as outf:
             outf.write(headers.encode('utf-8'))
                 
@@ -152,22 +156,26 @@ class SnarlProcessor:
                 df = self.create_binary_table(binary_groups, list_snarl)
 
                 # Perform statistical tests and compute descriptive statistics
-                fisher_p_value, chi2_p_value, total_sum, min_sample, numb_colum, inter_group, average, group_paths = self.binary_stat_test(df, gaf)
+                fisher_p_value, chi2_p_value, allele_number, min_sample, numb_colum, inter_group, average, group_paths = self.binary_stat_test(df, gaf)
                 chrom = pos = type_var = ref = alt = "NA"
-                data = (f'{chrom}\t{pos}\t{snarl}\t{type_var}\t{ref}\t{alt}\t{fisher_p_value}\t'
-                        f'{chi2_p_value}\t{total_sum}\t{min_sample}\t{numb_colum}\t{inter_group}\t{average}\t{group_paths}\n')
+                common_data = (
+                f"{chrom}\t{pos}\t{snarl}\t{type_var}\t{ref}\t{alt}\t"
+                f"{fisher_p_value}\t{chi2_p_value}\t{allele_number}\t{min_sample}\t"
+                f"{numb_colum}\t{inter_group}\t{average}")
+                data = f"{common_data}\t{group_paths}\n" if gaf else f"{common_data}\n"
+            
                 outf.write(data.encode('utf-8'))
 
     def quantitative_table(self, snarls:dict, quantitative_dict:dict, kinship_matrix:pd.DataFrame=None, covar:Optional[dict]=None, output:str="output/quantitative_output.tsv") :
 
         with open(output, 'wb') as outf:
-            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tRSQUARED\tBETA\tSE\tP\n'
+            headers = 'CHR\tPOS\tSNARL\tTYPE\tREF\tALT\tRSQUARED\tBETA\tSE\tP\tALLELE_NUM\n'
             outf.write(headers.encode('utf-8'))
             for snarl, list_snarl in snarls.items() :
-                df = self.create_quantitative_table(list_snarl)
+                df, allele_number = self.create_quantitative_table(list_snarl)
                 rsquared, beta, se, pvalue = self.linear_regression(df, quantitative_dict)
                 chrom = pos = type_var = ref = alt = "NA"
-                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, rsquared, beta, se, pvalue)
+                data = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, pos, snarl, type_var, ref, alt, rsquared, beta, se, pvalue, allele_number)
                 outf.write(data.encode('utf-8'))
 
     def identify_correct_path(self, decomposed_snarl:list, idx_srr_save:list) -> list:
@@ -242,7 +250,8 @@ class SnarlProcessor:
                 genotypes[srr_idx, col_idx] += 1
 
         df = pd.DataFrame(genotypes, index=self.list_samples, columns=column_headers)
-        return df
+        allele_number = int(df.values.sum()) # Calculate the number of samples in the DataFrame
+        return df, allele_number
     
     def linear_regression(self, df:pd.DataFrame, pheno:dict, covar:dict=None) -> tuple :
 
@@ -349,15 +358,15 @@ class SnarlProcessor:
         fisher_p_value = self.fisher_test(df)
         chi2_p_value = self.chi2_test(df)
 
-        total_sum = int(df.values.sum()) # Calculate the total sum of all values in the DataFrame
+        allele_number = int(df.values.sum()) # Calculate the number of samples in the DataFrame
         inter_group = int(df.min().sum()) # Calculate the sum of the minimum values from each column
         numb_colum = df.shape[1] # Get the total number of columns in the DataFrame
-        average = float(total_sum / numb_colum) # Calculate the average of the total sum divided by the number of columns
+        average = float(allele_number / numb_colum) # Calculate the average of the total sum divided by the number of columns
         row_sums = df.sum(axis=1) # Calculate the sum of values for each row in the DataFrame
         min_row_index = row_sums.min() # Find the minimum sum among the row sums
         group_paths = self.format_group_paths(df) if gaf else ""
 
-        return fisher_p_value, chi2_p_value, total_sum, min_row_index, numb_colum, inter_group, average, group_paths
+        return fisher_p_value, chi2_p_value, allele_number, min_row_index, numb_colum, inter_group, average, group_paths
     
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="Parse and analyse snarl from vcf file")
@@ -389,15 +398,16 @@ if __name__ == "__main__" :
         binary_group = utils.parse_pheno_binary_file(args.binary)
         vcf_object.binary_table(snarl, binary_group, covar, output=output)
 
-    # python3 src/snarl_analyser.py tests/other_files/big_vcf.vcf tests/other_files/list_snarl_short.txt -b tests/other_files/group.txt
-    # python3 src/snarl_analyser.py ../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../snarl_data/group.txt
-    # python3 src/snarl_analyser.py ../snarl_data/simulation_1000vars_100samps/calls/merged_output.vcf ../snarl_data/simulation_1000vars_100samps/pg.snarl_netgraph.paths.tsv -b ../snarl_data/simulation_1000vars_100samps/group.txt -o output/simulation_binary.tsv
+    # python3 stoat/snarl_analyser.py tests/other_files/big_vcf.vcf tests/other_files/list_snarl_short.txt -b tests/other_files/group.txt
+    # python3 stoat/snarl_analyser.py ../snarl_data/fly.merged.vcf output/test_list_snarl.tsv -b ../snarl_data/group.txt
+    # python3 stoat/snarl_analyser.py tests/simulation/binary_data/merged_output.vcf tests/simulation/binary_data/snarl_paths.tsv -q tests/simulation/binary_data/phenotype.tsv -o tests/binary_tests_output/binary_output.tsv
 
     if args.quantitative:
         quantitative_dict = utils.parse_pheno_quantitatif_file(args.quantitative)
         vcf_object.quantitative_table(snarl, quantitative_dict, covar, output=output)
 
-    # python3 src/snarl_analyser.py tests/other_files/big_vcf.vcf tests/other_files/list_snarl_short.txt -q tests/other_files/pheno.txt
+    # python3 stoat/snarl_analyser.py tests/other_files/big_vcf.vcf tests/other_files/list_snarl_short.txt -q tests/other_files/pheno.txt
+    # python3 stoat/snarl_analyser.py tests/simulation/quantitative_data/merged_output.vcf tests/simulation/quantitative_data/snarl_paths.tsv -q tests/simulation/quantitative_data/phenotype.tsv -o tests/quantitative_tests_output/quantitative_output.tsv
 
     print(f"Time P-value : {time.time() - start} s")
 
