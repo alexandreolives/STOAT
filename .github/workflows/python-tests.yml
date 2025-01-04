@@ -15,122 +15,125 @@ jobs:
       SKIP_LIBBDSG_INSTALL: "1"
 
     steps:
-    - name: Checkout the repository
-      uses: actions/checkout@v3
-      with:
-        lfs: true
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+        with:
+          lfs: true
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libjansson-dev cmake build-essential
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libjansson-dev cmake build-essential tabix
 
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install cyvcf2==0.31.1
-        pip install numpy==2.0.1
-        pip install pandas==2.2.2
-        pip install statsmodels==0.14.4
-        pip install qmplot==0.3.3
-        pip install scipy==1.14.1
-        pip install setuptools==75.6.0
-        pip install scikit-learn==1.6.0
-        pip install matplotlib==3.9.4
-        pip install seaborn==0.13.2
-        pip install plotly==5.24.1
-        pip install pytest==8.3.4
-        pip install pybind11
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install cyvcf2==0.31.1
+          pip install numpy==2.0.1
+          pip install pandas==2.2.2
+          pip install statsmodels==0.14.4
+          pip install qmplot==0.3.3
+          pip install scipy==1.14.1
+          pip install setuptools==75.6.0
+          pip install scikit-learn==1.6.0
+          pip install matplotlib==3.9.4
+          pip install seaborn==0.13.2
+          pip install plotly==5.24.1
+          pip install pytest==8.3.4
+          pip install pybind11
 
-    - name: Clean previous installations
-      run: |
-        sudo rm -rf /usr/local/lib/python*/site-packages/bdsg*
-        sudo rm -rf /usr/local/lib/python*/site-packages/libbdsg*
-        rm -rf libbdsg
-        rm -rf build
+      - name: Clean previous installations
+        run: |
+          sudo rm -rf /usr/local/lib/python*/site-packages/bdsg*
+          sudo rm -rf /usr/local/lib/python*/site-packages/libbdsg*
+          rm -rf libbdsg
+          rm -rf build
 
-    - name: Install libbdsg
-      run: |
-        git clone --recursive https://github.com/vgteam/libbdsg.git
-        cd libbdsg
-        mkdir build && cd build
-        cmake .. -DPYTHON_EXECUTABLE=$(which python) -DRUN_DOXYGEN=OFF -DBUILD_TESTING=OFF
-        make -j4
-        sudo make install
-        cd ..
-        CFLAGS="-fPIC" pip install .
-        cd ..
+      - name: Install libbdsg
+        run: |
+          git clone --recursive https://github.com/vgteam/libbdsg.git
+          cd libbdsg
+          mkdir build && cd build
+          cmake .. -DPYTHON_EXECUTABLE=$(which python) -DRUN_DOXYGEN=OFF -DBUILD_TESTING=OFF
+          make -j4
+          sudo make install
+          cd ..
+          CFLAGS="-fPIC" pip install .
+          cd ..
 
-    - name: Verify libbdsg installation
-      run: |
-        python -c "import bdsg; print('libbdsg successfully imported')"
+      - name: Verify libbdsg installation
+        run: |
+          python -c "import bdsg; print('libbdsg successfully imported')"
 
-    - name: Install package in development mode
-      run: |
-        pip install -e .
+      - name: Install package in development mode
+        run: |
+          pip install -e .
 
-    - name: Create test data
-      run: |
-        mkdir -p tests/binary_tests_output
-        mkdir -p tests/quantitative_tests_output
-        mkdir -p tests/simulation/binary_data
-        mkdir -p tests/simulation/quantitative_data
-        
-        # Create binary VCF
-        echo '##fileformat=VCFv4.2' > tests/simulation/binary_data/merged_output.vcf
-        echo '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">' >> tests/simulation/binary_data/merged_output.vcf
-        echo -e '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE1\tSAMPLE2' >> tests/simulation/binary_data/merged_output.vcf
-        echo -e '1\t100\t.\tA\tT\t.\tPASS\t.\tGT\t0/0\t0/1' >> tests/simulation/binary_data/merged_output.vcf
-        
-        # Create quantitative VCF
-        echo '##fileformat=VCFv4.2' > tests/simulation/quantitative_data/merged_output.vcf
-        echo '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">' >> tests/simulation/quantitative_data/merged_output.vcf
-        echo -e '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE1\tSAMPLE2' >> tests/simulation/quantitative_data/merged_output.vcf
-        echo -e '1\t100\t.\tA\tT\t.\tPASS\t.\tGT\t0/0\t0/1' >> tests/simulation/quantitative_data/merged_output.vcf
-        
-        # Create binary phenotype
-        echo -e 'FID\tIID\tPHENO' > tests/simulation/binary_data/phenotype.tsv
-        echo -e 'FAM1\tSAMPLE1\t1' >> tests/simulation/binary_data/phenotype.tsv
-        echo -e 'FAM2\tSAMPLE2\t2' >> tests/simulation/binary_data/phenotype.tsv
-        
-        # Create quantitative phenotype
-        echo -e 'FID\tIID\tPHENO' > tests/simulation/quantitative_data/phenotype.tsv
-        echo -e 'FAM1\tSAMPLE1\t1.5' >> tests/simulation/quantitative_data/phenotype.tsv
-        echo -e 'FAM2\tSAMPLE2\t2.5' >> tests/simulation/quantitative_data/phenotype.tsv
-        
-        # Create other files
-        echo "dummy data" > tests/simulation/binary_data/pg.dist
-        echo "dummy data" > tests/simulation/binary_data/pg.full.pg
-        echo "dummy data" > tests/simulation/binary_data/snarl_paths.tsv
-        echo "dummy data" > tests/simulation/binary_data/binary_test.assoc.tsv
-        
-        echo "dummy data" > tests/simulation/quantitative_data/pg.dist
-        echo "dummy data" > tests/simulation/quantitative_data/pg.full.pg
-        echo "dummy data" > tests/simulation/quantitative_data/snarl_paths.tsv
-        echo "dummy data" > tests/simulation/quantitative_data/quantitative_test.assoc.tsv
+      - name: Create test data
+        run: |
+          mkdir -p tests/binary_tests_output
+          mkdir -p tests/quantitative_tests_output
+          mkdir -p tests/simulation/binary_data
+          mkdir -p tests/simulation/quantitative_data
+          
+          # Create VCF files
+          for type in binary quantitative; do
+            cat > "tests/simulation/${type}_data/merged_output.vcf" << 'EOL'
+##fileformat=VCFv4.2
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##INFO=<ID=AT,Number=.,Type=String,Description="Alternative paths through snarls">
+##contig=<ID=1,length=100000>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE1	SAMPLE2
+1	100	.	A	T	.	PASS	AT=path1,path2	GT	0/0	0/1
+EOL
+          done
+          
+          # Create phenotype files
+          echo -e 'FID\tIID\tPHENO' > tests/simulation/binary_data/phenotype.tsv
+          echo -e 'FAM1\tSAMPLE1\t1' >> tests/simulation/binary_data/phenotype.tsv
+          echo -e 'FAM2\tSAMPLE2\t2' >> tests/simulation/binary_data/phenotype.tsv
+          
+          echo -e 'FID\tIID\tPHENO' > tests/simulation/quantitative_data/phenotype.tsv
+          echo -e 'FAM1\tSAMPLE1\t1.5' >> tests/simulation/quantitative_data/phenotype.tsv
+          echo -e 'FAM2\tSAMPLE2\t2.5' >> tests/simulation/quantitative_data/phenotype.tsv
+          
+          # Create other files
+          for type in binary quantitative; do
+            for file in pg.dist pg.full.pg snarl_paths.tsv ${type}_test.assoc.tsv; do
+              echo "dummy data" > "tests/simulation/${type}_data/$file"
+            done
+          done
+          
+          # Index VCF files
+          for type in binary quantitative; do
+            bgzip -c "tests/simulation/${type}_data/merged_output.vcf" > "tests/simulation/${type}_data/merged_output.vcf.gz"
+            tabix -p vcf "tests/simulation/${type}_data/merged_output.vcf.gz"
+            mv "tests/simulation/${type}_data/merged_output.vcf.gz" "tests/simulation/${type}_data/merged_output.vcf"
+            mv "tests/simulation/${type}_data/merged_output.vcf.gz.tbi" "tests/simulation/${type}_data/merged_output.vcf.tbi"
+          done
 
-    - name: Debug file locations
-      run: |
-        echo "Current directory:"
-        pwd
-        echo "Content of tests directory:"
-        ls -la tests/
-        echo "Content of simulation directory:"
-        ls -la tests/simulation/
-        echo "Content of binary_data directory:"
-        ls -la tests/simulation/binary_data/
-        echo "Content of quantitative_data directory:"
-        ls -la tests/simulation/quantitative_data/
-        echo "Content of binary VCF file:"
-        cat tests/simulation/binary_data/merged_output.vcf
-        echo "Content of binary phenotype file:"
-        cat tests/simulation/binary_data/phenotype.tsv
+      - name: Debug file locations
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Content of tests directory:"
+          ls -la tests/
+          echo "Content of simulation directory:"
+          ls -la tests/simulation/
+          echo "Content of binary_data directory:"
+          ls -la tests/simulation/binary_data/
+          echo "Content of quantitative_data directory:"
+          ls -la tests/simulation/quantitative_data/
+          echo "Content of binary VCF file:"
+          cat tests/simulation/binary_data/merged_output.vcf
+          echo "Content of binary phenotype file:"
+          cat tests/simulation/binary_data/phenotype.tsv
 
-    - name: Run pytest tests
-      run: |
-        PYTHONPATH=$PWD pytest -v tests/
+      - name: Run pytest tests
+        run: |
+          PYTHONPATH=$PWD pytest -v tests/
