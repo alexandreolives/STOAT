@@ -42,17 +42,17 @@ jobs:
         pip install plotly==5.24.1
         pip install pytest==8.3.4
 
-    - name: Install and configure pybind11
+    - name: Install pybind11
       run: |
         pip install pybind11
-        pip install pytest-pybind11
+        python -m pybind11 --includes
 
     - name: Install libbdsg
       run: |
         git clone --recursive https://github.com/vgteam/libbdsg.git
         cd libbdsg
         mkdir build && cd build
-        cmake ..
+        cmake .. -DPYTHON_EXECUTABLE=$(which python)
         make -j4
         sudo make install
         cd ..
