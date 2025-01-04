@@ -167,6 +167,22 @@ def parse_graph_tree(pg_file, dist_file) :
     root = stree.get_root()
     return stree, pg, root
 
+def find_node_position_and_chromosome(pg, handle_t):
+    positions = []
+    chromosomes = []
+    
+    def step_callback(step_handle):
+        path_handle = pg.get_path_handle_of_step(step_handle)
+        path_name = pg.get_path_name(path_handle)
+        if path_name not in chromosomes:
+            chromosomes.append(path_name)
+        position = pg.get_position_of_step(step_handle)
+        positions.append(position)
+        return True
+    
+    pg.for_each_step_on_handle(handle_t, step_callback)
+    return chromosomes[-1], positions[-1]
+
 def fill_pretty_paths(stree, pg, finished_paths) :
     pretty_paths = []
     length_net_paths = []
@@ -174,22 +190,27 @@ def fill_pretty_paths(stree, pg, finished_paths) :
     for path in finished_paths:
         ppath = Path()
         length_net = []
-        for net in path:
+
+        # stree : bdsg.bdsg.SnarlDistanceIndex
+        # net : bdsg.handlegraph.net_handle_t
+        for net in path :
             if stree.is_sentinel(net) :
                 net = stree.get_node_from_sentinel(net)
  
-            if stree.is_node(net) or stree.is_trivial_chain(net) :
-                # if it's a node, add it to the path
+            # case node : get the node length
+            if stree.is_node(net) :
                 ppath.addNodeHandle(net, stree)
-                if stree.is_node(net) :
-                    length_net.append(str(stree.node_length(net)))
+                length_net.append(str(stree.node_length(net)))
+                node_handle_t = stree.get_handle(net)
+                chromosome, position = find_node_position_and_chromosome(pg, node_handle_t)
 
-                else :
-                    # return the first length node from a trivial_chain
-                    stn_start = stree.get_bound(net, False, True)
-                    node_start_id = stree.node_id(stn_start)
-                    net_trivial_chain = pg.get_handle(node_start_id)
-                    length_net.append(str(pg.get_length(net_trivial_chain)))
+            # case trivial_chain : get the first node length
+            elif stree.is_trivial_chain(net) :
+                ppath.addNodeHandle(net, stree)
+                stn_start = stree.get_bound(net, False, True)
+                node_start_id = stree.node_id(stn_start)
+                net_trivial_chain = pg.get_handle(node_start_id)
+                length_net.append(str(pg.get_length(net_trivial_chain)))
 
             elif stree.is_chain(net) :
                 # if it's a chain, we need to write someting like ">Nl>*>Nr"
@@ -208,7 +229,7 @@ def fill_pretty_paths(stree, pg, finished_paths) :
 
     type_variants = calcul_type_variant(length_net_paths)
     assert len(type_variants) == len(pretty_paths)
-    return pretty_paths, type_variants
+    return pretty_paths, type_variants, chromosome, position
 
 def write_header_output(output_file) :
     with open(output_file, 'w') as outf:
@@ -269,7 +290,7 @@ def loop_over_snarls_write(stree, snarls, pg, output_file, output_snarl_not_anal
 
         if not_break :
             # prepare path list to output and write each path directly to the file
-            pretty_paths, type_variants = fill_pretty_paths(stree, pg, finished_paths)
+            pretty_paths, type_variants, chromosome, position = fill_pretty_paths(stree, pg, finished_paths)
             write_output(output_file, snarl_id, pretty_paths, type_variants)
 
             if bool_return :
@@ -304,3 +325,4 @@ if __name__ == "__main__" :
 
     # python3 src/list_snarl_paths.py -p /home/mbagarre/Bureau/droso_data/fly/fly.pg -d /home/mbagarre/Bureau/droso_data/fly/fly.dist -o output/test/test_list_snarl.tsv
     # vg find -x ../snarl_data/fly.gbz -r 5176878:5176884 -c 10 | vg view -dp - | dot -Tsvg -o ../snarl_data/subgraph.svg
+
