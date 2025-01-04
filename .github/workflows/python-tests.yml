@@ -100,7 +100,7 @@ jobs:
               
               # Create and save distance index
               stree = bdsg.bdsg.SnarlDistanceIndex()
-              stree.index_graph_from_tips(pg)
+              stree.build_index(pg)
               dist_file = os.path.join(type_dir, "pg.dist")
               stree.serialize(dist_file)
           
