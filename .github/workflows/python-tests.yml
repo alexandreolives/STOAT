@@ -98,9 +98,14 @@ jobs:
               pg_file = os.path.join(type_dir, "pg.full.pg")
               pg.serialize(pg_file)
               
+              # Create snarl decomposition
+              snarl_manager = bdsg.bdsg.SnarlManager()
+              snarl_manager.add_snarl(n1, n2)
+              
               # Create and save distance index
               stree = bdsg.bdsg.SnarlDistanceIndex()
-              stree.build_index(pg)
+              stree.set_snarl_manager(snarl_manager)
+              stree.set_graph(pg)
               dist_file = os.path.join(type_dir, "pg.dist")
               stree.serialize(dist_file)
           
