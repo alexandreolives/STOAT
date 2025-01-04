@@ -43,9 +43,15 @@ jobs:
         pip install pytest==8.3.4
         pip install pybind11
 
+    - name: Clean previous installations
+      run: |
+        sudo rm -rf /usr/local/lib/python*/site-packages/bdsg*
+        sudo rm -rf /usr/local/lib/python*/site-packages/libbdsg*
+        rm -rf libbdsg
+        rm -rf build
+
     - name: Install libbdsg
       run: |
-        rm -rf libbdsg
         git clone --recursive https://github.com/vgteam/libbdsg.git
         cd libbdsg
         mkdir build && cd build
@@ -53,10 +59,14 @@ jobs:
         make -j4
         sudo make install
         cd ..
-        pip install .
+        CFLAGS="-fPIC" pip install .
         cd ..
 
-    - name: Install package
+    - name: Verify libbdsg installation
+      run: |
+        python -c "import bdsg; print('libbdsg successfully imported')"
+
+    - name: Install package in development mode
       run: |
         pip install -e .
 
