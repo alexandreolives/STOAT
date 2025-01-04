@@ -58,18 +58,11 @@ jobs:
         cd ..
         pip install .
 
-    - name: Prepare test data
+    - name: Prepare test directories
       run: |
-        mkdir -p tests/simulation/binary_data
         mkdir -p tests/binary_tests_output
-        # Créer des fichiers de test vides pour le moment
-        touch tests/simulation/binary_data/merged_output.vcf
-        touch tests/simulation/binary_data/phenotype.tsv
-        touch tests/simulation/binary_data/pg.dist
-        touch tests/simulation/binary_data/pg.full.pg
-        touch tests/simulation/binary_data/snarl_paths.tsv
 
     - name: Run pytest tests
       run: |
         cd tests
-        python -m pytest -v test_snarl_analyser.py
+        python -m pytest -v
