@@ -17,11 +17,13 @@ class CustomInstallCommand:
             print(f"Failed to install libbdsg: {e}")
             raise
 
-# Check if libbdsg is already installed
-try:
-    import bdsg
-except ImportError:
-    CustomInstallCommand.install_libbdsg()
+# Check if we should skip libbdsg installation
+if not os.environ.get("SKIP_LIBBDSG_INSTALL"):
+    # Check if libbdsg is already installed
+    try:
+        import bdsg
+    except ImportError:
+        CustomInstallCommand.install_libbdsg()
 
 setup(
     name="STOAT",
