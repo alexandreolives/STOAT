@@ -17,6 +17,8 @@ jobs:
     steps:
     - name: Checkout the repository
       uses: actions/checkout@v3
+      with:
+        lfs: true
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -72,10 +74,38 @@ jobs:
       run: |
         pip install -e .
 
-    - name: Prepare test directories
+    - name: Create test data
       run: |
         mkdir -p tests/binary_tests_output
         mkdir -p tests/quantitative_tests_output
+        mkdir -p tests/simulation/binary_data
+        mkdir -p tests/simulation/quantitative_data
+        
+        # Créer un fichier VCF minimal pour les tests
+        cat > tests/simulation/binary_data/merged_output.vcf << EOL
+        ##fileformat=VCFv4.2
+        #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  SAMPLE1 SAMPLE2
+        1       100     .       A       T       .       PASS    .       GT      0/0     0/1
+        EOL
+        
+        # Copier le même fichier pour les tests quantitatifs
+        cp tests/simulation/binary_data/merged_output.vcf tests/simulation/quantitative_data/
+        
+        # Créer les autres fichiers nécessaires
+        touch tests/simulation/binary_data/phenotype.tsv
+        touch tests/simulation/binary_data/pg.dist
+        touch tests/simulation/binary_data/pg.full.pg
+        touch tests/simulation/binary_data/snarl_paths.tsv
+        touch tests/simulation/binary_data/binary_test.assoc.tsv
+        
+        touch tests/simulation/quantitative_data/phenotype.tsv
+        touch tests/simulation/quantitative_data/pg.dist
+        touch tests/simulation/quantitative_data/pg.full.pg
+        touch tests/simulation/quantitative_data/snarl_paths.tsv
+        touch tests/simulation/quantitative_data/quantitative_test.assoc.tsv
+
+    - name: Debug file locations
+      run: |
         echo "Current directory:"
         pwd
         echo "Content of tests directory:"
@@ -86,14 +116,10 @@ jobs:
         ls -la tests/simulation/binary_data/
         echo "Content of quantitative_data directory:"
         ls -la tests/simulation/quantitative_data/
-        echo "File permissions for VCF files:"
-        ls -l tests/simulation/binary_data/merged_output.vcf || echo "Binary VCF not found"
-        ls -l tests/simulation/quantitative_data/merged_output.vcf || echo "Quantitative VCF not found"
+        echo "Content of binary VCF file:"
+        cat tests/simulation/binary_data/merged_output.vcf
 
     - name: Run pytest tests
       run: |
         cd tests
-        pwd
-        echo "Current directory content:"
-        ls -la
         PYTHONPATH=.. python -m pytest -v
