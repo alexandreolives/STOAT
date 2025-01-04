@@ -30,11 +30,18 @@ def process_file(freq_file, threshold=0.2):
     
     return path_list, true_labels, list_diff
 
+def split_snarl(input_str):
+    # Split the string and filter empty elements, then convert to integers
+    return [int(num) for num in re.split(r'[><]', input_str) if num]
+
 def match_snarl(path_list, true_labels, p_value_file, paths_file, type_):
 
     p_value_df = pd.read_csv(p_value_file, sep='\t')
     paths_df = pd.read_csv(paths_file, sep='\t')['paths']
-    split = p_value_df['SNARL'].str.split('_')
+    if type_ == 'binary' or type_ == 'quantitative':
+        split = p_value_df['SNARL'].str.split('_')
+    elif type_ == 'plink':
+        split = p_value_df['ID'].apply(split_snarl)
 
     # To store predicted labels
     predicted_labels_10_2 = []
@@ -71,7 +78,7 @@ def match_snarl(path_list, true_labels, p_value_file, paths_file, type_):
                         p_value = matched_row.loc[indices[idx_paths]]
                         if type_ == 'binary':  
                             p_value = p_value['P_FISHER']
-                        elif type_ == 'quantitative':
+                        elif type_ == 'quantitative' or type_ == 'plink':
                             p_value = p_value['P']
                         else :
                             raise ValueError("type_ must be binary or quantitative")
@@ -82,7 +89,10 @@ def match_snarl(path_list, true_labels, p_value_file, paths_file, type_):
                         predicted_labels_10_8.append(0 if p_value < 0.00000001 else 1)
                         cleaned_true_labels.append(true_labels[idx])
                         pvalue.append(p_value)
-                        num_sample.append(matched_row.loc[indices[idx_paths]]['ALLELE_NUM'])
+                        if type_ == 'binary' or type_ == 'quantitative':
+                            num_sample.append(matched_row.loc[indices[idx_paths]]['ALLELE_NUM'])
+                        else :  
+                            num_sample.append(0)
                         break
 
     # print("total row : ", len(path_list))
@@ -92,7 +102,8 @@ def conf_mat_maker(p_val, predicted_labels, true_labels, output):
         
     # Calculate confusion matrix for p-value < p_val
     print(f"\nMetrics for p-value < {p_val}:")
-    # Inverse because i want the X axis to be the truth labels and Y axis to be the predicted labels
+
+    # Inverse because I want the X axis to be the truth labels and Y axis to be the predicted labels
     cm = confusion_matrix(predicted_labels, true_labels)
     print(f"Confusion Matrix for p-value < {p_val}:\n{cm}")
     prec = precision_score(predicted_labels, true_labels)
@@ -283,6 +294,8 @@ if __name__ == "__main__":
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-b", "--binary", action='store_true', help="binary test")
     group.add_argument("-q", "--quantitative", action='store_true', help="quantitative test")
+    group.add_argument("-p", "--plink", action='store_true', help="plink test")
+
     args = parser.parse_args()
 
     if args.binary:
@@ -295,27 +308,34 @@ if __name__ == "__main__":
         output_diff = f"{output}/quantitative_test"
         type_ = 'quantitative'
 
-    # # THRESHOLD_FREQ : Threshold to define the truth label by comparing the frequence difference between both group
-    # THRESHOLD_FREQ = 0.4 # Default value is =>20% difference == Truth label 0
+    elif args.plink:
+        output = "tests/plink_tests_output/"
+        output_diff = f"{output}/plink_test"
+        type_ = 'plink'
 
-    # # Define Truth label from freq file
-    # test_path_list, test_true_labels, list_diff = process_file(args.freq, THRESHOLD_FREQ)
+    # THRESHOLD_FREQ : Threshold to define the truth label by comparing the frequence difference between both group
+    THRESHOLD_FREQ = 0.2
 
-    # # Define Truth label from output file and compare with the truth label
-    # test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, _, _ = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths, type_)
+    # Define Truth label from freq file
+    test_path_list, test_true_labels, list_diff = process_file(args.freq, THRESHOLD_FREQ)
+
+    # Define Truth label from output file and compare with the truth label
+    test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, _, _ = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths, type_)
         
-    # # Plot confusion matrix
-    # print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, f"{output}/confusion_matrix_{THRESHOLD_FREQ}")
+    # Plot confusion matrix
+    print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, f"{output}/confusion_matrix_{THRESHOLD_FREQ}")
 
     # THRESHOLD_FREQ = 0.0 : Case where just a difference between both group snarl is considered like Truth label
     THRESHOLD_FREQ = 0.0
     test_path_list, test_true_labels, list_diff = process_file(args.freq, THRESHOLD_FREQ)
     test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, pvalue, num_sample = match_snarl(test_path_list, test_true_labels, args.p_value, args.paths, type_)
-    #print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, f"{output}/confusion_matrix_{THRESHOLD_FREQ}")
+    print_confusion_matrix(test_predicted_labels_10_2, test_predicted_labels_10_5, test_predicted_labels_10_8, cleaned_true_labels, f"{output}/confusion_matrix_{THRESHOLD_FREQ}")
 
     # Plot distribution of p-values for false negatives and true positives
-    #plot_diff_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff, output_diff, "10^-2")
-    p_value_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff, pvalue, num_sample, output_diff)
+    plot_diff_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff, output_diff, "10^-2")
+
+    if args.binary or args.quantitative :
+        p_value_distribution(test_predicted_labels_10_2, cleaned_true_labels, list_diff, pvalue, num_sample, output_diff)
     
     """
     python3 tests/verify_truth.py tests/simulation/quantitative_data/pg.snarls.freq.tsv \
@@ -324,5 +344,5 @@ if __name__ == "__main__":
 
     """
     python3 tests/verify_truth.py tests/simulation/binary_data/pg.snarls.freq.tsv \
-    tests/binary_tests_output/binary_test.assoc.tsv tests/simulation/binary_data/snarl_paths.tsv -q
+    tests/binary_tests_output/binary_test.assoc.tsv tests/simulation/binary_data/snarl_paths.tsv -b
     """

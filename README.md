@@ -194,3 +194,5 @@ Description : Color represente the different paths group (red : group 1 & blue :
 - [ ] verify quantitative truth.
 
 - [ ] Correct GitHub Actions.
+
+- [ ] Test simulation data on plink and compare against stoat.
