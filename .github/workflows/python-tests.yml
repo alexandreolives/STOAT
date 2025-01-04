@@ -52,7 +52,7 @@ jobs:
         git clone --recursive https://github.com/vgteam/libbdsg.git
         cd libbdsg
         mkdir build && cd build
-        cmake .. -DPYTHON_EXECUTABLE=$(which python) -DRUN_DOXYGEN=OFF
+        cmake .. -DPYTHON_EXECUTABLE=$(which python) -DRUN_DOXYGEN=OFF -DBUILD_TESTING=OFF
         make -j4
         sudo make install
         cd ..
@@ -60,4 +60,5 @@ jobs:
 
     - name: Run pytest tests
       run: |
+        cd tests
         python -m pytest -v
