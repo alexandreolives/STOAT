@@ -21,8 +21,14 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install requirements dependencies
+    - name: Install system dependencies
       run: |
+        sudo apt-get update
+        sudo apt-get install -y libjansson-dev cmake build-essential
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
         pip install cyvcf2==0.31.1
         pip install numpy==2.0.1
         pip install pandas==2.2.2
@@ -36,19 +42,22 @@ jobs:
         pip install plotly==5.24.1
         pip install pytest==8.3.4
 
-    - name: Install libbdsg and pybind11
+    - name: Install and configure pybind11
       run: |
-        sudo apt-get install -y libjansson-dev
         pip install pybind11
-        git clone --recursive https://github.com/vgteam/libbdsg.git && cd libbdsg && pip install .
+        pip install pytest-pybind11
+
+    - name: Install libbdsg
+      run: |
+        git clone --recursive https://github.com/vgteam/libbdsg.git
+        cd libbdsg
+        mkdir build && cd build
+        cmake ..
+        make -j4
+        sudo make install
+        cd ..
+        pip install .
 
     - name: Run pytest tests
-      run: python3 -m pytest
-
-# Run python3 -m pytest
-# Traceback (most recent call last):
-#   File "/home/runner/work/STOAT/STOAT/libbdsg/bdsg/deps/pybind11/tests/conftest.py", line 20, in <module>
-#     import pybind11_tests
-# ModuleNotFoundError: No module named 'pybind11_tests'
-# Unable to find the test binary "/opt/hostedtoolcache/Python/3.10.15/x64/lib/python3.10/site-packages/pytest/gtest_catch_exceptions_ex_test_". Please make sure to provide
-# a path to the binary via the --build_dir flag or the BUILD_DIR
+      run: |
+        python -m pytest -v
