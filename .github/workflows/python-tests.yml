@@ -61,6 +61,17 @@ jobs:
     - name: Prepare test directories
       run: |
         mkdir -p tests/binary_tests_output
+        mkdir -p tests/quantitative_tests_output
+        mkdir -p tests/simulation/binary_data
+        mkdir -p tests/simulation/quantitative_data
+        # Copier les fichiers de test binaires
+        cp tests/simulation/binary_data/* tests/simulation/binary_data/ || true
+        # Copier les fichiers de test quantitatifs
+        cp tests/simulation/quantitative_data/* tests/simulation/quantitative_data/ || true
+
+    - name: Install package
+      run: |
+        pip install -e .
 
     - name: Run pytest tests
       run: |

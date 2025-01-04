@@ -11,7 +11,7 @@ def parsing_samples_vcf(vcf_path:str) -> list :
     try :
         return VCF(vcf_path).samples
     except :
-        raise f"Error : VCF parsing error, verify {vcf_path} format"
+        raise Exception(f"Error : VCF parsing error, verify {vcf_path} format")
 
 def parse_covariate_file(filepath:str) -> dict:
 
