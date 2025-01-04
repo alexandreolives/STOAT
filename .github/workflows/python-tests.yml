@@ -89,15 +89,20 @@ jobs:
               n1 = pg.create_handle("A")
               n2 = pg.create_handle("T")
               pg.create_edge(n1, n2)
-              return pg
+              return pg, n1, n2
           
           def create_test_files(type_dir):
-              pg = create_test_graph()
+              pg, n1, n2 = create_test_graph()
+              
+              # Save graph
               pg_file = os.path.join(type_dir, "pg.full.pg")
               pg.serialize(pg_file)
+              
+              # Create and save distance index
+              stree = bdsg.bdsg.SnarlDistanceIndex()
+              stree.index_graph_from_tips(pg)
               dist_file = os.path.join(type_dir, "pg.dist")
-              with open(dist_file, "w") as f:
-                  f.write("node1\tnode2\t10\n")
+              stree.serialize(dist_file)
           
           for type_name in ["binary", "quantitative"]:
               type_dir = f"tests/simulation/{type_name}_data"
@@ -165,7 +170,7 @@ jobs:
           echo "Content of binary phenotype file:"
           cat tests/simulation/binary_data/phenotype.tsv
           echo "Content of binary pg.dist file:"
-          cat tests/simulation/binary_data/pg.dist
+          ls -l tests/simulation/binary_data/pg.dist
 
       - name: Run pytest tests
         run: |
