@@ -83,24 +83,29 @@ jobs:
           
           # Create VCF files
           for type in binary quantitative; do
-            cat > "tests/simulation/${type}_data/merged_output.vcf" << 'EOL'
-##fileformat=VCFv4.2
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##INFO=<ID=AT,Number=.,Type=String,Description="Alternative paths through snarls">
-##contig=<ID=1,length=100000>
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE1	SAMPLE2
-1	100	.	A	T	.	PASS	AT=path1,path2	GT	0/0	0/1
-EOL
+            {
+              echo "##fileformat=VCFv4.2"
+              echo "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">"
+              echo "##INFO=<ID=AT,Number=.,Type=String,Description=\"Alternative paths through snarls\">"
+              echo "##contig=<ID=1,length=100000>"
+              echo -e "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE1\tSAMPLE2"
+              echo -e "1\t100\t.\tA\tT\t.\tPASS\tAT=path1,path2\tGT\t0/0\t0/1"
+            } > "tests/simulation/${type}_data/merged_output.vcf"
           done
           
           # Create phenotype files
-          echo -e 'FID\tIID\tPHENO' > tests/simulation/binary_data/phenotype.tsv
-          echo -e 'FAM1\tSAMPLE1\t1' >> tests/simulation/binary_data/phenotype.tsv
-          echo -e 'FAM2\tSAMPLE2\t2' >> tests/simulation/binary_data/phenotype.tsv
-          
-          echo -e 'FID\tIID\tPHENO' > tests/simulation/quantitative_data/phenotype.tsv
-          echo -e 'FAM1\tSAMPLE1\t1.5' >> tests/simulation/quantitative_data/phenotype.tsv
-          echo -e 'FAM2\tSAMPLE2\t2.5' >> tests/simulation/quantitative_data/phenotype.tsv
+          for type in binary quantitative; do
+            {
+              echo -e "FID\tIID\tPHENO"
+              if [ "$type" = "binary" ]; then
+                echo -e "FAM1\tSAMPLE1\t1"
+                echo -e "FAM2\tSAMPLE2\t2"
+              else
+                echo -e "FAM1\tSAMPLE1\t1.5"
+                echo -e "FAM2\tSAMPLE2\t2.5"
+              fi
+            } > "tests/simulation/${type}_data/phenotype.tsv"
+          done
           
           # Create other files
           for type in binary quantitative; do
