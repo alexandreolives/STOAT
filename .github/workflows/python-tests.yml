@@ -81,28 +81,38 @@ jobs:
         mkdir -p tests/simulation/binary_data
         mkdir -p tests/simulation/quantitative_data
         
-        # Créer un fichier VCF minimal pour les tests
-        cat > tests/simulation/binary_data/merged_output.vcf << EOL
-        ##fileformat=VCFv4.2
-        #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  SAMPLE1 SAMPLE2
-        1       100     .       A       T       .       PASS    .       GT      0/0     0/1
-        EOL
+        # Create binary VCF
+        echo '##fileformat=VCFv4.2' > tests/simulation/binary_data/merged_output.vcf
+        echo '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">' >> tests/simulation/binary_data/merged_output.vcf
+        echo -e '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE1\tSAMPLE2' >> tests/simulation/binary_data/merged_output.vcf
+        echo -e '1\t100\t.\tA\tT\t.\tPASS\t.\tGT\t0/0\t0/1' >> tests/simulation/binary_data/merged_output.vcf
         
-        # Copier le même fichier pour les tests quantitatifs
-        cp tests/simulation/binary_data/merged_output.vcf tests/simulation/quantitative_data/
+        # Create quantitative VCF
+        echo '##fileformat=VCFv4.2' > tests/simulation/quantitative_data/merged_output.vcf
+        echo '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">' >> tests/simulation/quantitative_data/merged_output.vcf
+        echo -e '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE1\tSAMPLE2' >> tests/simulation/quantitative_data/merged_output.vcf
+        echo -e '1\t100\t.\tA\tT\t.\tPASS\t.\tGT\t0/0\t0/1' >> tests/simulation/quantitative_data/merged_output.vcf
         
-        # Créer les autres fichiers nécessaires
-        touch tests/simulation/binary_data/phenotype.tsv
-        touch tests/simulation/binary_data/pg.dist
-        touch tests/simulation/binary_data/pg.full.pg
-        touch tests/simulation/binary_data/snarl_paths.tsv
-        touch tests/simulation/binary_data/binary_test.assoc.tsv
+        # Create binary phenotype
+        echo -e 'FID\tIID\tPHENO' > tests/simulation/binary_data/phenotype.tsv
+        echo -e 'FAM1\tSAMPLE1\t1' >> tests/simulation/binary_data/phenotype.tsv
+        echo -e 'FAM2\tSAMPLE2\t2' >> tests/simulation/binary_data/phenotype.tsv
         
-        touch tests/simulation/quantitative_data/phenotype.tsv
-        touch tests/simulation/quantitative_data/pg.dist
-        touch tests/simulation/quantitative_data/pg.full.pg
-        touch tests/simulation/quantitative_data/snarl_paths.tsv
-        touch tests/simulation/quantitative_data/quantitative_test.assoc.tsv
+        # Create quantitative phenotype
+        echo -e 'FID\tIID\tPHENO' > tests/simulation/quantitative_data/phenotype.tsv
+        echo -e 'FAM1\tSAMPLE1\t1.5' >> tests/simulation/quantitative_data/phenotype.tsv
+        echo -e 'FAM2\tSAMPLE2\t2.5' >> tests/simulation/quantitative_data/phenotype.tsv
+        
+        # Create other files
+        echo "dummy data" > tests/simulation/binary_data/pg.dist
+        echo "dummy data" > tests/simulation/binary_data/pg.full.pg
+        echo "dummy data" > tests/simulation/binary_data/snarl_paths.tsv
+        echo "dummy data" > tests/simulation/binary_data/binary_test.assoc.tsv
+        
+        echo "dummy data" > tests/simulation/quantitative_data/pg.dist
+        echo "dummy data" > tests/simulation/quantitative_data/pg.full.pg
+        echo "dummy data" > tests/simulation/quantitative_data/snarl_paths.tsv
+        echo "dummy data" > tests/simulation/quantitative_data/quantitative_test.assoc.tsv
 
     - name: Debug file locations
       run: |
@@ -118,8 +128,9 @@ jobs:
         ls -la tests/simulation/quantitative_data/
         echo "Content of binary VCF file:"
         cat tests/simulation/binary_data/merged_output.vcf
+        echo "Content of binary phenotype file:"
+        cat tests/simulation/binary_data/phenotype.tsv
 
     - name: Run pytest tests
       run: |
-        cd tests
-        PYTHONPATH=.. python -m pytest -v
+        PYTHONPATH=$PWD pytest -v tests/
