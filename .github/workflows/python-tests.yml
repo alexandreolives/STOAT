@@ -76,10 +76,24 @@ jobs:
       run: |
         mkdir -p tests/binary_tests_output
         mkdir -p tests/quantitative_tests_output
+        echo "Current directory:"
+        pwd
+        echo "Content of tests directory:"
+        ls -la tests/
+        echo "Content of simulation directory:"
+        ls -la tests/simulation/
+        echo "Content of binary_data directory:"
         ls -la tests/simulation/binary_data/
+        echo "Content of quantitative_data directory:"
         ls -la tests/simulation/quantitative_data/
+        echo "File permissions for VCF files:"
+        ls -l tests/simulation/binary_data/merged_output.vcf || echo "Binary VCF not found"
+        ls -l tests/simulation/quantitative_data/merged_output.vcf || echo "Quantitative VCF not found"
 
     - name: Run pytest tests
       run: |
         cd tests
+        pwd
+        echo "Current directory content:"
+        ls -la
         PYTHONPATH=.. python -m pytest -v
