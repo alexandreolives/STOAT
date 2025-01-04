@@ -52,7 +52,7 @@ jobs:
         git clone --recursive https://github.com/vgteam/libbdsg.git
         cd libbdsg
         mkdir build && cd build
-        cmake .. -DPYTHON_EXECUTABLE=$(which python)
+        cmake .. -DPYTHON_EXECUTABLE=$(which python) -DRUN_DOXYGEN=OFF
         make -j4
         sudo make install
         cd ..
