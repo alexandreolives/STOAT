@@ -99,17 +99,27 @@ jobs:
               pg_file = os.path.join(type_dir, "pg.full.pg")
               pg.serialize(pg_file)
               
-              # Create a simple binary distance file
+              # Create a simple distance file
               dist_file = os.path.join(type_dir, "pg.dist")
               with open(dist_file, "wb") as f:
-                  # Write a simple header
-                  f.write(struct.pack("<I", 1))  # Version number
-                  f.write(struct.pack("<I", 2))  # Number of nodes
+                  # Write magic number
+                  f.write(b"DIST")
                   
-                  # Write node IDs and their distances
+                  # Write version
+                  f.write(struct.pack("<I", 1))
+                  
+                  # Write number of nodes
+                  f.write(struct.pack("<I", 2))
+                  
+                  # Write node IDs
                   f.write(struct.pack("<I", pg.get_id(n1)))
                   f.write(struct.pack("<I", pg.get_id(n2)))
-                  f.write(struct.pack("<I", 1))  # Distance between nodes
+                  
+                  # Write distance matrix (2x2)
+                  f.write(struct.pack("<I", 0))  # n1 to n1
+                  f.write(struct.pack("<I", 1))  # n1 to n2
+                  f.write(struct.pack("<I", 1))  # n2 to n1
+                  f.write(struct.pack("<I", 0))  # n2 to n2
           
           for type_name in ["binary", "quantitative"]:
               type_dir = f"tests/simulation/{type_name}_data"
