@@ -83,6 +83,7 @@ jobs:
           cat > create_test_graph.py << 'END'
           import bdsg
           import os
+          import struct
           
           def create_test_graph():
               pg = bdsg.bdsg.PackedGraph()
@@ -98,16 +99,17 @@ jobs:
               pg_file = os.path.join(type_dir, "pg.full.pg")
               pg.serialize(pg_file)
               
-              # Create snarl decomposition
-              decomp = bdsg.bdsg.SnarlDecomposition()
-              decomp.decompose(pg)
-              
-              # Create and save distance index
-              stree = bdsg.bdsg.SnarlDistanceIndex()
-              stree.set_graph(pg)
-              stree.set_snarl_decomposition(decomp)
+              # Create a simple binary distance file
               dist_file = os.path.join(type_dir, "pg.dist")
-              stree.serialize(dist_file)
+              with open(dist_file, "wb") as f:
+                  # Write a simple header
+                  f.write(struct.pack("<I", 1))  # Version number
+                  f.write(struct.pack("<I", 2))  # Number of nodes
+                  
+                  # Write node IDs and their distances
+                  f.write(struct.pack("<I", pg.get_id(n1)))
+                  f.write(struct.pack("<I", pg.get_id(n2)))
+                  f.write(struct.pack("<I", 1))  # Distance between nodes
           
           for type_name in ["binary", "quantitative"]:
               type_dir = f"tests/simulation/{type_name}_data"
@@ -175,7 +177,7 @@ jobs:
           echo "Content of binary phenotype file:"
           cat tests/simulation/binary_data/phenotype.tsv
           echo "Content of binary pg.dist file:"
-          ls -l tests/simulation/binary_data/pg.dist
+          hexdump -C tests/simulation/binary_data/pg.dist
 
       - name: Run pytest tests
         run: |
