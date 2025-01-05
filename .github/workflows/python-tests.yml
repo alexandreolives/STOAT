@@ -99,13 +99,13 @@ jobs:
               pg.serialize(pg_file)
               
               # Create snarl decomposition
-              snarl_manager = bdsg.bdsg.SnarlManager()
-              snarl_manager.add_snarl(n1, n2)
+              decomp = bdsg.bdsg.SnarlDecomposition()
+              decomp.decompose(pg)
               
               # Create and save distance index
               stree = bdsg.bdsg.SnarlDistanceIndex()
-              stree.set_snarl_manager(snarl_manager)
               stree.set_graph(pg)
+              stree.set_snarl_decomposition(decomp)
               dist_file = os.path.join(type_dir, "pg.dist")
               stree.serialize(dist_file)
           
