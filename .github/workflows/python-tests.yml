@@ -98,17 +98,13 @@ jobs:
               pg_file = os.path.join(type_dir, "pg.full.pg")
               pg.serialize(pg_file)
               
+              # Create snarl decomposition
+              snarls = bdsg.bdsg.SnarlDecomposition()
+              snarls.decompose(pg)
+              
               # Create distance index
               stree = bdsg.bdsg.SnarlDistanceIndex()
-              stree.set_graph(pg)
-              
-              # Add distances
-              h1 = pg.get_handle(pg.get_id(n1))
-              h2 = pg.get_handle(pg.get_id(n2))
-              stree.set_distance(h1, h2, 1)
-              stree.set_distance(h2, h1, 1)
-              stree.set_distance(h1, h1, 0)
-              stree.set_distance(h2, h2, 0)
+              stree.set_snarl_decomposition(snarls)
               
               # Save distance index
               dist_file = os.path.join(type_dir, "pg.dist")
